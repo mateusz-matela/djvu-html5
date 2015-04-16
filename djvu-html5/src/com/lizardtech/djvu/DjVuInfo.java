@@ -108,11 +108,9 @@ public class DjVuInfo
   public static DjVuInfo createDjVuInfo(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (DjVuInfo)create(
-      options,
-      options.getDjVuInfoClass(),
-      DjVuInfo.class);
+    DjVuInfo djVuInfo = new DjVuInfo();
+    djVuInfo.setDjVuOptions(options);
+    return djVuInfo;
   }
 
   /**

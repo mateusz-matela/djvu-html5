@@ -47,7 +47,6 @@ package com.lizardtech.djvu;
 
 import java.io.*;
 import java.util.*;
-import java.net.URL;
 
   /**
  * This class is an InputStream which spans some of the accessable data in a
@@ -108,11 +107,9 @@ public class CachedInputStream
   public static CachedInputStream createCachedInputStream(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (CachedInputStream)DjVuObject.create(
-      options,
-      options.getCachedInputStreamClass(),
-      CachedInputStream.class);
+    CachedInputStream cachedInputStream = new CachedInputStream();
+    cachedInputStream.setDjVuOptions(options);
+    return cachedInputStream;
   }
 
   /**
@@ -175,7 +172,7 @@ public class CachedInputStream
      *
      * @return the initialized stream
      */
-    public CachedInputStream init(final URL url,final boolean prefetch)
+    public CachedInputStream init(final String url,final boolean prefetch)
     {
       return init(DataPool.createDataPool(this).init(url),0, Integer.MAX_VALUE);
     }

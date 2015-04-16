@@ -90,11 +90,9 @@ public class JB2Image
   public static JB2Image createJB2Image(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (JB2Image)create(
-      options,
-      options.getJB2ImageClass(),
-      JB2Image.class);
+    JB2Image jb2Image = new JB2Image();
+    jb2Image.setDjVuOptions(options);
+    return jb2Image;
   }
 
   /**

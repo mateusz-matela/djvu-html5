@@ -47,7 +47,6 @@ package com.lizardtech.djvu;
 
 import java.io.*;
 import java.util.*;
-import java.net.*;
 
 
 /**
@@ -79,7 +78,7 @@ public class DataPool
   private int endOffset=Integer.MAX_VALUE;
   
   // The url we are reading.
-  private URL url=null;
+  private String url=null;
   
   // The input stream we are reading.
   private InputStream input=null;
@@ -124,11 +123,9 @@ public class DataPool
   public static DataPool createDataPool(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (DataPool)create(
-      options,
-      options.getDataPoolClass(),
-      DataPool.class);
+    DataPool dataPool = new DataPool();
+    dataPool.setDjVuOptions(options);
+    return dataPool;
   }
 
   /**
@@ -139,7 +136,7 @@ public class DataPool
    * 
    * @return an initialized DataPool
    */
-  public DataPool init(final URL url)
+  public DataPool init(final String url)
   {
     this.url=url;
     DataPool retval=this;

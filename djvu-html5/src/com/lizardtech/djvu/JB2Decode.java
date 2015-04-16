@@ -89,11 +89,9 @@ public class JB2Decode
   public static JB2Decode createJB2Decode(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (JB2Decode)create(
-      options,
-      options.getJB2DecodeClass(),
-      JB2Decode.class);
+    JB2Decode jb2Decode = new JB2Decode();
+    jb2Decode.setDjVuOptions(options);
+    return jb2Decode;
   }
 
   /**

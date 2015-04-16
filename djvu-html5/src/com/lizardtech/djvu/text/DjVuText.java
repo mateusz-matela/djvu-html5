@@ -182,11 +182,9 @@ public class DjVuText
   public static DjVuText createDjVuText(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (DjVuText)create(
-      options,
-      options.getDjVuTextClass(),
-      DjVuText.class);
+    DjVuText djVuText = new DjVuText();
+    djVuText.setDjVuOptions(options);
+    return djVuText;
   }
 
   /**

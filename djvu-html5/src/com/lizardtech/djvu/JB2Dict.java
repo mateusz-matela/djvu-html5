@@ -105,11 +105,9 @@ public class JB2Dict
   public static JB2Dict createJB2Dict(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (JB2Dict)create(
-      options,
-      options.getJB2DictClass(),
-      JB2Dict.class);
+    JB2Dict jb2Dict = new JB2Dict();
+    jb2Dict.setDjVuOptions(options);
+    return jb2Dict;
   }
 
   /**

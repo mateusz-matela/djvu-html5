@@ -48,6 +48,10 @@ package com.lizardtech.djvu;
 import java.lang.reflect.*;
 import java.io.PrintStream;
 
+import com.lizardtech.djvu.anno.DjVuAnno;
+import com.lizardtech.djvu.outline.Bookmark;
+import com.lizardtech.djvu.text.DjVuText;
+
 
 /**
  * This is a factory which stores standard encoding options.  Each class
@@ -715,10 +719,7 @@ public class DjVuOptions
    */
   public Codec createBookmark()
   {
-    return (Codec)DjVuObject.create(
-      this,
-      getBookmarkClass(),
-      "com.lizardtech.djvu.outline.Bookmark");
+    return new Bookmark();
   }
 
   /**
@@ -729,10 +730,7 @@ public class DjVuOptions
    */
   public Codec createDjVuAnno()
   {
-    return (Codec)DjVuObject.create(
-      this,
-      getDjVuAnnoClass(),
-      "com.lizardtech.djvu.anno.DjVuAnno");
+    return new DjVuAnno();
   }
 
   /**
@@ -743,9 +741,6 @@ public class DjVuOptions
    */
   public Codec createDjVuText()
   {
-    return (Codec)DjVuObject.create(
-      this,
-      getDjVuTextClass(),
-      "com.lizardtech.djvu.text.DjVuText");
+    return new DjVuText();
   }
 }

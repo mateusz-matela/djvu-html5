@@ -678,11 +678,9 @@ public class Rect
   public static Rect createRect(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (Rect)create(
-      options,
-      options.getAnnoRectClass(),
-      Rect.class);
+    Rect rect = new Rect();
+    rect.setDjVuOptions(options);
+    return rect;
   }
 
   /**

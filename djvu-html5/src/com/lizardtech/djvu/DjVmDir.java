@@ -46,7 +46,6 @@
 package com.lizardtech.djvu;
 
 import java.io.*;
-import java.net.URL;
 import java.util.*;
 
 
@@ -67,7 +66,7 @@ public final class DjVmDir
 
   //~ Instance fields --------------------------------------------------------
 
-  private URL initURL = null;
+  private String initURL = null;
   private final Hashtable id2file = new Hashtable();
   private final Hashtable name2file = new Hashtable();
   private final Hashtable title2file = new Hashtable();
@@ -94,11 +93,9 @@ public final class DjVmDir
   public static DjVmDir createDjVmDir(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (DjVmDir)create(
-      options,
-      options.getDjVmDirClass(),
-      DjVmDir.class);
+    DjVmDir djVmDir = new DjVmDir();
+    djVmDir.setDjVuOptions(options);
+    return djVmDir;
   }
   
   /**
@@ -116,7 +113,7 @@ public final class DjVmDir
    *
    * @param url DOCUMENT ME!
    */
-  public void setInitURL(final URL url)
+  public void setInitURL(final String url)
   {
     initURL = url;
   }
@@ -126,7 +123,7 @@ public final class DjVmDir
    *
    * @return the top level URL
    */
-  public URL getInitURL()
+  public String getInitURL()
   {
     return initURL;
   }

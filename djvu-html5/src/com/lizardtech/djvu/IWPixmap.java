@@ -145,11 +145,9 @@ public class IWPixmap
   public static IWPixmap createIWPixmap(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (IWPixmap)create(
-      options,
-      options.getIWPixmapClass(),
-      IWPixmap.class);
+    IWPixmap iwPixmap = new IWPixmap();
+    iwPixmap.setDjVuOptions(options);
+    return iwPixmap;
   }
 
   /**

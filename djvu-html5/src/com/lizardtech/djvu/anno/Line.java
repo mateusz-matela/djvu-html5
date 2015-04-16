@@ -93,11 +93,9 @@ public class Line
   public static Line createLine(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (Line)create(
-      options,
-      options.getAnnoLineClass(),
-      Line.class);
+    Line line = new Line();
+    line.setDjVuOptions(options);
+    return line;
   }
 
   /**

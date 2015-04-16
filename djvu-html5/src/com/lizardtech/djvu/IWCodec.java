@@ -133,11 +133,9 @@ final class IWCodec
   public static IWCodec createIWCodec(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (IWCodec)create(
-      options,
-      options.getIWCodecClass(),
-      IWCodec.class);
+    IWCodec iwCodec = new IWCodec();
+    iwCodec.setDjVuOptions(options);
+    return iwCodec;
   }
 
   /**

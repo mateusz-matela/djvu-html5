@@ -46,8 +46,6 @@
 package com.lizardtech.djvu;
 
 import java.io.*;
-import java.lang.reflect.*;
-import java.net.URL;
 import java.util.*;
 
 
@@ -62,41 +60,6 @@ import java.util.*;
 public class DjVuObject
   implements DjVuInterface
 {
-  //~ Static fields/initializers ---------------------------------------------
-
-  /** This flag indicates if references are available. */
-  public static final boolean hasReferences;
-
-  /** This constructor will be used to create soft references. */
-  private static final Constructor  newSoftReference;
-  
-  /** This constructor will be used to create weak references. */
-  private static final Constructor  newWeakReference;
-  
-  /** This method will be used to read references. */
-  private static final Method       getMethod;
-
-  static
-  {
-    Method xgetMethod=null;
-    Constructor xnewSoftReference=null;
-    Constructor xnewWeakReference=null;
-    try
-    {
-      xgetMethod =
-        Class.forName("java.lang.ref.Reference").getMethod("get", null);
-      final Class[] params = {Object.class};
-      xnewWeakReference=xnewSoftReference =
-        Class.forName("java.lang.ref.SoftReference").getConstructor(params);
-      xnewWeakReference =
-        Class.forName("java.lang.ref.WeakReference").getConstructor(params);
-    }
-    catch(final Throwable ignored) {}
-    getMethod=xgetMethod;
-    newSoftReference=xnewSoftReference;
-    newWeakReference=xnewWeakReference;
-    hasReferences = (newSoftReference != null);
-  }
 
   //~ Instance fields --------------------------------------------------------
 
@@ -156,90 +119,7 @@ public class DjVuObject
    */
   public static Object getFromReference(final Object value)
   {
-    return (hasReferences &&(value != null))?invoke(getMethod, value, null):value;
-  }
-
-  /**
-   * Creates the desired class.  bestClass is not null, it will be created.
-   * Otherwise the named class will be created.  If the creation fails, a
-   * null will be returned.
-   *
-   * @param options the DjVuOptions instance the new object should use.
-   * @param bestClass The class we wish to create.
-   * @param className The name of the class to create as default.
-   *
-   * @return the newly created object
-   */
-  public static DjVuInterface create(
-    final DjVuOptions options,
-    final Class       bestClass,
-    final String      className)
-  {
-    Class defaultClass = null;
-
-    if(
-      (bestClass == null)
-      || !DjVuInterface.class.isAssignableFrom(bestClass))
-    {
-      try
-      {
-        defaultClass = Class.forName(className);
-      }
-      catch(final Throwable exp)
-      {
-        return null;
-      }
-    }
-
-    return create(options, bestClass, defaultClass);
-  }
-
-  /**
-   * Creates the desired class.  bestClass is not null, it will be created.
-   * Otherwise the named class will be created.  If the creation fails, a
-   * null will be returned.
-   *
-   * @param options the DjVuOptions instance the new object should use.
-   * @param bestClass The class we wish to create.
-   * @param defaultClass The class to create as default.
-   *
-   * @return the newly created object
-   */
-  public static DjVuInterface create(
-    final DjVuOptions options,
-    final Class       bestClass,
-    final Class       defaultClass)
-  {
-    DjVuInterface retval = null;
-    try
-    {
-      if(bestClass != null)
-      {
-        try
-        {
-           retval = (DjVuInterface)bestClass.newInstance();
-        }
-        catch(final Throwable exp)        
-        {
-          retval = (DjVuInterface)defaultClass.newInstance();
-        }
-      }
-      else if(defaultClass != null)
-      {
-        retval = (DjVuInterface)defaultClass.newInstance();
-      }
-      retval.setDjVuOptions(options);
-    }
-    catch(final InstantiationException exp)
-    {
-      exp.printStackTrace(DjVuOptions.err);
-    }
-    catch(final IllegalAccessException exp)
-    {
-      exp.printStackTrace(DjVuOptions.err);
-    }
-
-    return retval;
+    return value;
   }
 
   /**
@@ -255,16 +135,6 @@ public class DjVuObject
     final Object value,
     final Object defaultValue)
   {
-    if(hasReferences)
-    {
-      try
-      {
-        final Object[] args = {value};
-
-        return newSoftReference.newInstance(args);
-      }
-      catch(final Throwable ignored) {}
-    }
     return defaultValue;
   }
 
@@ -281,44 +151,7 @@ public class DjVuObject
     final Object value,
     final Object defaultValue)
   {
-    if(hasReferences)
-    {
-      try
-      {
-        final Object[] args = {value};
-
-        return newWeakReference.newInstance(args);
-      }
-      catch(final Throwable ignored) {}
-    }
     return defaultValue;
-  }
-  
-  /**
-   * This is a wrapper for method.invoke that catches and reports exceptions.
-   *
-   * @param method class method to invoke
-   * @param o the object to invoke the method on
-   * @param args the arguments to send to the method
-   *
-   * @return the method.invoke return value or null
-   */
-  public static Object invoke(Method method, Object o, Object [] args)
-  {
-    Object retval=null;
-    try
-    {
-      retval=method.invoke(o,args);
-    }
-    catch(final IllegalAccessException exp) 
-    {
-      exp.printStackTrace(DjVuOptions.err);
-    }
-    catch(final InvocationTargetException exp) 
-    {
-      exp.printStackTrace(DjVuOptions.err);
-    }
-    return retval;
   }
   
   public static void checkLockTime(final long lockTime,final long maxTime)
@@ -332,5 +165,13 @@ public class DjVuObject
             exp.printStackTrace(DjVuOptions.err);
         }
     }
+  }
+
+  /**
+   * Primitive replacement for {@code new java.net.URL(URL context, String spec)}
+   */
+  protected static String url(String context, String spec) {
+	  String base = context.replaceFirst("/[^/]+$", "/");
+	  return base + spec;
   }
 }

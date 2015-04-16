@@ -412,11 +412,9 @@ public class ZPCodec
   public static ZPCodec createZPCodec(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (ZPCodec)create(
-      options,
-      options.getZPCodecClass(),
-      ZPCodec.class);
+    ZPCodec zpCodec = new ZPCodec();
+    zpCodec.setDjVuOptions(options);
+    return zpCodec;
   }
 
   /**

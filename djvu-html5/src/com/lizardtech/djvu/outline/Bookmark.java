@@ -292,11 +292,9 @@ public class Bookmark
   public static Bookmark createBookmark(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (Bookmark)DjVuObject.create(
-      options,
-      options.getBookmarkClass(),
-      Bookmark.class);
+    Bookmark bookmark = new Bookmark();
+    bookmark.setDjVuOptions(options);
+    return bookmark;
   }
 
   /**

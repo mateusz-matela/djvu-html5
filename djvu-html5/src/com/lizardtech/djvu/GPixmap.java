@@ -131,11 +131,9 @@ public class GPixmap
   public static GPixmap createGPixmap(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (GPixmap)create(
-      options,
-      options.getGPixmapClass(),
-      GPixmap.class);
+    GPixmap gPixmap = new GPixmap();
+    gPixmap.setDjVuOptions(options);
+    return gPixmap;
   }
 
   /**

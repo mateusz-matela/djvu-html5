@@ -100,11 +100,9 @@ public class IFFEnumeration
   public static IFFEnumeration createIFFEnumeration(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (IFFEnumeration)DjVuObject.create(
-      options,
-      options.getIFFEnumerationClass(),
-      IFFEnumeration.class);
+    IFFEnumeration iffEnumeration = new IFFEnumeration();
+    iffEnumeration.setDjVuOptions(options);
+    return iffEnumeration;
   }
 
   /**

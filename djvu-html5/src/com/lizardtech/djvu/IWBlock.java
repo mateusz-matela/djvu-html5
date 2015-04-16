@@ -153,11 +153,9 @@ final class IWBlock
   static IWBlock createIWBlock(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (IWBlock)create(
-      options,
-      options.getIWBlockClass(),
-      IWBlock.class);
+    IWBlock iwBlock = new IWBlock();
+    iwBlock.setDjVuOptions(options);
+    return iwBlock;
   }
 
   /**

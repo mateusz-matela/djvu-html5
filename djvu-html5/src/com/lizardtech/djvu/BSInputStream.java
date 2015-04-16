@@ -156,11 +156,9 @@ public final class BSInputStream
   public static BSInputStream createBSInputStream(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (BSInputStream)DjVuObject.create(
-      options,
-      options.getBSInputStreamClass(),
-      BSInputStream.class);
+    BSInputStream bsInputStream = new BSInputStream();
+    bsInputStream.setDjVuOptions(options);
+    return bsInputStream;
   }
 
   /**

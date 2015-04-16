@@ -129,11 +129,9 @@ public class Palette
   public static Palette createPalette(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (Palette)create(
-      options,
-      options.getPaletteClass(),
-      Palette.class);
+    Palette palette2 = new Palette();
+    palette2.setDjVuOptions(options);
+    return palette2;
   }
 
   /**

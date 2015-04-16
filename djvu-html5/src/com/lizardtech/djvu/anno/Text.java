@@ -90,11 +90,9 @@ public class Text
   public static Text createText(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (Text)create(
-      options,
-      options.getAnnoTextClass(),
-      Text.class);
+    Text text = new Text();
+    text.setDjVuOptions(options);
+    return text;
   }
 
   /**

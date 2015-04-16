@@ -92,11 +92,9 @@ public class Oval
   public static Oval createOval(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (Oval)create(
-      options,
-      options.getAnnoRectClass(),
-      Oval.class);
+    Oval oval = new Oval();
+    oval.setDjVuOptions(options);
+    return oval;
   }
 
   /**

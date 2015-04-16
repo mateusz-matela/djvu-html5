@@ -104,11 +104,9 @@ class JB2Shape
   public static JB2Shape createJB2Shape(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (JB2Shape)create(
-      options,
-      options.getJB2ShapeClass(),
-      JB2Shape.class);
+    JB2Shape jb2Shape = new JB2Shape();
+    jb2Shape.setDjVuOptions(options);
+    return jb2Shape;
   }
 
   /**

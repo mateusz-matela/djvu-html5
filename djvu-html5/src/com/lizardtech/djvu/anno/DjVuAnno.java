@@ -211,11 +211,9 @@ public class DjVuAnno
   public static DjVuAnno createDjVuAnno(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (DjVuAnno)create(
-      options,
-      options.getDjVuAnnoClass(),
-      DjVuAnno.class);
+    DjVuAnno djVuAnno = new DjVuAnno();
+    djVuAnno.setDjVuOptions(options);
+    return djVuAnno;
   }
 
   /**

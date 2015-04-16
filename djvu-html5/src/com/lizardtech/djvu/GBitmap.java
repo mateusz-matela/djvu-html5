@@ -144,11 +144,9 @@ public class GBitmap
   public static GBitmap createGBitmap(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (GBitmap)create(
-      options,
-      options.getGBitmapClass(),
-      GBitmap.class);
+    GBitmap gBitmap = new GBitmap();
+    gBitmap.setDjVuOptions(options);
+    return gBitmap;
   }
 
   /**

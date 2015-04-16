@@ -47,7 +47,6 @@ package com.lizardtech.djvu;
 
 import java.beans.*;
 import java.io.*;
-import java.net.URL;
 import java.util.*;
 
 
@@ -215,7 +214,7 @@ public class DjVuPage
   private Throwable caughtException = null;
 
   /** The URL for this page. */
-  protected URL url = null;
+  protected String url = null;
 
   /** True if a separate thread should be used for decoding. */
   private boolean asyncValue = false;
@@ -725,11 +724,9 @@ public class DjVuPage
   public static DjVuPage createDjVuPage(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (DjVuPage)create(
-      options,
-      options.getDjVuPageClass(),
-      DjVuPage.class);
+    DjVuPage djVuPage = new DjVuPage();
+    djVuPage.setDjVuOptions(options);
+    return djVuPage;
   }
 
   /**
@@ -758,7 +755,7 @@ public class DjVuPage
    *
    * @throws IOException if an error occures.
    */
-  public void decode(final URL url)
+  public void decode(final String url)
     throws IOException
   {
     this.url = url;
@@ -1765,7 +1762,7 @@ public class DjVuPage
   CachedInputStream createCachedInputStream(final String id)
     throws IOException
   {
-    return CachedInputStream.createCachedInputStream(this).init(new URL(url, id), false);
+    return CachedInputStream.createCachedInputStream(this).init(url(url, id), false);
   }
 
   /**
@@ -1849,7 +1846,7 @@ public class DjVuPage
     try
     {
       startTime = System.currentTimeMillis();
-      final URL url=this.url;
+      final String url=this.url;
       if(url != null)
       {
         setStatus("decoding "+url); 

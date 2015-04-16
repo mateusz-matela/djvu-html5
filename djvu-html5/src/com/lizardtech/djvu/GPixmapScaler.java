@@ -45,9 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import java.beans.*;
 import java.io.*;
-import java.net.URL;
 import java.util.*;
 
 

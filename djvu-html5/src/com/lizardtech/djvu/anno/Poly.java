@@ -148,11 +148,9 @@ public class Poly
   public static Poly createPoly(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (Poly)create(
-      options,
-      options.getAnnoPolyClass(),
-      Poly.class);
+    Poly poly = new Poly();
+    poly.setDjVuOptions(options);
+    return poly;
   }
 
   /**

@@ -45,9 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import java.beans.*;
 import java.io.*;
-import java.net.URL;
 import java.util.*;
 
 
@@ -77,18 +75,12 @@ public class Document
   private static int prefetchCount=0;
 
   
-  // Used to propigate change events
-  private final PropertyChangeSupport change;
-  
   // The status string.
   private String status=null;
   
   /** A map of saved pages for this document. */
   protected Hashtable cachedInputStreamMap = new Hashtable();
 
-  /** A Vector of soft links to decoded pages. */
-  protected Hashtable pageMap = new Hashtable();
-  
   // The bookmark Codec for this document.
   private Codec    bookmark = null;
   
@@ -114,29 +106,6 @@ public class Document
   public Document()
   {
     dir = DjVmDir.createDjVmDir(this);
-    change=new PropertyChangeSupport(this);
-  }
-  
-  /**
-   * Add a listener for property change events.
-   *
-   * @param listener to add
-   */
-  public void addPropertyChangeListener(
-    final PropertyChangeListener listener)
-  {
-    change.addPropertyChangeListener(listener);
-  }
-
-  /**
-   * Remove a listener for PropertyChangeEvent.
-   *
-   * @param listener to remove
-   */
-  public void removePropertyChangeListener(
-    final PropertyChangeListener listener)
-  {
-    change.removePropertyChangeListener(listener);
   }
 
   /**
@@ -148,7 +117,6 @@ public class Document
   {
     final String s=this.status;
     this.status=status;
-    change.firePropertyChange("status", s, status);
   }
 
   /**
@@ -168,7 +136,7 @@ public class Document
    *
    * @throws IOException DOCUMENT ME!
    */
-  public Document(final URL url)
+  public Document(final String url)
     throws IOException
   {
     this();
@@ -188,10 +156,9 @@ public class Document
   public static Document createDocument(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-    return (Document)create(
-      options,
-      options.getDocumentClass(),
-      Document.class);
+    Document document = new Document();
+    document.setDjVuOptions(options);
+    return document;
   }
 
   /**
@@ -280,15 +247,6 @@ public class Document
   {
     DjVuPage page = null;
 
-    if(hasReferences)
-    {
-      try
-      {
-        page = (DjVuPage)getFromReference(pageMap.get(id));
-      }
-      catch(final ArrayIndexOutOfBoundsException exp){}
-    }
-
     if(page == null)
     {
       CachedInputStream data=get_data(id);
@@ -298,28 +256,15 @@ public class Document
       }
       if(dataWait || (data.available() > 0))
       {
-        URL url=getDjVmDir().getInitURL();
+        String url=getDjVmDir().getInitURL();
         if(url != null)
         {
-          url=new URL(url,id);
+          url=url(url,id);
         }
         page = createDjVuPage(url);
         page.setAsync(isAsync());
         page.setPriority(priority);
         page.decode(data);
-        if(hasReferences)
-        {
-          Object ref = createSoftReference(page, null);
-
-          if(ref != null)
-          {
-            try
-            {
-              pageMap.put(id, ref);
-            }
-            catch(final Throwable ignored) {}
-          }
-        }
       }
     }
     if((page != null)&&!dataWait)
@@ -390,7 +335,7 @@ public class Document
    *
    * @return the newly created object
    */
-  public DjVuPage createDjVuPage(final URL url)
+  public DjVuPage createDjVuPage(final String url)
   {
     return new DocumentDjVuPage(url);
   }
@@ -438,7 +383,7 @@ public class Document
     {
       final Vector       files_list = djvmDir.get_files_list();
 
-      final URL          initURL = djvmDir.getInitURL();
+      final String       initURL = djvmDir.getInitURL();
       final DjVmDir.File f       = getDjVmDir().id_to_file(id);
 
       if(f == null)
@@ -448,7 +393,7 @@ public class Document
           throw new IOException("Requested data outside document");
         }
 
-        final URL fileurl = new URL(initURL, id);
+        final String fileurl = url(initURL, id);
         pool = CachedInputStream.createCachedInputStream(this).init(fileurl,false);
         insert_file(pool, DjVmDir.File.INCLUDE, id, id);
       }
@@ -461,7 +406,7 @@ public class Document
       }
       else if(initURL != null)
       {
-        pool = CachedInputStream.createCachedInputStream(this).init(new URL(initURL, id), false);
+        pool = CachedInputStream.createCachedInputStream(this).init(url(initURL, id), false);
         cachedInputStreamMap.put(id, pool);
       }
     }
@@ -501,7 +446,7 @@ public class Document
    *
    * @throws IOException if an error occurs
    */
-  public Document init(final URL url)
+  public Document init(final String url)
     throws IOException
   {
     read(url);
@@ -846,7 +791,7 @@ public class Document
    *
    * @throws IOException if an error occurs
    */
-  public void read(final URL url)
+  public void read(final String url)
     throws IOException
   {
     setStatus("Read URL "+url);
@@ -866,7 +811,7 @@ public class Document
       {
         throw new IOException("Invalid DjVu File Format");
       }
-      String name = url.getFile();
+      String name = url.replaceFirst(".+/", "");
       int    s = name.indexOf('?');
 
       if(s > 0)
@@ -1032,7 +977,7 @@ public class Document
   {
     //~ Constructors ---------------------------------------------------------
 
-    DocumentDjVuPage(final URL url)
+    DocumentDjVuPage(final String url)
     {
       setDjVuOptions(Document.this.getDjVuOptions());
       this.url=url;

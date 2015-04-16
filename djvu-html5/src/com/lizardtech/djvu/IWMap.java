@@ -259,11 +259,9 @@ final class IWMap
   public static IWMap createIWMap(final DjVuInterface ref)
   {
     final DjVuOptions options = ref.getDjVuOptions();
-
-    return (IWMap)create(
-      options,
-      options.getIWMapClass(),
-      IWMap.class);
+    IWMap iwMap = new IWMap();
+    iwMap.setDjVuOptions(options);
+    return iwMap;
   }
 
   /**
