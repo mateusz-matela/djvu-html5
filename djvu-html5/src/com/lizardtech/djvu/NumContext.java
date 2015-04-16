@@ -45,9 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
-
 
 /**
  * Implements an editable Integer class.
@@ -100,9 +97,10 @@ public final class NumContext
    *
    * @return double value.
    */
-  public final double doubleValue()
+  @Override
+public final double doubleValue()
   {
-    return (double)longValue();
+    return longValue();
   }
 
   /**
@@ -112,7 +110,8 @@ public final class NumContext
    *
    * @return DOCUMENT ME!
    */
-  public final boolean equals(final Object value)
+  @Override
+public final boolean equals(final Object value)
   {
     return (value instanceof NumContext)
     && (this.value == ((NumContext)value).intValue());
@@ -123,9 +122,10 @@ public final class NumContext
    *
    * @return float value.
    */
-  public final float floatValue()
+  @Override
+public final float floatValue()
   {
-    return (float)longValue();
+    return longValue();
   }
 
   /**
@@ -133,7 +133,8 @@ public final class NumContext
    *
    * @return DOCUMENT ME!
    */
-  public final int hashCode()
+  @Override
+public final int hashCode()
   {
     return this.value;
   }
@@ -143,7 +144,8 @@ public final class NumContext
    *
    * @return integer value.
    */
-  public final int intValue()
+  @Override
+public final int intValue()
   {
     return value;
   }
@@ -153,7 +155,8 @@ public final class NumContext
    *
    * @return long value.
    */
-  public final long longValue()
+  @Override
+public final long longValue()
   {
     return 0xffffffffL & value;
   }

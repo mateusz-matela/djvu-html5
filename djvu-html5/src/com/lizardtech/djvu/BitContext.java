@@ -53,7 +53,6 @@ package com.lizardtech.djvu;
  * @version $Revision: 1.7 $
  */
 public class BitContext
-  extends Number
   implements Cloneable
 {
   //~ Instance fields --------------------------------------------------------
@@ -61,7 +60,7 @@ public class BitContext
   /**
    * The raw value.  Try to use the methods, unless speed is of the essence.
    */
-  public byte bit = 0;
+  private byte bit = 0;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -86,21 +85,12 @@ public class BitContext
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Query the raw byte value.
-   *
-   * @return the raw byte value
-   */
-  public final byte byteValue()
-  {
-    return bit;
-  }
-
-  /**
    * Clone this object.
    *
    * @return the newly created clone
    */
-  public Object clone()
+  @Override
+public Object clone()
   {
     //DjVuOptions.out.println("1. BitContext clone");
     Cloneable retval = null;
@@ -113,46 +103,6 @@ public class BitContext
 
     //DjVuOptions.out.println("2. BitContext clone");
     return retval;
-  }
-
-  /**
-   * Query the double value.
-   *
-   * @return (double)intValue()
-   */
-  public final double doubleValue()
-  {
-    return (double)intValue();
-  }
-
-  /**
-   * Query the float value.
-   *
-   * @return (float)intValue()
-   */
-  public final float floatValue()
-  {
-    return (float)intValue();
-  }
-
-  /**
-   * Query the integer value.
-   *
-   * @return the byte value ranged 0 to 255
-   */
-  public final int intValue()
-  {
-    return 0xff & bit;
-  }
-
-  /**
-   * Query the long value.
-   *
-   * @return the byte value ranged 0L to 255L
-   */
-  public final long longValue()
-  {
-    return 0xff & bit;
   }
 
   /**
@@ -170,18 +120,13 @@ public class BitContext
    *
    * @param value the raw value to set
    */
-  public final void set(final Number value)
+  public final void set(final BitContext value)
   {
-    bit = value.byteValue();
+    bit = value.bit;
   }
 
-  /**
-   * Query the short value.
-   *
-   * @return the byte value ranged 0 to 255
-   */
-  public final short shortValue()
-  {
-    return (short)(0xff & bit);
+  public final byte get() {
+    return bit;
   }
+
 }

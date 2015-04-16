@@ -170,22 +170,22 @@ public abstract class JB2Codec
   protected final NumContext rel_size_y = new NumContext();
 
   /** DOCUMENT ME! */
-  protected final Vector bitcells = new Vector();
+  protected final Vector<BitContext> bitcells = new Vector<>();
 
   /** DOCUMENT ME! */
-  protected final Vector leftcell = new Vector();
+  protected final Vector<NumContext> leftcell = new Vector<>();
 
   /** DOCUMENT ME! */
-  protected final Vector lib2shape = new Vector();
+  protected final Vector<Integer> lib2shape = new Vector<>();
 
   /** DOCUMENT ME! */
-  protected final Vector libinfo = new Vector();
+  protected final Vector<GRect> libinfo = new Vector<>();
 
   /** DOCUMENT ME! */
-  protected final Vector rightcell = new Vector();
+  protected final Vector<NumContext> rightcell = new Vector<>();
 
   /** DOCUMENT ME! */
-  protected final Vector shape2lib = new Vector();
+  protected final Vector<Number> shape2lib = new Vector<>();
 
   /** DOCUMENT ME! */
   protected final int[] short_list = new int[3];
@@ -319,16 +319,16 @@ public abstract class JB2Codec
         decision =
           encoding
           ? (((low < cutoff) && (high >= cutoff))
-          ? codeBit((v >= cutoff), (BitContext)bitcells.elementAt(ictx))
+          ? codeBit((v >= cutoff), bitcells.elementAt(ictx))
           : (v >= cutoff))
           : ((low >= cutoff)
           || ((high >= cutoff)
-          && codeBit(false, (BitContext)bitcells.elementAt(ictx))));
+          && codeBit(false, bitcells.elementAt(ictx))));
 
         ctx =
-          (NumContext)(decision
+          decision
           ? rightcell.elementAt(ictx)
-          : leftcell.elementAt(ictx));
+          : leftcell.elementAt(ictx);
       }
 
       switch(phase)
@@ -620,7 +620,7 @@ public abstract class JB2Codec
         }
 
         final GBitmap cbm    = jim.get_shape(jshp.parent).getGBitmap();
-        GRect       lmatch = (GRect)libinfo.elementAt(match);
+        GRect       lmatch = libinfo.elementAt(match);
         code_relative_mark_size(
           bm,
           (1 + lmatch.xmax) - lmatch.xmin,
@@ -812,7 +812,7 @@ public abstract class JB2Codec
         }
 
         final GBitmap cbm    = jim.get_shape(jshp.parent).getGBitmap();
-        final GRect lmatch = (GRect)libinfo.elementAt(match);
+        final GRect lmatch = libinfo.elementAt(match);
         code_relative_mark_size(
           bm,
           (1 + lmatch.xmax) - lmatch.xmin,
@@ -842,7 +842,7 @@ public abstract class JB2Codec
         }
 
         final GBitmap cbm    = jim.get_shape(jshp.parent).getGBitmap();
-        final GRect lmatch = (GRect)libinfo.elementAt(match);
+        final GRect lmatch = libinfo.elementAt(match);
         code_relative_mark_size(
           bm,
           (1 + lmatch.xmax) - lmatch.xmin,
@@ -863,7 +863,7 @@ public abstract class JB2Codec
         }
 
         final GBitmap cbm    = jim.get_shape(jshp.parent).getGBitmap();
-        final GRect lmatch = (GRect)libinfo.elementAt(match);
+        final GRect lmatch = libinfo.elementAt(match);
         code_relative_mark_size(
           bm,
           (1 + lmatch.xmax) - lmatch.xmin,
@@ -890,7 +890,7 @@ public abstract class JB2Codec
 
         bm = jim.get_shape(jblt.shapeno()).getGBitmap();
 
-        final GRect lmatch = (GRect)libinfo.elementAt(match);
+        final GRect lmatch = libinfo.elementAt(match);
         jblt.leftAdd(lmatch.xmin);
         jblt.bottomAdd(lmatch.ymin);
 
@@ -1366,7 +1366,7 @@ public abstract class JB2Codec
       final int     cw     = cbm.columns();
       final int     dw     = bm.columns();
       final int     dh     = bm.rows();
-      final GRect lmatch = (GRect)libinfo.elementAt(libno);
+      final GRect lmatch = libinfo.elementAt(libno);
       final int     xd2c   =
         ((1 + (dw / 2)) - dw)
         - ((((1 + lmatch.xmax) - lmatch.xmin) / 2) - lmatch.xmax);

@@ -62,7 +62,6 @@ public class JB2Decode
 
   /** DOCUMENT ME! */
   protected final BitContext zpBitHolder = new BitContext();
-  private GBitmap            refBitmap;
   private JB2Dict            zdict = null;
   private ZPCodec            zp    = null;
 
@@ -171,7 +170,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected final boolean codeBit(
+  @Override
+protected final boolean codeBit(
     final boolean    ignored,
     final BitContext ctx)
     throws IOException
@@ -190,7 +190,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected final int codeBit(
+  @Override
+protected final int codeBit(
     final boolean ignored,
     final byte[]  array,
     final int     offset)
@@ -199,7 +200,7 @@ public class JB2Decode
     zpBitHolder.set(array[offset]);
 
     final int retval = zp.decoder(zpBitHolder);
-    array[offset] = zpBitHolder.bit;
+    array[offset] = zpBitHolder.get();
 
     return retval;
   }
@@ -234,7 +235,8 @@ public class JB2Decode
    * @throws IOException DOCUMENT ME!
    * @throws IllegalStateException DOCUMENT ME!
    */
-  protected void code_absolute_location(
+  @Override
+protected void code_absolute_location(
     final JB2Blit jblt,
     final int     rows,
     final int     columns)
@@ -260,7 +262,8 @@ public class JB2Decode
    * @throws IOException DOCUMENT ME!
    * @throws IllegalStateException DOCUMENT ME!
    */
-  protected void code_absolute_mark_size(
+  @Override
+protected void code_absolute_mark_size(
     final GBitmap bm,
     final int     border)
     throws IOException
@@ -293,7 +296,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected void code_bitmap_by_cross_coding(
+  @Override
+protected void code_bitmap_by_cross_coding(
     final GBitmap bm,
     final GBitmap cbm,
     final int     xd2c,
@@ -349,7 +353,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected void code_bitmap_directly(
+  @Override
+protected void code_bitmap_directly(
     final GBitmap bm,
     final int     dw,
     int           dy,
@@ -384,7 +389,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected String code_comment(final String comment)
+  @Override
+protected String code_comment(final String comment)
     throws IOException
   {
     final int size   = codeNum(0, BIGPOSITIVE, dist_comment_length);
@@ -406,7 +412,8 @@ public class JB2Decode
    * @throws IOException DOCUMENT ME!
    * @throws IllegalStateException DOCUMENT ME!
    */
-  protected void code_image_size(final JB2Dict jim)
+  @Override
+protected void code_image_size(final JB2Dict jim)
     throws IOException
   {
     final int w = codeNum(0, BIGPOSITIVE, image_size_dist);
@@ -428,7 +435,8 @@ public class JB2Decode
    * @throws IOException DOCUMENT ME!
    * @throws IllegalStateException DOCUMENT ME!
    */
-  protected void code_image_size(final JB2Image jim)
+  @Override
+protected void code_image_size(final JB2Image jim)
     throws IOException
   {
     image_columns   = codeNum(0, BIGPOSITIVE, image_size_dist);
@@ -452,7 +460,8 @@ public class JB2Decode
    * @throws IOException DOCUMENT ME!
    * @throws IllegalStateException DOCUMENT ME!
    */
-  protected void code_inherited_shape_count(final JB2Dict jim)
+  @Override
+protected void code_inherited_shape_count(final JB2Dict jim)
     throws IOException
   {
     final int size = codeNum(0, BIGPOSITIVE, inherited_shape_count_dist);
@@ -487,7 +496,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected int code_match_index(
+  @Override
+protected int code_match_index(
     final int     index,
     final JB2Dict ignored)
     throws IOException
@@ -504,7 +514,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected int code_record_type(final int ignored)
+  @Override
+protected int code_record_type(final int ignored)
     throws IOException
   {
     return codeNum(START_OF_DATA, END_OF_DATA, dist_record_type);
@@ -521,7 +532,8 @@ public class JB2Decode
    * @throws IOException DOCUMENT ME!
    * @throws IllegalStateException DOCUMENT ME!
    */
-  protected void code_relative_mark_size(
+  @Override
+protected void code_relative_mark_size(
     final GBitmap bm,
     final int     cw,
     final int     ch,
@@ -551,7 +563,8 @@ public class JB2Decode
    *
    * @throws IOException DOCUMENT ME!
    */
-  protected int get_diff(
+  @Override
+protected int get_diff(
     final int        ignored,
     final NumContext rel_loc)
     throws IOException

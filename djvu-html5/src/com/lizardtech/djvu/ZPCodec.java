@@ -358,12 +358,9 @@ public class ZPCodec
   /** DOCUMENT ME! */
   protected int        aValue;
   private InputStream  ibs;
-  private OutputStream obs;
   private int          buffer;
   private long         code;
   private long         fence;
-  private long         nrun;
-  private long         subend;
   private short        delay;
   private short        scount;
   private short        zByte;
@@ -445,7 +442,7 @@ public class ZPCodec
     int              z)
     throws IOException
   {
-    final int bit = ctx.bit & 1;
+    final int bit = ctx.get() & 1;
     final int d = 24576 + ((z + aValue) >> 2);
 
     if(z > d)
@@ -458,14 +455,14 @@ public class ZPCodec
       z = 0x10000 - z;
       aValue += z;
       code += z;
-      ctx.set(dn[0xff & ctx.bit]);
+      ctx.set(dn[0xff & ctx.get()]);
 
       final int shift = ffz(aValue);
       scount -= shift;
       aValue   = 0xffff & (aValue << shift);
       code =
         0xffff
-        & ((code << shift) | (long)((buffer >> scount) & ((1 << shift) - 1)));
+        & ((code << shift) | ((buffer >> scount) & ((1 << shift) - 1)));
 
       if(scount < 16)
       {
@@ -482,14 +479,14 @@ public class ZPCodec
       return bit ^ 1;
     }
 
-    if((0xffffffffL & aValue) >= (0xffffffffL & mArray[0xff & ctx.bit]))
+    if((0xffffffffL & aValue) >= (0xffffffffL & mArray[0xff & ctx.get()]))
     {
-      ctx.set(up[0xff & ctx.bit]);
+      ctx.set(up[0xff & ctx.get()]);
     }
 
     scount--;
     aValue   = 0xffff & (z << 1);
-    code     = 0xffff & ((code << 1) | (long)((buffer >> scount) & 1));
+    code     = 0xffff & ((code << 1) | ((buffer >> scount) & 1));
 
     if(scount < 16)
     {
@@ -539,7 +536,7 @@ public class ZPCodec
       aValue   = 0xffff & (aValue << shift);
       code =
         0xffff
-        & ((code << shift) | (long)((buffer >> scount) & ((1 << shift) - 1)));
+        & ((code << shift) | ((buffer >> scount) & ((1 << shift) - 1)));
 
       if(scount < 16)
       {
@@ -558,7 +555,7 @@ public class ZPCodec
 
     scount--;
     aValue   = 0xffff & (z << 1);
-    code     = 0xffff & ((code << 1) | (long)((buffer >> scount) & 1));
+    code     = 0xffff & ((code << 1) | ((buffer >> scount) & 1));
 
     if(scount < 16)
     {
@@ -601,7 +598,7 @@ public class ZPCodec
       aValue   = 0xffff & (aValue << shift);
       code =
         0xffff
-        & ((code << shift) | (long)((buffer >> scount) & ((1 << shift) - 1)));
+        & ((code << shift) | ((buffer >> scount) & ((1 << shift) - 1)));
 
       if(scount < 16)
       {
@@ -620,7 +617,7 @@ public class ZPCodec
 
     scount--;
     aValue   = 0xffff & (z << 1);
-    code     = 0xffff & ((code << 1) | (long)((buffer >> scount) & 1));
+    code     = 0xffff & ((code << 1) | ((buffer >> scount) & 1));
 
     if(scount < 16)
     {
@@ -662,7 +659,7 @@ public class ZPCodec
   public final int decoder(BitContext ctx)
     throws IOException
   {
-    final int ictx = 0xff & ctx.bit;
+    final int ictx = 0xff & ctx.get();
     final int z = aValue + pArray[ictx];
 
     if(z <= fence)
