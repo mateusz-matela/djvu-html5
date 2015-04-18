@@ -56,8 +56,7 @@ import java.util.*;
  * @version $Revision: 1.4 $
  */
 public final class DjVmDir
-  extends DjVuObject
-  implements Cloneable, Codec
+  implements Codec
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -70,8 +69,8 @@ public final class DjVmDir
   private final Hashtable id2file = new Hashtable();
   private final Hashtable name2file = new Hashtable();
   private final Hashtable title2file = new Hashtable();
-  private final Vector files_list = new Vector();
-  private final Vector page2file = new Vector();
+  private final Vector<File> files_list = new Vector<>();
+  private final Vector<File> page2file = new Vector<>();
 
   //~ Constructors -----------------------------------------------------------
 
@@ -83,27 +82,12 @@ public final class DjVmDir
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Creates an instance of DjVmDir with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of DjVmDir.
-   */
-  public static DjVmDir createDjVmDir(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    DjVmDir djVmDir = new DjVmDir();
-    djVmDir.setDjVuOptions(options);
-    return djVmDir;
-  }
-  
-  /**
    * Query if this is image data.
    *
    * @return false
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return false;
   }
@@ -177,23 +161,18 @@ public final class DjVmDir
    *
    * @return the newly created copy
    */
-  public Object clone()
+  public DjVmDir(DjVmDir toCopy)
   {
-    DjVmDir retval = null;
+	  setInitURL(toCopy.getInitURL());
 
-    retval = createDjVmDir(this);
-    retval.setInitURL(getInitURL());
-
-//      xretval.setInitURL(getInitURL());
-    for(Enumeration e = get_files_list().elements(); e.hasMoreElements();)
+    for(File file : toCopy.get_files_list())
     {
       try
       {
-        retval.insert_file((File)((File)e.nextElement()).clone());
+        insert_file(new File(file));
       }
       catch(final IOException ignored) {}
     }
-    return retval;
   }
 
   /**
@@ -232,10 +211,11 @@ public final class DjVmDir
    *
    * @throws IOException if an error occurs
    */
-  public synchronized void decode(final CachedInputStream pool)
+  @Override
+public synchronized void decode(final CachedInputStream pool)
     throws IOException
   {
-    final InputStream str = (CachedInputStream)pool.clone();
+    final CachedInputStream str = new CachedInputStream(pool);
     files_list.setSize(0);
     page2file.setSize(0);
     name2file.clear();
@@ -287,13 +267,13 @@ public final class DjVmDir
       }
 
       final InputStream bs_str =
-        BSInputStream.createBSInputStream(this).init(str);
+        new BSInputStream().init(str);
 
       if(ver > 0)
       {
         for(int i = 0; i < files_list.size(); i++)
         {
-          final File file = (File)files_list.elementAt(i);
+          final File file = files_list.elementAt(i);
           int        b = bs_str.read();
           b           = (b << 8) | bs_str.read();
           b           = (b << 8) | bs_str.read();
@@ -303,7 +283,7 @@ public final class DjVmDir
 
       for(int i = 0; i < files_list.size(); i++)
       {
-        final File file = (File)files_list.elementAt(i);
+        final File file = files_list.elementAt(i);
         file.flags = (byte)bs_str.read();
       }
 
@@ -311,7 +291,7 @@ public final class DjVmDir
       {
         for(int i = 0; i < files_list.size(); i++)
         {
-          final File file    = (File)files_list.elementAt(i);
+          final File file    = files_list.elementAt(i);
           final byte flags_0 = file.flags;
           byte       flags_1 =
             ((flags_0 & File.IS_PAGE_0) != 0)
@@ -368,7 +348,7 @@ public final class DjVmDir
         // Copy names into the files
         for(int i = 0, stringNo = 0; i < files_list.size(); i++)
         {
-          final File file = (File)files_list.elementAt(i);
+          final File file = files_list.elementAt(i);
           file.id = (String)stringList.elementAt(stringNo++);
 
           if((file.flags & File.HAS_NAME) != 0)
@@ -396,7 +376,7 @@ public final class DjVmDir
 
       for(int i = 0; i < files_list.size(); i++)
       {
-        final File file = (File)files_list.elementAt(i);
+        final File file = files_list.elementAt(i);
 
         if(file.is_shared_anno())
         {
@@ -414,7 +394,7 @@ public final class DjVmDir
 
       for(int i = 0; i < files_list.size(); i++)
       {
-        final File file = (File)files_list.elementAt(i);
+        final File file = files_list.elementAt(i);
 
         if(file.is_page())
         {
@@ -426,7 +406,7 @@ public final class DjVmDir
 
       for(int i = 0; i < files_list.size(); i++)
       {
-        final File file = (File)files_list.elementAt(i);
+        final File file = files_list.elementAt(i);
 
         if(file.is_page())
         {
@@ -438,7 +418,7 @@ public final class DjVmDir
       // Generate name2file map
       for(int i = 0; i < files_list.size(); i++)
       {
-        final File file = (File)files_list.elementAt(i);
+        final File file = files_list.elementAt(i);
 
         if(name2file.contains(file.name))
         {
@@ -451,7 +431,7 @@ public final class DjVmDir
       // Generate id2file map
       for(int i = 0; i < files_list.size(); i++)
       {
-        final File file = (File)files_list.elementAt(i);
+        final File file = files_list.elementAt(i);
 
         if(id2file.contains(file.id))
         {
@@ -464,7 +444,7 @@ public final class DjVmDir
       // Generate title2file map
       for(int i = 0; i < files_list.size(); i++)
       {
-        final File file = (File)files_list.elementAt(i);
+        final File file = files_list.elementAt(i);
 
         if((file.title != null) && (file.title.length() > 0))
         {
@@ -488,7 +468,7 @@ public final class DjVmDir
   {
     for(int i = 0; i < files_list.size(); i++)
     {
-      File f = (File)files_list.elementAt(i);
+      File f = files_list.elementAt(i);
 
       if(id.equals(f.id))
       {
@@ -506,7 +486,7 @@ public final class DjVmDir
 
               for(; page < page2file.size(); page++)
               {
-                File xfile = (File)page2file.elementAt(page);
+                File xfile = page2file.elementAt(page);
                 xfile.page_num = page;
               }
 
@@ -547,7 +527,7 @@ public final class DjVmDir
    *
    * @return the vector of DjVmDir.File objects
    */
-  public synchronized Vector get_files_list()
+  public synchronized Vector<File> get_files_list()
   {
     return files_list;
   }
@@ -599,7 +579,7 @@ public final class DjVmDir
 
     for(int i = 0; i < files_list.size(); i++)
     {
-      File frec = (File)files_list.elementAt(i);
+      File frec = files_list.elementAt(i);
 
       if(frec.is_shared_anno())
       {
@@ -688,9 +668,9 @@ public final class DjVmDir
     {
       for(int i = 0; i < files_list.size(); i++)
       {
-        File xfile = (File)files_list.elementAt(i);
+        File xfile = files_list.elementAt(i);
 
-        if(file.is_shared_anno())
+        if(xfile.is_shared_anno())
         {
           throw new IOException("DjVmDir.multi_save2");
         }
@@ -708,7 +688,7 @@ public final class DjVmDir
 
       for(int i = 0; i < files_list.size(); i++)
       {
-        File xfile = (File)files_list.elementAt(i);
+        File xfile = files_list.elementAt(i);
 
         if(xfile.equals(file))
         {
@@ -725,7 +705,7 @@ public final class DjVmDir
 
       for(int i = page_num; i < page2file.size(); i++)
       {
-        File xfile = (File)page2file.elementAt(i);
+        File xfile = page2file.elementAt(i);
         xfile.page_num = i;
       }
     }
@@ -751,7 +731,7 @@ public final class DjVmDir
   public synchronized boolean is_indirect()
   {
     return ((files_list.size() > 0) && (files_list.elementAt(0) != null)
-    && (((File)files_list.elementAt(0)).offset == 0));
+    && (files_list.elementAt(0).offset == 0));
   }
 
   /**
@@ -775,9 +755,9 @@ public final class DjVmDir
    */
   public synchronized File page_to_file(int page_num)
   {
-    return (File)((page_num < page2file.size())
+    return (page_num < page2file.size())
     ? page2file.elementAt(page_num)
-    : null);
+    : null;
   }
 
   /**
@@ -796,7 +776,7 @@ public final class DjVmDir
     // First see, if the name is unique
     for(int i = 0; i < files_list.size(); i++)
     {
-      File file = (File)files_list.elementAt(i);
+      File file = files_list.elementAt(i);
 
       if(!id.equals(file.id) && name.equals(file.name))
       {
@@ -832,7 +812,7 @@ public final class DjVmDir
   {
     for(int i = 0; i < files_list.size(); i++)
     {
-      File file = (File)files_list.elementAt(i);
+      File file = files_list.elementAt(i);
 
       if(!id.equals(file.id) && title.equals(file.title))
       {
@@ -875,7 +855,6 @@ public final class DjVmDir
    * @version $Revision: 1.4 $
    */
   public static final class File
-    implements Cloneable
   {
     //~ Static fields/initializers -------------------------------------------
 
@@ -951,21 +930,17 @@ public final class DjVmDir
     //~ Methods --------------------------------------------------------------
 
     /**
-     * Create a clone of this object
-     *
-     * @return the newly created clone
+     * Create a copy of given object
      */
-    public Object clone()
+    public File(File toCopy)
     {
-      Cloneable retval = null;
-
-      try
-      {
-        retval = (File)super.clone();
-      }
-      catch(final CloneNotSupportedException ignored) {}
-
-      return retval;
+      this.offset = toCopy.offset;
+      this.size = toCopy.size;
+      this.id = toCopy.id;
+      this.name = toCopy.name;
+      this.title = toCopy.title;
+      this.flags = toCopy.flags;
+      this.page_num = toCopy.page_num;
     }
 
     /**

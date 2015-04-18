@@ -56,8 +56,7 @@ import java.util.*;
  * @version $Revision: 1.7 $
  */
 public class Palette
-  extends DjVuObject
-  implements Cloneable, Codec
+  implements Codec
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -93,7 +92,8 @@ public class Palette
    *
    * @return true
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return true;
   }  
@@ -116,60 +116,6 @@ public class Palette
   public GPixel[] getPalette()
   {
     return palette;
-  }
-
-  /**
-   * Creates an instance of Palette with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of Palette.
-   */
-  public static Palette createPalette(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    Palette palette2 = new Palette();
-    palette2.setDjVuOptions(options);
-    return palette2;
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public Object clone()
-  {
-    //verbose("1. Palette clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (Palette)super.clone();
-
-      final GPixel[] oldPalette = getPalette();
-
-      if(oldPalette != null)
-      {
-        final GPixel[] palette = new GPixel[oldPalette.length];
-        ((Palette)retval).setPalette(palette);
-
-        for(int i = 0; i < palette.length;)
-        {
-          palette[i] = (GPixel)oldPalette[i].clone();
-        }
-      }
-
-      if(colordata != null)
-      {
-        ((Palette)retval).colordata = (int[])colordata.clone();
-      }
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //verbose("2. Palette clone");
-    return retval;
   }
 
   /**
@@ -238,10 +184,11 @@ public class Palette
    *
    * @throws IOException DOCUMENT ME!
    */
-  public void decode(final CachedInputStream pool)
+  @Override
+public void decode(final CachedInputStream pool)
     throws IOException
   {
-    final InputStream input = (CachedInputStream)pool.clone();
+    final CachedInputStream input = new CachedInputStream(pool);
 
     // Make sure that everything is clear
     pmap.clear();
@@ -290,7 +237,7 @@ public class Palette
       colordata = new int[datasize];
 
       final InputStream bsinput =
-        BSInputStream.createBSInputStream(this).init(input);
+        new BSInputStream().init(input);
 
       for(int d = 0; d < datasize; d++)
       {

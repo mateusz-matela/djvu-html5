@@ -48,6 +48,8 @@ package com.lizardtech.djvu;
 import java.io.*;
 import java.util.*;
 
+import com.lizardtech.djvu.outline.Bookmark;
+
 
 /**
  * This class represents indirect, bundled, and single page DjVu documents.
@@ -56,8 +58,7 @@ import java.util.*;
  * @version $Revision: 1.23 $
  */
 public class Document
-  extends DjVuObject
-  implements Cloneable, Runnable
+  implements Runnable
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -79,7 +80,7 @@ public class Document
   private String status=null;
   
   /** A map of saved pages for this document. */
-  protected Hashtable cachedInputStreamMap = new Hashtable();
+  private Hashtable<String, CachedInputStream> cachedInputStreamMap = new Hashtable<>();
 
   // The bookmark Codec for this document.
   private Codec    bookmark = null;
@@ -105,7 +106,7 @@ public class Document
    */
   public Document()
   {
-    dir = DjVmDir.createDjVmDir(this);
+    dir = new DjVmDir();
   }
 
   /**
@@ -146,22 +147,6 @@ public class Document
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Creates an instance of Document with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of Document.
-   */
-  public static Document createDocument(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    Document document = new Document();
-    document.setDjVuOptions(options);
-    return document;
-  }
-
-  /**
    * Set the flag to allow or disallow asynchronous operations.
    *
    * @param value true if asynchronous operations should be used.
@@ -192,7 +177,7 @@ public class Document
 
     if(retval == null)
     {
-      bookmark = retval = getDjVuOptions().createBookmark();
+      bookmark = retval = new Bookmark();
     }
 
     return retval;
@@ -259,7 +244,7 @@ public class Document
         String url=getDjVmDir().getInitURL();
         if(url != null)
         {
-          url=url(url,id);
+          url=Utils.url(url,id);
         }
         page = createDjVuPage(url);
         page.setAsync(isAsync());
@@ -298,36 +283,6 @@ public class Document
   public int getPageno(final String url)
   {
     return getDjVmDir().getPageno(url);
-  }
-
-  /**
-   * Create a copy by value.
-   *
-   * @return the newly created copy
-   */
-  public Object clone()
-  {
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (Document)super.clone();
-
-      final DjVmDir djvmDir = getDjVmDir();
-
-      if(djvmDir != null)
-      {
-        ((Document)retval).dir = (DjVmDir)djvmDir.clone();
-      }
-
-      if(cachedInputStreamMap != null)
-      {
-        ((Document)retval).cachedInputStreamMap = (Hashtable)cachedInputStreamMap.clone();
-      }
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    return retval;
   }
 
   /**
@@ -393,20 +348,20 @@ public class Document
           throw new IOException("Requested data outside document");
         }
 
-        final String fileurl = url(initURL, id);
-        pool = CachedInputStream.createCachedInputStream(this).init(fileurl,false);
+        final String fileurl = Utils.url(initURL, id);
+        pool = new CachedInputStream().init(fileurl,false);
         insert_file(pool, DjVmDir.File.INCLUDE, id, id);
       }
       else if(this.pool != null)
       {
-        pool = (CachedInputStream)this.pool.clone();
+        pool = new CachedInputStream(this.pool);
         pool.skip(f.offset);
         pool.setSize(f.size);
         cachedInputStreamMap.put(id, pool);
       }
       else if(initURL != null)
       {
-        pool = CachedInputStream.createCachedInputStream(this).init(url(initURL, id), false);
+        pool = new CachedInputStream().init(Utils.url(initURL, id), false);
         cachedInputStreamMap.put(id, pool);
       }
     }
@@ -519,7 +474,7 @@ public class Document
   {
     final DjVmDir.File file =
       getDjVmDir().createFile(name, id, title, file_type);
-    final CachedInputStream pool = CachedInputStream.createCachedInputStream(this).init(input);
+    final CachedInputStream pool = new CachedInputStream().init(input);
     insert_file(file, pool, pos);
   }
 
@@ -632,7 +587,7 @@ public class Document
       throw new IOException("No duplicates allowed.");
     }
 
-    CachedInputStream input = (CachedInputStream)data_pool.clone();
+    CachedInputStream input = new CachedInputStream(data_pool);
     final int                  b0 = input.read();
     final int                  b1 = input.read();
     final int                  b2 = input.read();
@@ -678,8 +633,8 @@ public class Document
         Thread thread=prefetchThread;  
         if((thread == null)||!prefetchThread.isAlive())
         {
-          final Document runnable = createDocument(new DjVuObject());
-          runnable.parentRef      = createWeakReference(this, this);
+          final Document runnable = new Document();
+          runnable.parentRef      = this;
           runnable.dir            = getDjVmDir();
           runnable.cachedInputStreamMap    = cachedInputStreamMap;
           runnable.prefetchVector = prefetchVector;
@@ -700,7 +655,7 @@ public class Document
   public void read(final InputStream input)
     throws IOException
   {
-    read(CachedInputStream.createCachedInputStream(this).init(input));
+    read(new CachedInputStream().init(input));
   }
 
   /**
@@ -716,24 +671,24 @@ public class Document
     final DjVmDir djvmDir = getDjVmDir();
     djvmDir.setInitURL(null);
 
-    final Enumeration iff = data_pool.getIFFChunks();
+    final Enumeration<CachedInputStream> iff = data_pool.getIFFChunks();
     if((iff == null)||!iff.hasMoreElements())
     {
         throw new IOException("EOF");
     }
-    final CachedInputStream formStream=(CachedInputStream)iff.nextElement();
+    final CachedInputStream formStream = iff.nextElement();
     if(! "FORM:DJVM".equals(formStream.getName()))
     {
       insert_file(data_pool, DjVmDir.File.PAGE, "noname.djvu", "noname.djvu");
       return;
     }
 
-    final Enumeration formIff=formStream.getIFFChunks();
+    final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
     if((formIff != null)&&!formIff.hasMoreElements())
     {
       throw new IOException("EOF");
     }
-    final CachedInputStream dirmStream=(CachedInputStream)formIff.nextElement();
+    final CachedInputStream dirmStream = formIff.nextElement();
     if(! "DIRM".equals(dirmStream.getName()))
     {
       throw new IOException("No DIRM chunk");
@@ -756,7 +711,7 @@ public class Document
     {
       final DjVmDir.File f = (DjVmDir.File)files_list.elementAt(i);
 
-      final CachedInputStream filePool = (CachedInputStream)data_pool.clone();
+      final CachedInputStream filePool = new CachedInputStream(data_pool);
       filePool.skip(f.offset);
       filePool.setSize(f.size);
       cachedInputStreamMap.put(
@@ -778,7 +733,7 @@ public class Document
         }
         if(name.equals("NAVM"))
         {
-          bookmark.decode(CachedInputStream.createCachedInputStream(this).init(BSInputStream.createBSInputStream(this).init(chunk)));
+          bookmark.decode(new CachedInputStream().init(new BSInputStream().init(chunk)));
         }
       }
     }
@@ -798,7 +753,7 @@ public class Document
     final DjVmDir djvmDir = getDjVmDir();
     djvmDir.setInitURL(null);
 
-    final CachedInputStream pool = CachedInputStream.createCachedInputStream(this).init(url,false);
+    final CachedInputStream pool = new CachedInputStream().init(url,false);
     final Enumeration iff = pool.getIFFChunks();
     if((iff == null)||!iff.hasMoreElements())
     {
@@ -857,8 +812,8 @@ public class Document
             if("NAVM".equals(chunk.getName()))
             {
               bookmark.decode(
-                CachedInputStream.createCachedInputStream(this).init(
-                BSInputStream.createBSInputStream(this).init(chunk)));
+                new CachedInputStream().init(
+                new BSInputStream().init(chunk)));
             }
           }
         }
@@ -881,23 +836,24 @@ public class Document
       final Thread current = Thread.currentThread();
       int priority=MIN_PRIORITY;
       String last=null;
+	final Object value = parentRef;
 //    logError("queue + "+this);
-      while( ((Document)getFromReference(parentRef)).prefetchThread == current)
+      while( ((Document)value).prefetchThread == current)
       {
         String id = null;
 
         synchronized(prefetchVector)
         {
-          if(((Document)getFromReference(parentRef)).prefetchCount == 0)
+		if(((Document)parentRef).prefetchCount == 0)
           {
             try
             {
               prefetchVector.wait(5000L);
             }
             catch(final Throwable ignored) {}
-            if(((Document)getFromReference(parentRef)).prefetchCount == 0)
+            if(((Document)parentRef).prefetchCount == 0)
             {
-              ((Document)getFromReference(parentRef)).prefetchThread = null;
+			((Document)parentRef).prefetchThread = null;
 
               break;
             }
@@ -910,7 +866,7 @@ public class Document
             {
               id=(String)prefetch.lastElement();
               prefetch.removeElementAt(prefetch.size() - 1);
-              ((Document)getFromReference(parentRef)).prefetchCount--;
+              ((Document)parentRef).prefetchCount--;
               if(id != null)
               {
                 if(id.equals(last))
@@ -923,7 +879,7 @@ public class Document
                   {
                     final Vector q=prefetchVector[priority+1];
                     q.addElement(id);
-                    ((Document)getFromReference(parentRef)).prefetchCount++;
+                    ((Document)parentRef).prefetchCount++;
                     id=null;
                     try { prefetchVector.wait(200L); } catch(final Throwable ignored) {}
                   }
@@ -938,9 +894,9 @@ public class Document
           last=id;
           try
           {
-            ((Document)getFromReference(parentRef)).setStatus("fetching "+id);
-            ((Document)getFromReference(parentRef)).get_data(id).prefetchWait();
-            ((Document)getFromReference(parentRef)).setStatus("fetched "+id);
+			((Document)parentRef).setStatus("fetching "+id);
+            ((Document)parentRef).get_data(id).prefetchWait();
+            ((Document)parentRef).setStatus("fetched "+id);
           }
           catch(final Throwable ignored) {}
         }
@@ -979,7 +935,6 @@ public class Document
 
     DocumentDjVuPage(final String url)
     {
-      setDjVuOptions(Document.this.getDjVuOptions());
       this.url=url;
     }
 

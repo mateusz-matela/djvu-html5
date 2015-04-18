@@ -45,9 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.Vector;
-
 
 /**
  * DOCUMENT ME!
@@ -56,8 +53,6 @@ import java.util.Vector;
  * @version $Revision: 1.4 $
  */
 class JB2Shape
-  extends DjVuObject
-  implements Cloneable
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -94,22 +89,6 @@ class JB2Shape
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Creates an instance of JB2Shape with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of JB2Shape.
-   */
-  public static JB2Shape createJB2Shape(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    JB2Shape jb2Shape = new JB2Shape();
-    jb2Shape.setDjVuOptions(options);
-    return jb2Shape;
-  }
-
-  /**
    * DOCUMENT ME!
    *
    * @return DOCUMENT ME!
@@ -124,36 +103,12 @@ class JB2Shape
    *
    * @return DOCUMENT ME!
    */
-  public Object clone()
+  public JB2Shape(JB2Shape toCopy)
   {
-    //verbose("1. JB2Shape clone");
-    JB2Shape retval = duplicate();
-
-    if(retval.bits != null)
-    {
-      retval.bits = (GBitmap)retval.bits.clone();
-    }
-
-    //verbose("2. JB2Shape clone");
-    return retval;
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public JB2Shape duplicate()
-  {
-    Cloneable retval = this;
-
-    try
-    {
-      retval = (JB2Shape)super.clone();
-    }
-    catch(CloneNotSupportedException ignored) {}
-
-    return (JB2Shape)retval;
+	  if (toCopy.bits != null)
+		  this.bits = new GBitmap(toCopy.bits);
+	  this.parent = toCopy.parent;
+	  this.userdata = toCopy.userdata;
   }
 
   /**

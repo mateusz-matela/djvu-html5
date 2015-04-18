@@ -55,8 +55,7 @@ import java.io.*;
  * @version $Revision: 1.5 $
  */
 public class DjVuInfo
-  extends DjVuObject
-  implements Cloneable, Codec
+  implements Codec
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -92,45 +91,23 @@ public class DjVuInfo
    *
    * @return false
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return false;
   }  
 
   /**
-   * Creates an instance of DjVuInfo with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of DjVuInfo.
+   * Create a copy of given object.
    */
-  public static DjVuInfo createDjVuInfo(final DjVuInterface ref)
+  public DjVuInfo(DjVuInfo toCopy)
   {
-    final DjVuOptions options = ref.getDjVuOptions();
-    DjVuInfo djVuInfo = new DjVuInfo();
-    djVuInfo.setDjVuOptions(options);
-    return djVuInfo;
-  }
-
-  /**
-   * Create a clone of this object.
-   *
-   * @return the newly created object
-   */
-  public Object clone()
-  {
-    //verbose("1. DjVuInfo clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (DjVuInfo)super.clone();
-    }
-    catch(CloneNotSupportedException ignored) {}
-
-    //verbose("2. DjVuInfo clone");
-    return retval;
+    this.gamma = toCopy.gamma;
+    this.dpi = toCopy.dpi;
+    this.flags = toCopy.flags;
+    this.height = toCopy.height;
+    this.version = toCopy.version;
+    this.width = toCopy.width;
   }
 
   /**
@@ -140,10 +117,11 @@ public class DjVuInfo
    *
    * @throws IOException if an error occurs
    */
-  public void decode(final CachedInputStream pool)
+  @Override
+public void decode(final CachedInputStream pool)
     throws IOException
   {
-    final InputStream bs     = (CachedInputStream)pool.clone();
+    final InputStream bs     = new CachedInputStream(pool);
     final byte[]      buffer = new byte[10];
     final int         size   = bs.read(buffer);
 
@@ -176,7 +154,7 @@ public class DjVuInfo
     {
       if((buffer[8] >= 3) || (buffer[8] <= 50))
       {
-        gamma = 0.1D * (double)(buffer[8]);
+        gamma = 0.1D * (buffer[8]);
       }
     }
 

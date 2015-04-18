@@ -45,10 +45,6 @@
 //
 package com.lizardtech.djvu.anno;
 
-import com.lizardtech.djvu.*;
-import java.util.*;
-
-
 /**
  * Implements text map areas.
  */
@@ -74,25 +70,10 @@ public class Text
    *
    * @return MAP_TEXT
    */
-  public int getMapType()
+  @Override
+public int getMapType()
   {
     return MAP_TEXT;
-  }
-
-  /**
-   * Creates an instance of Text with the options interherited from the
-   * specified reference.
-   * 
-   * @param ref Object to interherit DjVuOptions from.
-   * 
-   * @return a new instance of Text.
-   */
-  public static Text createText(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    Text text = new Text();
-    text.setDjVuOptions(options);
-    return text;
   }
 
   /**

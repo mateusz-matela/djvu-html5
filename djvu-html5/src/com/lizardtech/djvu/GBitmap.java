@@ -45,9 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-
-
 /**
  * This class represents bitonal and gray scale pixel images.
  *
@@ -56,7 +53,6 @@ import java.io.*;
  */
 public class GBitmap
   extends GMap
-  implements Cloneable
 {
     
   static Object [] rampRefArray=new Object[256];
@@ -95,6 +91,16 @@ public class GBitmap
       super(1,0,0,0,true);
   }
 
+  public GBitmap(GBitmap toCopy)
+  {
+	  super(toCopy);
+	  this.grays = toCopy.grays;
+	  this.border = toCopy.border;
+	  this.rowSize = toCopy.rowSize;
+	  this.maxRowOffset = toCopy.maxRowOffset;
+	  this.ramp = toCopy.ramp;
+  }
+
   //~ Methods ----------------------------------------------------------------
 
   public GPixel [] getRamp()
@@ -103,7 +109,7 @@ public class GBitmap
     if(retval == null)
     {
       final int grays=this.grays;
-      retval=(GPixel[])getFromReference(rampRefArray[grays]);
+      retval=(GPixel[])rampRefArray[grays];
       if(retval == null)
       {
         retval = new GPixel[256];
@@ -126,29 +132,13 @@ public class GBitmap
         {
           retval[i++]=GPixel.BLACK;            
         }
-        rampRefArray[grays]=createSoftReference(retval,null);
+        rampRefArray[grays]=null;
       }
       ramp=retval;
     }
     return retval;
   }
   
-  /**
-   * Creates an instance of GBitmap with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of GBitmap.
-   */
-  public static GBitmap createGBitmap(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    GBitmap gBitmap = new GBitmap();
-    gBitmap.setDjVuOptions(options);
-    return gBitmap;
-  }
-
   /**
    * Query a pixel as boolean
    *
@@ -356,7 +346,8 @@ public class GBitmap
    *
    * @return the offset to the pixel data
    */
-  public final int rowOffset(final int row)
+  @Override
+public final int rowOffset(final int row)
   {
     return (row * rowSize) + border;
   }
@@ -366,7 +357,8 @@ public class GBitmap
    *
    * @return bytes per row
    */
-  public final int getRowSize()
+  @Override
+public final int getRowSize()
   {
     return rowSize;
   }
@@ -399,7 +391,8 @@ public class GBitmap
    * @param dx horizontal position to insert at
    * @param dy vertical position to insert at
    */
-  public void fill(
+  @Override
+public void fill(
     final GMap ref,    
     final int  dx,
     final int  dy)
@@ -463,7 +456,7 @@ public class GBitmap
           // or bitonal blits it really doesn't matter.
           do
           {
-            final int g=(int)data[offset]+(int)bit.data[refOffset++];
+            final int g=data[offset]+bit.data[refOffset++];
             data[offset++] = (g<grays)?(byte)g:gmax;
           }
           while(--i > 0);
@@ -666,7 +659,8 @@ public class GBitmap
    *
    * @return the translated image
    */
-  public GMap translate(
+  @Override
+public GMap translate(
     final int dx,
     final int dy,
     GMap      retval)
@@ -718,7 +712,8 @@ public class GBitmap
   /**
    * Convert the pixel to 24 bit color.
    */
-  public GPixel ramp(final GPixelReference ref)
+  @Override
+public GPixel ramp(final GPixelReference ref)
   {
     return getRamp()[ref.getBlue()];
   }
@@ -728,7 +723,8 @@ public class GBitmap
    *
    * @return true if not 24 bit color
    */
-  public boolean isRampNeeded()
+  @Override
+public boolean isRampNeeded()
   {
     return true;
   }

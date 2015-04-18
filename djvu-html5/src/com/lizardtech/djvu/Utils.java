@@ -43,88 +43,51 @@
 //C- hire under US copyright laws.
 //C- -------------------------------------------------------------------
 //
-package com.lizardtech.djvu.anno;
-
-import com.lizardtech.djvu.*;
-import java.util.*;
+package com.lizardtech.djvu;
 
 
-/**
- * Implements elliptical map areas. The only supported types of border are
- * NO_BORDER, XOR_BORDER and SOLID_BORDER. Its contents can not be
- * highlighted either.
- */
-public class Oval
-  extends Rect
+public final class Utils
 {
-  //~ Static fields/initializers ---------------------------------------------
 
-  /** Tag name for this map type. */
-  public static final String OVAL_TAG = "oval";
-
-  //~ Constructors -----------------------------------------------------------
-
-  /**
-   * Creates a new Oval object.
-   */
-  public Oval() {}
+	private Utils() {
+		
+	}
 
   //~ Methods ----------------------------------------------------------------
 
-  /**
-   * Query the map type.
-   *
-   * @return MAP_OVAL
-   */
-  public int getMapType()
+  public static void printStackTrace(final Throwable exp)
   {
-    return MAP_OVAL;
+    exp.printStackTrace(DjVuOptions.err);    
+  }
+  
+  public static void verbose(final String message)
+  {
+    DjVuOptions.out.println(message);    
+  }
+  
+  public static void logError(final String message)
+  {
+    DjVuOptions.err.println(message);    
+  }
+  
+  public static void checkLockTime(final long lockTime,final long maxTime)
+  {
+    final long t=System.currentTimeMillis()-lockTime;
+    if(t > maxTime)
+    {
+        try { 
+            throw new Exception("lock held for "+t+" ms"); 
+        } catch(final Throwable exp) {
+            exp.printStackTrace(DjVuOptions.err);
+        }
+    }
   }
 
   /**
-   * Returns "oval"
-   *
-   * @return QVAL_TAG
+   * Primitive replacement for {@code new java.net.URL(URL context, String spec)}
    */
-  public String getShapeName()
-  {
-    return OVAL_TAG;
-  }
-
-  /**
-   * Checks if the object is OK.
-   *
-   * @return true if valid
-   */
-  public boolean isValid()
-  {
-    final int    border_type  = getBorderType();
-    final int hilite_color = getHiliteColor();
-
-    return ((border_type == NO_BORDER) || (border_type == SOLID_BORDER)
-    || (border_type != XOR_BORDER))
-    && (hilite_color == 0xffffffff)
-    && super.isValid();
-  }
-
-  /**
-   * Check if the point is inside the hyperlink area
-   *
-   * @param x horizontal position
-   * @param y vertical position
-   *
-   * @return true if the given point is inside the hyperlink area
-   */
-  public boolean contains(
-    final int x,
-    final int y)
-  {
-    final GRect  bounds = getBounds();
-    final double a   = (double)bounds.width() / (double)2;
-    final double b   = (double)bounds.height() / (double)2;
-    final double xb0 = (a + (double)(x - bounds.xmin)) * b;
-    final double ya0 = (b + (double)(y - bounds.ymin)) * a;
-
-    return ((xb0 * xb0) + (ya0 * ya0)) <= ((double)a * (double)b);
+  protected static String url(String context, String spec) {
+	  String base = context.replaceFirst("/[^/]+$", "/");
+	  return base + spec;
   }
 }

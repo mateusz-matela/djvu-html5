@@ -57,7 +57,6 @@ import java.io.*;
  * @version $Revision: 1.4 $
  */
 public interface Codec
-        extends DjVuInterface
 {
   //~ Methods ----------------------------------------------------------------
 

@@ -68,7 +68,7 @@ public class JB2Image
 
   /** DOCUMENT ME! */
   public int     width = 0;
-  private Vector blits = new Vector();
+  private Vector<JB2Blit> blits = new Vector<>();
 
   //~ Constructors -----------------------------------------------------------
 
@@ -80,44 +80,18 @@ public class JB2Image
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Creates an instance of JB2Image with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of JB2Image.
-   */
-  public static JB2Image createJB2Image(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    JB2Image jb2Image = new JB2Image();
-    jb2Image.setDjVuOptions(options);
-    return jb2Image;
-  }
-
-  /**
    * DOCUMENT ME!
    *
    * @return DOCUMENT ME!
    */
-  public Object clone()
+  public JB2Image(JB2Image toCopy)
   {
-    //DjVuOptions.out.println("1. JB2Image clone");
-    Cloneable retval = (JB2Image)super.clone();
-
-    if(this.blits != null)
-    {
-      final Vector blits = new Vector();
-      ((JB2Image)retval).blits = blits;
-
-      for(Enumeration e = this.blits.elements(); e.hasMoreElements();)
-      {
-        blits.addElement(((JB2Blit)e.nextElement()).clone());
-      }
-    }
-
-    //DjVuOptions.out.println("2. JB2Image clone");
-    return retval;
+	  super(toCopy);
+	  this.reproduce_old_bug = toCopy.reproduce_old_bug;
+	  this.height = toCopy.height;
+	  this.width = toCopy.width;
+	  for (JB2Blit item : blits)
+		  this.blits.add(item);
   }
 
   /**
@@ -164,7 +138,7 @@ public class JB2Image
     final int     swidth  = ((width + subsample) - 1) / subsample;
     final int     sheight = ((height + subsample) - 1) / subsample;
     final int     border  = (((swidth + align) - 1) & ~(align - 1)) - swidth;
-    final GBitmap bm      = GBitmap.createGBitmap(this);
+    final GBitmap bm      = new GBitmap();
     bm.init(sheight, swidth, border);
     bm.setGrays(1 + (subsample * subsample));
 
@@ -258,7 +232,7 @@ public class JB2Image
     final int     swidth  = rect.width();
     final int     sheight = rect.height();
     final int     border  = (((swidth + align) - 1) & ~(align - 1)) - swidth;
-    final GBitmap bm      = GBitmap.createGBitmap(this);
+    final GBitmap bm      = new GBitmap();
     bm.init(sheight, swidth, border);
     bm.setGrays(1 + (subsample * subsample));
 
@@ -298,7 +272,7 @@ public class JB2Image
     final int    subsample,
     final int    align,
     final int    dispy,
-    final Vector components)
+    final Vector<Number> components)
   {
     if(components == null)
     {
@@ -315,7 +289,7 @@ public class JB2Image
     final int     swidth  = rect.width();
     final int     sheight = rect.height();
     final int     border  = (((swidth + align) - 1) & ~(align - 1)) - swidth;
-    final GBitmap bm      = GBitmap.createGBitmap(this);
+    final GBitmap bm      = new GBitmap();
     bm.init(sheight, swidth, border);
     bm.setGrays(1 + (subsample * subsample));
 
@@ -350,7 +324,7 @@ public class JB2Image
    */
   public final JB2Blit get_blit(int blitno)
   {
-    return (JB2Blit)blits.elementAt(blitno);
+    return blits.elementAt(blitno);
   }
 
   /**
@@ -395,14 +369,15 @@ public class JB2Image
    *
    * @throws IOException DOCUMENT ME!
    */
-  public void decode(
+  @Override
+public void decode(
     final InputStream gbs,
     final JB2Dict     zdict)
     throws IOException
   {
     init();
 
-    final JB2Decode codec = JB2Decode.createJB2Decode(this);
+    final JB2Decode codec = new JB2Decode();
     codec.init(gbs, zdict);
     codec.code(this);
   }
@@ -410,7 +385,8 @@ public class JB2Image
   /**
    * DOCUMENT ME!
    */
-  public void init()
+  @Override
+public void init()
   {
     width = height = 0;
     blits.setSize(0);

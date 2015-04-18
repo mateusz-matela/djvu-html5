@@ -45,10 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.Vector;
-
-
 /**
  * This class represent a JB2 encoded shape.
  *
@@ -56,7 +52,6 @@ import java.util.Vector;
  * @version $Revision: 1.5 $
  */
 class JB2Blit
-  implements Cloneable
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -118,24 +113,11 @@ class JB2Blit
     this.bottom -= (short)bottom;
   }
 
-  /**
-   * DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public Object clone()
+  JB2Blit (JB2Blit toCopy)
   {
-    //DjVuOptions.out.println("1. JB2Blit clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (JB2Blit)super.clone();
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //DjVuOptions.out.println("2. JB2Blit clone");
-    return retval;
+    this.shapeno = toCopy.shapeno;
+    this.bottom = toCopy.bottom;
+    this.left = toCopy.left;
   }
 
   /**

@@ -49,6 +49,9 @@ import java.beans.*;
 import java.io.*;
 import java.util.*;
 
+import com.lizardtech.djvu.anno.DjVuAnno;
+import com.lizardtech.djvu.text.DjVuText;
+
 
 /**
  * <p>
@@ -106,7 +109,6 @@ import java.util.*;
  * </pre>
  */
 public class DjVuPage
-  extends DjVuObject
   implements Runnable
 {
   //~ Static fields/initializers ---------------------------------------------
@@ -385,7 +387,7 @@ public class DjVuPage
         GPixmap ipm = bgIWPixmap.getPixmap(1, xrect, null);
         pm = (retval != null)
           ? retval
-          : GPixmap.createGPixmap(this);
+          : new GPixmap();
         pm.downsample43(ipm, nrect);
       }
       else
@@ -409,7 +411,7 @@ public class DjVuPage
         final GPixmap ipm = bgIWPixmap.getPixmap(po2, xrect, null);
         pm = (retval != null)
           ? retval
-          : GPixmap.createGPixmap(this);
+          : new GPixmap();
         ps.scale(xrect, ipm, rect, pm);
       }
 
@@ -549,7 +551,7 @@ public class DjVuPage
       retval.properties.put(progressiveLock, count);
       retval.properties.put(
         "rect",
-        segment.clone());
+        new GRect(segment));
       retval.properties.put(
         "subsample",
         new Integer(subsample));
@@ -609,7 +611,7 @@ public class DjVuPage
    */
   public GPixmap getFgPixmap()
   {
-    GPixmap fgPixmap = (GPixmap)getFromReference(fgPixmapReference);
+	GPixmap fgPixmap = (GPixmap)fgPixmapReference;
 
     if(fgPixmap == null)
     {
@@ -619,12 +621,12 @@ public class DjVuPage
       {
         synchronized(fgIWPixmapLock)
         {
-          fgPixmap = (GPixmap)getFromReference(fgPixmapReference);
+		fgPixmap = (GPixmap)fgPixmapReference;
 
           if(fgPixmap == null)
           {
             fgPixmap            = fgIWPixmap.getPixmap();
-            fgPixmapReference   = createSoftReference(fgPixmap, fgPixmap);
+            fgPixmapReference   = fgPixmap;
           }
         }
       }
@@ -714,22 +716,6 @@ public class DjVuPage
   }
 
   /**
-   * Creates an instance of DjVuPage with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of DjVuPage.
-   */
-  public static DjVuPage createDjVuPage(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    DjVuPage djVuPage = new DjVuPage();
-    djVuPage.setDjVuOptions(options);
-    return djVuPage;
-  }
-
-  /**
    * Called to create an instance of GPixmapScaler
    *
    * @param inw Source image width.
@@ -759,7 +745,7 @@ public class DjVuPage
     throws IOException
   {
     this.url = url;
-    decode(CachedInputStream.createCachedInputStream(this).init(url,false));
+    decode(new CachedInputStream().init(url,false));
   }
 
   /**
@@ -791,12 +777,12 @@ public class DjVuPage
     {
       synchronized(queueVector)
       {
-        queueVector[getPriority()].addElement(createWeakReference(this, this));
+        queueVector[getPriority()].addElement(this);
         queueCount++;
 
         if(queueThread == null)
         {
-          queueThread = new Thread(createDjVuPage(this));
+          queueThread = new Thread(new DjVuPage());
           queueThread.start();
         }
         else
@@ -922,7 +908,7 @@ public class DjVuPage
     if(rect.isEmpty())
     {
       return (retval == null)
-      ? (GPixmap.createGPixmap(this))
+      ? (new GPixmap())
       : retval.init(0, 0, null);
     }
 
@@ -931,7 +917,7 @@ public class DjVuPage
     {
       if(bg == null)
       {
-          bg=(retval == null)?GPixmap.createGPixmap(this):retval;
+          bg=(retval == null)?new GPixmap():retval;
           bg.init(
            rect.height(), 
            rect.width(), GPixel.WHITE);
@@ -966,7 +952,7 @@ public class DjVuPage
   {
     if(rect.isEmpty())
     {
-      return GBitmap.createGBitmap(this);
+      return new GBitmap();
     }
 
     final DjVuInfo info = getInfo();
@@ -1124,7 +1110,7 @@ public class DjVuPage
             if(queue.size() > 0)
             {
               final Object ref=queue.lastElement();
-              page = (DjVuPage)getFromReference(ref);
+              page = (DjVuPage)ref;
               queue.removeElementAt(queue.size() - 1);
               queueCount--;
               if(page != null)
@@ -1152,7 +1138,7 @@ public class DjVuPage
         }
         catch(final Throwable exp)
         {
-          printStackTrace(exp);
+          Utils.printStackTrace(exp);
         }
       }
     }
@@ -1247,7 +1233,7 @@ public class DjVuPage
         }
 
         GPixmap colors =
-          GPixmap.createGPixmap(this).init(
+          new GPixmap().init(
             1,
             fgPalette.size(),
             null);
@@ -1314,7 +1300,7 @@ public class DjVuPage
           }
 
           //        bm   = getBitmap(comprect, subsample, 1);
-          bm = GBitmap.createGBitmap(this);
+          bm = new GBitmap();
           bm.init(
             comprect.height(),
             comprect.width(),
@@ -1455,7 +1441,7 @@ public class DjVuPage
     final long    used = run.totalMemory() - run.freeMemory();
     final long    t    = System.currentTimeMillis() - startTime;
     final String  d    = "000" + t;
-    verbose(
+    Utils.verbose(
       id + ". chkid=" + chkid + ",memory=" + used + " time=" + (t / 1000L)
       + "." + d.substring(d.length() - 3));
 
@@ -1486,12 +1472,12 @@ public class DjVuPage
       {
         addCodecChunk(
           fgJb2DictLock,
-          JB2Dict.createJB2Dict(this),
+          new JB2Dict(),
           iff);
 
         if(sjbzChunk != null)
         {
-          parseSjbz((CachedInputStream)sjbzChunk.clone());
+          parseSjbz(new CachedInputStream(sjbzChunk));
         }
       }
       else if(chkid.equals("ANTa")||chkid.equals("ANTz"))
@@ -1502,7 +1488,7 @@ public class DjVuPage
 
           if(anno == null)
           {
-            anno = getDjVuOptions().createDjVuAnno();
+            anno = new DjVuAnno();
           }
 
           addCodecChunk(annoLock, anno, iff);
@@ -1537,14 +1523,14 @@ public class DjVuPage
 
           addCodecChunk(
             fgPaletteLock,
-            Palette.createPalette(this),
+            new Palette(),
             iff);
         }
         else if(chkid.equals("TXTa")||chkid.equals("TXTz"))
         {
           addCodecChunk(
             textLock,
-            getDjVuOptions().createDjVuText(),
+            new DjVuText(),
             iff);
         }
         else if(chkid.equals("Sjbz"))
@@ -1581,7 +1567,7 @@ public class DjVuPage
 
             if(bgIWPixmap == null)
             {
-              bgIWPixmap = IWPixmap.createIWPixmap(this);
+              bgIWPixmap = new IWPixmap();
             }
 
             addCodecChunk(bgIWPixmapLock, bgIWPixmap, iff);
@@ -1597,7 +1583,7 @@ public class DjVuPage
 
           addCodecChunk(
             fgIWPixmapLock,
-            IWPixmap.createIWPixmap(this),
+            new IWPixmap(),
             iff);
         }
         else if(chkid.equals("BG2k"))
@@ -1676,7 +1662,7 @@ public class DjVuPage
 
       addCodecChunk(
         infoLock,
-        DjVuInfo.createDjVuInfo(this),
+        new DjVuInfo(),
         chunk);
       clean(chunk.getName());
     }
@@ -1730,7 +1716,7 @@ public class DjVuPage
   {
     sjbzChunk = null;
 
-    final JB2Image fgJb2 = JB2Image.createJB2Image(this);
+    final JB2Image fgJb2 = new JB2Image();
 
     final DjVuInfo info = getInfo();
 
@@ -1762,7 +1748,7 @@ public class DjVuPage
   CachedInputStream createCachedInputStream(final String id)
     throws IOException
   {
-    return CachedInputStream.createCachedInputStream(this).init(url(url, id), false);
+    return new CachedInputStream().init(Utils.url(url, id), false);
   }
 
   /**
@@ -1868,7 +1854,7 @@ public class DjVuPage
           decodeChunks(formStream.getIFFChunks(), false);
           if(sjbzChunk != null)
           {
-            parseSjbz((CachedInputStream)sjbzChunk.clone());
+            parseSjbz(new CachedInputStream(sjbzChunk));
             clean("Sjbz");
           }
           final IWPixmap bgIWPixmap = getBgIWPixmap();
@@ -1896,9 +1882,9 @@ public class DjVuPage
             {
               if(img44 != null)
               {
-                img44 = IWPixmap.createIWPixmap(this);
+                img44 = new IWPixmap();
                 img44.decode(chunk);
-                final DjVuInfo info = DjVuInfo.createDjVuInfo(this);
+                final DjVuInfo info = new DjVuInfo();
                 info.width    = img44.getWidth();
                 info.height   = img44.getHeight();
                 info.dpi      = 100;
@@ -1918,7 +1904,7 @@ public class DjVuPage
 
                 if(anno == null)
                 {
-                  anno = getDjVuOptions().createDjVuAnno();
+                  anno = new DjVuAnno();
                 }
                 addCodecChunk(annoLock, anno, chunk);
               }
@@ -1948,7 +1934,7 @@ public class DjVuPage
     catch(final Throwable exp)
     {
       caughtException = exp;
-      printStackTrace(exp);
+      Utils.printStackTrace(exp);
     }
     lockWait = false;
 
@@ -1979,7 +1965,7 @@ public class DjVuPage
     }
     catch(final Throwable exp)
     {
-      printStackTrace(exp);
+      Utils.printStackTrace(exp);
     }
   }
 }

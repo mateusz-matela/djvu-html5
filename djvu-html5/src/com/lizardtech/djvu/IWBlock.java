@@ -45,13 +45,13 @@
 //
 package com.lizardtech.djvu;
 
+import java.util.Arrays;
+
 
 /**
  *  This class represents structured wavelette data.
  */
 final class IWBlock
-  extends DjVuObject
-  implements Cloneable
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -131,7 +131,7 @@ final class IWBlock
   //~ Instance fields --------------------------------------------------------
 
   /** the data structure for this block */
-  protected short[][][] pdata = {null, null, null, null};
+  private short[][][] pdata = {null, null, null, null};
 
   //~ Constructors -----------------------------------------------------------
 
@@ -142,59 +142,26 @@ final class IWBlock
 
   //~ Methods ----------------------------------------------------------------
 
-  /**
-   * Creates an instance of IWBlock with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of IWBlock.
-   */
-  static IWBlock createIWBlock(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    IWBlock iwBlock = new IWBlock();
-    iwBlock.setDjVuOptions(options);
-    return iwBlock;
-  }
 
   /**
    * Create a copy by value.
-   *
-   * @return the newly created copy
    */
-  public Object clone()
+  public IWBlock(IWBlock toCopy)
   {
-    //verbose("1. IWBlock clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (IWBlock)super.clone();
-
-      final short[][][] pdata = (short[][][])this.pdata.clone();
-      ((IWBlock) retval).pdata = pdata;
-
-      for(int i = 0; i < pdata.length; i++)
-      {
-        if(pdata[i] != null)
-        {
-          pdata[i] = (short[][])pdata[i].clone();
-
-          for(int j = 0; j < pdata[i].length; j++)
-          {
-            if(pdata[i][j] != null)
-            {
-              pdata[i][j] = (short[])pdata[i][j].clone();
-            }
-          }
-        }
-      }
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //verbose("2. IWBlock clone");
-    return retval;
+    short[][][] sss = toCopy.pdata;
+	this.pdata = Arrays.copyOf(sss, sss.length);
+    for (int i = 0; i < sss.length; i++) {
+		short[][] ss = sss[i];
+		if (ss == null)
+			continue;
+		this.pdata[i] = Arrays.copyOf(ss, ss.length);
+		for (int j = 0; j < ss.length; j++) {
+			short[] s = ss[j];
+			if (s == null)
+				continue;
+			this.pdata[i][j] = Arrays.copyOf(s, s.length);
+		}
+	}
   }
 
   /**

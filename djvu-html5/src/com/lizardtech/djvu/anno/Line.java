@@ -83,22 +83,6 @@ public class Line
   }
 
   /**
-   * Creates an instance of Text with the options interherited from the
-   * specified reference.
-   * 
-   * @param ref Object to interherit DjVuOptions from.
-   * 
-   * @return a new instance of Text.
-   */
-  public static Line createLine(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    Line line = new Line();
-    line.setDjVuOptions(options);
-    return line;
-  }
-
-  /**
    * Returns "line"
    *
    * @return LINE_TAG

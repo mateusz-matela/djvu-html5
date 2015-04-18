@@ -56,8 +56,7 @@ import java.util.*;
  * streaming data.
  */
 public class IFFEnumeration
-  extends DjVuObject
-  implements Enumeration
+  implements Enumeration<CachedInputStream>
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -90,22 +89,6 @@ public class IFFEnumeration
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Creates an instance of IFFEnumeration with the options interherited from
-   * the specified reference.
-   * 
-   * @param ref Object to interherit DjVuOptions from.
-   * 
-   * @return a new instance of IFFEnumeration.
-   */
-  public static IFFEnumeration createIFFEnumeration(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    IFFEnumeration iffEnumeration = new IFFEnumeration();
-    iffEnumeration.setDjVuOptions(options);
-    return iffEnumeration;
-  }
-
-  /**
    * Initialize this stream.
    *
    * @param input data source
@@ -114,7 +97,7 @@ public class IFFEnumeration
    */
   public IFFEnumeration init(final CachedInputStream input)
   {
-    this.input = (CachedInputStream)input.clone();
+    this.input = new CachedInputStream(input);
     return this;
   }
 
@@ -123,7 +106,8 @@ public class IFFEnumeration
    *
    * @return True if there is another CachedInputStream available.
    */
-  public boolean hasMoreElements()
+  @Override
+public boolean hasMoreElements()
   {
     if(next == null)
     {
@@ -147,7 +131,8 @@ public class IFFEnumeration
    * 
    * @throws NoSuchElementException if there are no more streams available.
    */
-  public Object nextElement()
+  @Override
+public CachedInputStream nextElement()
     throws NoSuchElementException
   {
     if(!hasMoreElements())

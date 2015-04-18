@@ -162,16 +162,6 @@ public final long longValue()
   }
 
   /**
-   * Set the primative value from a long.
-   *
-   * @param value long value.
-   */
-  public final void set(long value)
-  {
-    this.value = (int)value;
-  }
-
-  /**
    * Set the primative value from an int.
    *
    * @param value int value.
@@ -179,15 +169,5 @@ public final long longValue()
   public final void set(int value)
   {
     this.value = value;
-  }
-
-  /**
-   * Set the primative value from a Number.
-   *
-   * @param value Number object.
-   */
-  public final void set(Number value)
-  {
-    this.value = value.intValue();
   }
 }

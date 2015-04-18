@@ -56,7 +56,6 @@ import java.util.*;
  * @version $Revision: 1.6 $
  */
 public abstract class JB2Codec
-  extends DjVuObject
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -576,11 +575,11 @@ public abstract class JB2Codec
       {
         if(!encoding)
         {
-          jshp = JB2Shape.createJB2Shape(this).init(-1);
+          jshp = new JB2Shape().init(-1);
         }
         else if(jshp == null)
         {
-          jshp = JB2Shape.createJB2Shape(this);
+          jshp = new JB2Shape();
         }
 
         bm = jshp.getGBitmap();
@@ -664,7 +663,7 @@ public abstract class JB2Codec
         {
           if(xjshp != null)
           {
-            jshp = jshp.duplicate();
+            jshp = new JB2Shape(jshp);
           }
 
           shapeno = jim.add_shape(jshp);
@@ -725,14 +724,14 @@ public abstract class JB2Codec
         if(!encoding)
         {
           jshp =
-            JB2Shape.createJB2Shape(this).init(
+            new JB2Shape().init(
               (rectype == NON_MARK_DATA)
               ? (-2)
               : (-1));
         }
         else if(jshp == null)
         {
-          jshp = JB2Shape.createJB2Shape(this);
+          jshp = new JB2Shape();
         }
 
         bm = jshp.getGBitmap();
@@ -965,7 +964,7 @@ public abstract class JB2Codec
         {
           if(xjshp != null)
           {
-            jshp = jshp.duplicate();
+            jshp = new JB2Shape(jshp);
           }
 
           shapeno = jim.add_shape(jshp);
@@ -982,7 +981,7 @@ public abstract class JB2Codec
 
             if(xjblt != null)
             {
-              jblt = (JB2Blit)xjblt.clone();
+              jblt = new JB2Blit(xjblt);
             }
 
             jim.add_blit(jblt);
@@ -994,7 +993,7 @@ public abstract class JB2Codec
         {
           if(xjblt != null)
           {
-            jblt = (JB2Blit)xjblt.clone();
+            jblt = new JB2Blit(xjblt);
           }
 
           jim.add_blit(jblt);

@@ -138,22 +138,6 @@ public class Poly
   }
 
   /**
-   * Creates an instance of Poly with the options interherited from the
-   * specified reference.
-   * 
-   * @param ref Object to interherit DjVuOptions from.
-   * 
-   * @return a new instance of Poly.
-   */
-  public static Poly createPoly(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    Poly poly = new Poly();
-    poly.setDjVuOptions(options);
-    return poly;
-  }
-
-  /**
    * Query if the poly is closed
    *
    * @return true if closed or does not have valid data.

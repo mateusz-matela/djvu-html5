@@ -46,6 +46,7 @@
 package com.lizardtech.djvu;
 
 import java.io.*;
+import java.util.Arrays;
 
 
 /**
@@ -56,11 +57,9 @@ import java.io.*;
  */
 public final class BSInputStream
   extends InputStream
-  implements DjVuInterface
 {
   //~ Static fields/initializers ---------------------------------------------
 
-  private static final int MINBLOCK = 10;
   private static final int MAXBLOCK = 4096;
 
   // Sorting tresholds
@@ -100,9 +99,6 @@ public final class BSInputStream
   /** The size of the data read. */
   private int size=0;
 
-  // Object for holding the DjVuOptions
-  private final DjVuObject djvuObject = new DjVuObject();
-
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -117,49 +113,13 @@ public final class BSInputStream
    *
    * @throws IOException if an error occures
    */
-  public BSInputStream(final InputStream input)
+  public BSInputStream(final CachedInputStream input)
     throws IOException
   {
     init(input);
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Set the DjVuOptions used by this object.
-   *
-   * @param options The DjVuOptions used by this object.
-   */
-  public void setDjVuOptions(final DjVuOptions options)
-  {
-    djvuObject.setDjVuOptions(options);
-  }
-
-  /**
-   * Query the DjVuOptions used by this object.
-   *
-   * @return the DjVuOptions used by this object.
-   */
-  public DjVuOptions getDjVuOptions()
-  {
-    return djvuObject.getDjVuOptions();
-  }
-
-  /**
-   * Creates an instance of BSInputStream with the options interherited from
-   * the specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of BSInputStream.
-   */
-  public static BSInputStream createBSInputStream(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    BSInputStream bsInputStream = new BSInputStream();
-    bsInputStream.setDjVuOptions(options);
-    return bsInputStream;
-  }
 
   /**
    * Called to decode data.
@@ -210,7 +170,7 @@ public final class BSInputStream
     }
 
     // Prepare Quasi MTF
-    byte[] mtf = (byte[])MTF.clone();
+    byte[] mtf = Arrays.copyOf(MTF, MTF.length);
 
     int[]  freq = new int[FREQMAX];
 
@@ -404,14 +364,14 @@ public final class BSInputStream
     // Fill count buffer
     for(int i = 0; i < markerpos; i++)
     {
-      byte c = (byte)data[i];
+      byte c = data[i];
       pos[i] = (c << 24) | (count[0xff & c] & 0xffffff);
       count[0xff & c]++;
     }
 
     for(int i = markerpos + 1; i < size; i++)
     {
-      byte c = (byte)data[i];
+      byte c = data[i];
       pos[i] = (c << 24) | (count[0xff & c] & 0xffffff);
       count[0xff & c]++;
     }
@@ -434,7 +394,7 @@ public final class BSInputStream
     {
       int  n       = pos[j];
       byte c = (byte)(pos[j] >> 24);
-      data[--last]   = (byte)c;
+      data[--last]   = c;
       j              = count[0xff & c] + (n & 0xffffff);
     }
 
@@ -464,10 +424,10 @@ public final class BSInputStream
    *
    * @throws IOException if an error occurs
    */
-  public BSInputStream init(final InputStream input)
+  public BSInputStream init(final CachedInputStream input)
     throws IOException
   {
-    zp = ZPCodec.createZPCodec(this).init(input);
+    zp = new ZPCodec().init(input);
 
     for(int i = 0; i < ctx.length;)
     {
@@ -488,7 +448,8 @@ public final class BSInputStream
    *
    * @throws IOException if an error occurs
    */
-  public int read(
+  @Override
+public int read(
     byte[] buffer,
     int    offset,
     int    sz)
@@ -547,7 +508,8 @@ public final class BSInputStream
    *
    * @throws IOException if an error occurs
    */
-  public int read()
+  @Override
+public int read()
     throws IOException
   {
     byte[] buffer = new byte[1];

@@ -46,6 +46,8 @@
 package com.lizardtech.djvu.text;
 
 import com.lizardtech.djvu.*;
+import com.lizardtech.djvu.InputStream;
+
 import java.io.*;
 import java.util.*;
 
@@ -70,7 +72,6 @@ import java.util.*;
  * </p>
  */
 public class DjVuText
-  extends DjVuObject
   implements Codec
 {
   //~ Static fields/initializers ---------------------------------------------
@@ -170,22 +171,6 @@ public class DjVuText
   public DjVuText() {}
 
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Creates an instance of DjVuInfo with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of DjVuInfo.
-   */
-  public static DjVuText createDjVuText(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    DjVuText djVuText = new DjVuText();
-    djVuText.setDjVuOptions(options);
-    return djVuText;
-  }
 
   /**
    * Query if this is image data.
@@ -289,8 +274,8 @@ public class DjVuText
   {
     if("TXTz".equals(input.getName()))
     {
-      input=CachedInputStream.createCachedInputStream(this).init(
-              BSInputStream.createBSInputStream(this).init(input));
+      input=new CachedInputStream().init(
+              new BSInputStream().init(input));
       input.setName("TXTa");
     }
     // Read text

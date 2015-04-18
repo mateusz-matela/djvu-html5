@@ -46,8 +46,6 @@
 package com.lizardtech.djvu;
 
 import java.io.*;
-import java.util.*;
-
 
 /**
  * DOCUMENT ME!
@@ -76,22 +74,6 @@ public class JB2Decode
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Creates an instance of JB2Decode with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of JB2Decode.
-   */
-  public static JB2Decode createJB2Decode(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    JB2Decode jb2Decode = new JB2Decode();
-    jb2Decode.setDjVuOptions(options);
-    return jb2Decode;
-  }
 
   /**
    * DOCUMENT ME!

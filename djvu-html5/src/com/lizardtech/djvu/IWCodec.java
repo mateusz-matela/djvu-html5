@@ -49,7 +49,6 @@ import java.io.IOException;
 
 
 final class IWCodec
-  extends DjVuObject
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -121,22 +120,6 @@ final class IWCodec
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Creates an instance of IWCodec with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of IWCodec.
-   */
-  public static IWCodec createIWCodec(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    IWCodec iwCodec = new IWCodec();
-    iwCodec.setDjVuOptions(options);
-    return iwCodec;
-  }
 
   /**
    * DOCUMENT ME!
@@ -517,7 +500,7 @@ final class IWCodec
     int[] q    = iw_quant;
     int   qidx = 0;
 
-    for(int j = 0; i < 4; j++)
+    for(int j = 0; j < 4; j++)
     {
       quant_lo[i++] = q[qidx++];
     }

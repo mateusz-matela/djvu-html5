@@ -443,8 +443,8 @@ class GPixmapScaler
     {
       if((xshift > 0) || (yshift > 0))
       {
-        p1   = GPixmap.createGPixmap(output).init(1, bufw, null);
-        p2   = GPixmap.createGPixmap(output).init(2, bufw, null);
+        p1   = new GPixmap().init(1, bufw, null);
+        p2   = new GPixmap().init(2, bufw, null);
         l1   = l2 = -1;
       }
 

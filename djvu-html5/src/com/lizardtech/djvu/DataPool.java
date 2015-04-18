@@ -59,7 +59,6 @@ import java.util.*;
  * @version $Revision: 1.13 $
  */
 public class DataPool
-  extends DjVuObject
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -113,22 +112,6 @@ public class DataPool
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Creates an instance of DataPool with the options interherited from the
-   * specified reference.
-   * 
-   * @param ref Object to interherit DjVuOptions from.
-   * 
-   * @return a new instance of DataPool.
-   */
-  public static DataPool createDataPool(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    DataPool dataPool = new DataPool();
-    dataPool.setDjVuOptions(options);
-    return dataPool;
-  }
-
-  /**
    * Initialize this map to read the specified URL. If a cached DataPool for this 
    * URL exists, it will be returned.
    * 
@@ -142,13 +125,13 @@ public class DataPool
     DataPool retval=this;
     if(url != null)
     {
-      retval=(DataPool)getFromReference(cache.get(url));
+      retval=(DataPool)cache.get(url);
       if(retval == null)
       {
         retval=this;
         cache.put(
           url,
-          createSoftReference(this, this));
+          this);
       }
     }
     return retval;
@@ -202,7 +185,6 @@ public class DataPool
         {
           return (byte[])block;
         }
-        block=getFromReference(block);
         if(block != null)
         {
           if(read && (cacheAccessArray[cacheAccessIndex%cacheAccessArray.length] != block))
@@ -282,7 +264,7 @@ public class DataPool
             }
             catch(final IOException exp)
             {
-              printStackTrace(exp);
+              Utils.printStackTrace(exp);
               if(input != null)
               {
                 try
@@ -325,7 +307,7 @@ public class DataPool
           }
           catch(final Throwable exp)
           {
-            printStackTrace(exp);
+            Utils.printStackTrace(exp);
             if(rangeAccepted&&(++retry < 10))
             {
               try
@@ -372,7 +354,7 @@ public class DataPool
         }
         if(rangeAccepted&&(index > 0))
         {
-          buffer.setElementAt(createSoftReference(retval, retval), index);
+		buffer.setElementAt(retval, index);
           cacheCreatedArray[cacheCreatedIndex++%cacheCreatedArray.length]=retval;
         }
         else

@@ -53,8 +53,6 @@ package com.lizardtech.djvu;
  * @version $Revision: 1.6 $
  */
 public class GRect
-  extends DjVuObject
-  implements Cloneable
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -131,23 +129,11 @@ public class GRect
   }
 
   /**
-   * Create a clone of this rectangle.
-   *
-   * @return the newly created copy
+   * Create a copy of given rectangle.
    */
-  public Object clone()
+  public GRect(GRect toCopy)
   {
-    //verbose("1. GRect clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (GRect)super.clone();
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //verbose("2. GRect clone");
-    return retval;
+	  this(toCopy.xmin, toCopy.ymin, toCopy.xmax - toCopy.xmin, toCopy.ymax - toCopy.ymin);
   }
 
   /**
@@ -186,7 +172,8 @@ public class GRect
    *
    * @return true if all the edges are equal
    */
-  public boolean equals(final Object ref)
+  @Override
+public boolean equals(final Object ref)
   {
     if(ref instanceof GRect)
     {

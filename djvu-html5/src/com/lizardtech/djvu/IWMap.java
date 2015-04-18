@@ -50,8 +50,6 @@ package com.lizardtech.djvu;
  *  This class represents structured wavelette data.
  */
 final class IWMap
-  extends DjVuObject
-  implements Cloneable
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -160,7 +158,7 @@ final class IWMap
 
     if((z < b) || (z > e))
     {
-      logError(
+    	Utils.logError(
         "(_IWCoeff::backward_filter) Out of bounds [b<=z<=e]");
     }
 
@@ -246,50 +244,6 @@ final class IWMap
       int x = bb;
       p[pidx + n] += x;
     }
-  }
-
-  /**
-   * Creates an instance of IWMap with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of IWMap.
-   */
-  public static IWMap createIWMap(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    IWMap iwMap = new IWMap();
-    iwMap.setDjVuOptions(options);
-    return iwMap;
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public Object clone()
-  {
-    //verbose("1. IWMap clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (IWMap)super.clone();
-
-      final IWBlock[] blocks = (IWBlock[])this.blocks.clone();
-      ((IWMap)retval).blocks = blocks;
-
-      for(int i = 0; i < nb; i++)
-      {
-        blocks[i] = (IWBlock)blocks[i].clone();
-      }
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //verbose("2. IWMap clone");
-    return retval;
   }
 
   /**
@@ -466,8 +420,8 @@ final class IWMap
     }
 
     int r = 1;
-    needed[nlevel]   = (GRect)rect.clone();
-    recomp[nlevel]   = (GRect)rect.clone();
+    needed[nlevel]   = new GRect(rect);
+    recomp[nlevel]   = new GRect(rect);
 
     for(int i = nlevel - 1; i >= 0; i--)
     {
@@ -573,7 +527,7 @@ final class IWMap
       r >>= 1;
     }
 
-    GRect nrect = (GRect)rect.clone();
+    GRect nrect = new GRect(rect);
     nrect.translate(-work.xmin, -work.ymin);
 
     for(
@@ -623,7 +577,7 @@ final class IWMap
 
     for(int i = 0; i < nb; i++)
     {
-      blocks[i] = IWBlock.createIWBlock(this);
+      blocks[i] = new IWBlock();
     }
 
     return this;

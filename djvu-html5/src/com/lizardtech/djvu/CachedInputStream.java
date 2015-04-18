@@ -57,7 +57,6 @@ import java.util.*;
  */
 public class CachedInputStream
   extends InputStream
-  implements DjVuInterface, Cloneable
 {
     //~ Instance fields ------------------------------------------------------
 
@@ -79,9 +78,6 @@ public class CachedInputStream
     // The data block currently being read
     private byte block[]=null;
     
-    // Object for holding the DjVuOptions
-    private DjVuObject djvuObject = new DjVuObject();
-
     // We can assign a name to this Stream
     private String name=null;
 
@@ -94,44 +90,15 @@ public class CachedInputStream
     {
     }
 
-    //~ Methods --------------------------------------------------------------
-
-  /**
-   * Creates an instance of CachedInputStream with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of CachedInputStream.
-   */
-  public static CachedInputStream createCachedInputStream(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    CachedInputStream cachedInputStream = new CachedInputStream();
-    cachedInputStream.setDjVuOptions(options);
-    return cachedInputStream;
-  }
-
-  /**
-   * Set the DjVuOptions used by this object.
-   *
-   * @param options The DjVuOptions used by this object.
-   */
-  public void setDjVuOptions(final DjVuOptions options)
-  {
-    djvuObject.setDjVuOptions(options);
-  }
-
-  /**
-   * Query the DjVuOptions used by this object.
-   *
-   * @return the DjVuOptions used by this object.
-   */
-  public DjVuOptions getDjVuOptions()
-  {
-    return djvuObject.getDjVuOptions();
-  }
-
+    public CachedInputStream(CachedInputStream toCopy) {
+    	this.buffer = toCopy.buffer;
+    	this.markOffset = toCopy.markOffset;
+    	this.offset = toCopy.offset;
+    	this.endOffset = toCopy.endOffset;
+    	this.blockIndex = toCopy.blockIndex;
+    	this.block = toCopy.block;
+    	this.name = toCopy.name;
+    }
 
     /**
      * Create an a new CachedInputStream.
@@ -142,7 +109,7 @@ public class CachedInputStream
      */
     public CachedInputStream createCachedInputStream(int size)
     {
-      final CachedInputStream retval=(CachedInputStream)this.clone();
+      final CachedInputStream retval=new CachedInputStream(this);
       retval.setSize(size);
       return retval;
     }
@@ -174,7 +141,7 @@ public class CachedInputStream
      */
     public CachedInputStream init(final String url,final boolean prefetch)
     {
-      return init(DataPool.createDataPool(this).init(url),0, Integer.MAX_VALUE);
+      return init(new DataPool().init(url),0, Integer.MAX_VALUE);
     }
     
     /**
@@ -193,24 +160,7 @@ public class CachedInputStream
       }
       else
       {
-        return init(DataPool.createDataPool(this).init(input),0, Integer.MAX_VALUE);
-      }
-    }
-    
-    /**
-     * Create a copy of this stream which will referes to the same DataPool
-     * 
-     * @return the newly created copy
-     */
-    public Object clone()
-    {
-      try
-      {
-        return super.clone();
-      }
-      catch(final CloneNotSupportedException ignored)
-      {
-        return null;
+        return init(new DataPool().init(input),0, Integer.MAX_VALUE);
       }
     }
 
@@ -235,7 +185,7 @@ public class CachedInputStream
     public synchronized void setSize(final int size)
     {
       final long endOffset=offset+size;
-      if(endOffset < (long)this.endOffset)
+      if(endOffset < this.endOffset)
       {
         this.endOffset=(int)endOffset;
       }
@@ -246,7 +196,8 @@ public class CachedInputStream
      *
      * @return number of buffered bytes
      */
-    public int available()
+    @Override
+	public int available()
     {
       final int position = buffer.getCurrentSize();
       final int retval=(position < endOffset)?position:endOffset;
@@ -258,7 +209,8 @@ public class CachedInputStream
      *
      * @param readLimit ignored
      */
-    public void mark(int readLimit)
+    @Override
+	public void mark(int readLimit)
     {
       markOffset = offset;
     }
@@ -278,7 +230,8 @@ public class CachedInputStream
      *
      * @return next byte
      */
-    public int read()
+    @Override
+	public int read()
     {
       int retval=-1;
       final int index=offset/DataPool.BLOCKSIZE;
@@ -308,7 +261,8 @@ public class CachedInputStream
      *
      * @return number of bytes read
      */
-    public int read(
+    @Override
+	public int read(
       final byte[] b,
       final int    off,
       int          len)
@@ -347,7 +301,8 @@ public class CachedInputStream
      *
      * @return number of bytes read
      */
-    public int read(byte [] b)
+    @Override
+	public int read(byte [] b)
     {
       for(int remaining=b.length;remaining > 0;)
       {
@@ -411,7 +366,8 @@ public class CachedInputStream
      *
      * @throws IOException if an error occurs
      */
-    public void reset()
+    @Override
+	public void reset()
       throws IOException
     {
       offset = markOffset;
@@ -424,10 +380,11 @@ public class CachedInputStream
      *
      * @return number of bytes actually skipped
      */
-    public long skip(final long n)
+    @Override
+	public long skip(final long n)
     {
       final int endOffset=getEndOffset();
-      int retval=((long)endOffset <= n+(long)offset)?(endOffset-offset):(int)n;
+      int retval=(endOffset <= n+offset)?(endOffset-offset):(int)n;
       if(retval > 0)
       {
         offset+=retval;
@@ -560,12 +517,12 @@ public class CachedInputStream
    *
    * @return an Enumeration of CachedInputStream or null.
    */
-  public Enumeration getIFFChunks()
+  public Enumeration<CachedInputStream> getIFFChunks()
   {
     IFFEnumeration retval=null;
     if ((name == null)||(name.length() != 4))
     {
-      retval=IFFEnumeration.createIFFEnumeration(this).init(this);
+      retval=new IFFEnumeration().init(this);
     }
     return retval;
   }

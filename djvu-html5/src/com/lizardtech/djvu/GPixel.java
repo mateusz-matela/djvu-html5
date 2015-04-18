@@ -52,7 +52,6 @@ package com.lizardtech.djvu;
  * @version $Revision: 1.7 $
  */
 public class GPixel
-  implements Cloneable
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -167,23 +166,11 @@ public class GPixel
   }
 
   /**
-   * Create a clone of this pixel.
-   *
-   * @return the cloned pixel
+   * Create a copy of this pixel.
    */
-  public Object clone()
+  public GPixel(GPixel toCopy)
   {
-    //DjVuOptions.out.println("1. GPixel clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (GPixel)super.clone();
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //DjVuOptions.out.println("2. GPixel clone");
-    return retval;
+    this(toCopy.blue, toCopy.green, toCopy.red);
   }
 
   /**
@@ -193,7 +180,8 @@ public class GPixel
    *
    * @return true if red, green, and blue values are all equal
    */
-  public final boolean equals(Object object)
+  @Override
+public final boolean equals(Object object)
   {
     if(!(object instanceof GPixel))
     {
@@ -273,7 +261,8 @@ public class GPixel
    *
    * @return hashCode of 0xffRRGGBB
    */
-  public int hashCode()
+  @Override
+public int hashCode()
   {
     return 0xff000000 | (getRed() << 16) | (getGreen() << 8) | getBlue();
   }

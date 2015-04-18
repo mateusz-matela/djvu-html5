@@ -108,7 +108,6 @@ import com.lizardtech.djvu.*;
  * </p>
  */
 public class Rect
-  extends DjVuObject
   implements Hyperlink
 {
   //~ Static fields/initializers ---------------------------------------------
@@ -665,22 +664,6 @@ public class Rect
   public boolean isVisible()
   {
     return visible||(isBorderAlwaysVisible()&&!isPushpin());
-  }
-
-  /**
-   * Creates an instance of Rect with the options interherited from the
-   * specified reference.
-   * 
-   * @param ref Object to interherit DjVuOptions from.
-   * 
-   * @return a new instance of Rect.
-   */
-  public static Rect createRect(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    Rect rect = new Rect();
-    rect.setDjVuOptions(options);
-    return rect;
   }
 
   /**

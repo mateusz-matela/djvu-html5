@@ -55,7 +55,6 @@ package com.lizardtech.djvu;
  */
 public class GPixmap
   extends GMap
-  implements Cloneable
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -121,22 +120,6 @@ public class GPixmap
   //~ Methods ----------------------------------------------------------------
 
   /**
-   * Creates an instance of GPixmap with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of GPixmap.
-   */
-  public static GPixmap createGPixmap(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    GPixmap gPixmap = new GPixmap();
-    gPixmap.setDjVuOptions(options);
-    return gPixmap;
-  }
-
-  /**
    * Fill the array with color correction constants.
    * 
    * @param gamma color correction subsample
@@ -192,7 +175,7 @@ public class GPixmap
    */
   protected static int [] getMultiplier(final int maxgray)
   {
-    int [] retval=(int[])getFromReference(multiplierRefArray[maxgray]);
+    int [] retval=(int[])multiplierRefArray[maxgray];
     if(retval == null)
     {
       retval = new int[maxgray];
@@ -201,7 +184,7 @@ public class GPixmap
       {
         retval[i] = 0x10000 - ((i << 16) / maxgray);
       }
-      multiplierRefArray[maxgray]=createSoftReference(retval,null);
+      multiplierRefArray[maxgray]=null;
     }
     return retval;
   }
@@ -1258,7 +1241,7 @@ public class GPixmap
       || (retval.columns() != columns())
       || (retval.rows() != rows()))
     {
-      retval = createGPixmap(this).init(
+      retval = new GPixmap().init(
           rows(),
           columns(),
           null);

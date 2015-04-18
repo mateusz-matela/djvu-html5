@@ -45,7 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
 import java.util.*;
 
 
@@ -56,8 +55,6 @@ import java.util.*;
  * @version $Revision: 1.9 $
  */
 public abstract class GMap
-  extends DjVuObject
-  implements Cloneable
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -178,24 +175,20 @@ public abstract class GMap
 
   /**
    * Create a copy of this image.
-   *
-   * @return The newly created copy.
    */
-  public Object clone()
+  public GMap(GMap toCopy)
   {
-    GMap retval = null;
-
-    try
-    {
-      retval = (GMap)super.clone();
-      if(data != null)
-      {
-        retval.data = (byte[])data.clone();
-      }
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    return retval;
+    //this(toCopy.ncolors, toCopy.redOffset, toCopy.greenOffset, toCopy.blueOffset, toCopy.needRamp);
+    this.ncolors = toCopy.ncolors;
+    this.redOffset = toCopy.redOffset;
+    this.greenOffset = toCopy.greenOffset;
+    this.blueOffset = toCopy.blueOffset;
+    this.needRamp = toCopy.needRamp;
+    this.properties.putAll(toCopy.properties);
+    this.ncolumns = toCopy.ncolumns;
+    this.nrows = toCopy.nrows;
+    if (toCopy.data != null)
+    	this.data = Arrays.copyOf(toCopy.data, toCopy.data.length);
   }
 
   /**

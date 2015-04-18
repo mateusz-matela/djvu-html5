@@ -52,7 +52,6 @@ import java.io.*;
  *  This class represents structured wavelette data.
  */
 public class IWPixmap
-  extends DjVuObject
   implements Codec
 {
   //~ Static fields/initializers ---------------------------------------------
@@ -134,22 +133,6 @@ public class IWPixmap
       return true;
   }  
     
-  /**
-   * Creates an instance of IWPixmap with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of IWPixmap.
-   */
-  public static IWPixmap createIWPixmap(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    IWPixmap iwPixmap = new IWPixmap();
-    iwPixmap.setDjVuOptions(options);
-    return iwPixmap;
-  }
-
   /**
    * DOCUMENT ME!
    */
@@ -237,19 +220,19 @@ public class IWPixmap
         crcb_delay = -1;
       }
 
-      ymap     = IWMap.createIWMap(this).init(w, h);
-      ycodec   = IWCodec.createIWCodec(this).init(ymap);
+      ymap     = new IWMap().init(w, h);
+      ycodec   = new IWCodec().init(ymap);
 
       if(crcb_delay >= 0)
       {
-        cbmap     = IWMap.createIWMap(this).init(w, h);
-        crmap     = IWMap.createIWMap(this).init(w, h);
-        cbcodec   = IWCodec.createIWCodec(this).init(cbmap);
-        crcodec   = IWCodec.createIWCodec(this).init(crmap);
+        cbmap     = new IWMap().init(w, h);
+        crmap     = new IWMap().init(w, h);
+        cbcodec   = new IWCodec().init(cbmap);
+        crcodec   = new IWCodec().init(crmap);
       }
     }
 
-    ZPCodec zp = ZPCodec.createZPCodec(this).init(bs);
+    ZPCodec zp = new ZPCodec().init(bs);
 
     for(int flag = 1; (flag != 0) && (cslice < nslices); cslice++)
     {
@@ -307,7 +290,7 @@ public class IWPixmap
 
     // Convert image to RGB
     final GPixmap         ppm   =
-      GPixmap.createGPixmap(this).init(bytes, h, w);
+      new GPixmap().init(bytes, h, w);
     final GPixelReference pixel = ppm.createGPixelReference(0);
 
     for(int i = 0; i < h;)
@@ -351,7 +334,7 @@ public class IWPixmap
 
     if(retval == null)
     {
-      retval = GPixmap.createGPixmap(this);
+      retval = new GPixmap();
     }
 
     final int    w      = rect.width();

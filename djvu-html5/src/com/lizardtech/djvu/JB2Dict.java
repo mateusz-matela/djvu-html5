@@ -56,8 +56,7 @@ import java.util.*;
  * @version $Revision: 1.6 $
  */
 public class JB2Dict
-  extends DjVuObject
-  implements Cloneable, Codec
+  implements Codec
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -68,7 +67,7 @@ public class JB2Dict
   private JB2Dict inherited_dict = null;
 
   /** DOCUMENT ME! */
-  private Vector shapes = new Vector();
+  private Vector<JB2Shape> shapes = new Vector<>();
 
   /** DOCUMENT ME! */
   private int inherited_shapes = 0;
@@ -89,63 +88,33 @@ public class JB2Dict
    *
    * @return false
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return false;
   }  
-
-  /**
-   * Creates an instance of JB2Dict with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of JB2Dict.
-   */
-  public static JB2Dict createJB2Dict(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    JB2Dict jb2Dict = new JB2Dict();
-    jb2Dict.setDjVuOptions(options);
-    return jb2Dict;
-  }
 
   /**
    * DOCUMENT ME!
    *
    * @return DOCUMENT ME!
    */
-  public Object clone()
+  public JB2Dict(JB2Dict toCopy)
   {
-    //verbose("1. JB2Dict clone");
-    Cloneable retval = this;
-
-    try
-    {
-      retval = (JB2Dict)super.clone();
-
-      if(get_inherited_dict() != null)
+	  
+      if(toCopy.get_inherited_dict() != null)
       {
-        ((JB2Dict)retval).set_inherited_dict(
-          (JB2Dict)get_inherited_dict().clone(),
+        set_inherited_dict(new JB2Dict(toCopy.get_inherited_dict()),
           true);
       }
 
-      if(this.shapes != null)
+      if(toCopy.shapes != null)
       {
-        final Vector shapes = new Vector();
-        ((JB2Dict)retval).shapes = shapes;
-
-        for(Enumeration e = this.shapes.elements(); e.hasMoreElements();)
+        for(Enumeration<JB2Shape> e = this.shapes.elements(); e.hasMoreElements();)
         {
-          shapes.addElement(((JB2Shape)e.nextElement()).clone());
+          this.shapes.addElement(new JB2Shape(e.nextElement()));
         }
       }
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //verbose("2. JB2Dict clone");
-    return retval;
   }
 
   /**
@@ -207,11 +176,11 @@ public class JB2Dict
    *
    * @throws IOException DOCUMENT ME!
    */
-  public final void decode(final CachedInputStream pool)
+  @Override
+public final void decode(final CachedInputStream pool)
     throws IOException
   {
-    decode(
-      (CachedInputStream)pool.clone(),
+    decode(new CachedInputStream(pool),
       null);
   }
 
@@ -230,7 +199,7 @@ public class JB2Dict
   {
     init();
 
-    final JB2Decode codec = JB2Decode.createJB2Decode(this);
+    final JB2Decode codec = new JB2Decode();
     codec.init(gbs, zdict);
     codec.code(this);
   }
@@ -250,7 +219,7 @@ public class JB2Dict
 
     if(shapeno >= get_inherited_shapes())
     {
-      retval = (JB2Shape)shapes.elementAt(shapeno - get_inherited_shapes());
+      retval = shapes.elementAt(shapeno - get_inherited_shapes());
     }
     else if(get_inherited_dict() != null)
     {

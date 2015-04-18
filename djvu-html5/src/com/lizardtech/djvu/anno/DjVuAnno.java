@@ -84,7 +84,6 @@ import java.util.*;
  * </p>
  */
 public class DjVuAnno
-  extends DjVuObject
   implements Codec
 {
   //~ Static fields/initializers ---------------------------------------------
@@ -195,26 +194,11 @@ public class DjVuAnno
    *
    * @return false
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return false;
   }  
-
-  /**
-   * Creates an instance of DjVuAnno with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of DjVuAnno.
-   */
-  public static DjVuAnno createDjVuAnno(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    DjVuAnno djVuAnno = new DjVuAnno();
-    djVuAnno.setDjVuOptions(options);
-    return djVuAnno;
-  }
 
   /**
    * Set the horizontal alignment. Allowed values are LEFT, CENTER, RIGHT and
@@ -461,13 +445,14 @@ public class DjVuAnno
    *
    * @throws IOException if an error occures
    */
-  public void decode(CachedInputStream input)
+  @Override
+public void decode(CachedInputStream input)
     throws IOException
   {
     if("ANTz".equals(input.getName()))
     {
-      input=CachedInputStream.createCachedInputStream(this).init(
-              BSInputStream.createBSInputStream(this).init(input));
+      input=new CachedInputStream().init(
+              new BSInputStream().init(input));
       input.setName("ANTa");
     }
     final String raw = input.readFullyUTF();
@@ -490,24 +475,6 @@ public class DjVuAnno
   public long get_bg_color()
   {
     return bg_color;
-  }
-
-  /**
-   * Decodes contents of annotation chunk ANTa. The chunk data is read from
-   * InputStream bs until reaching an end-of-stream marker.
-   *
-   * @param pool Stream to read data from.
-   *
-   * @return The decoded annotations.
-   *
-   * @throws IOException if an error occurs reading the stream.
-   */
-  public DjVuAnno init(final CachedInputStream pool)
-    throws IOException
-  {
-    setRaw(((CachedInputStream)pool.clone()).readFullyUTF());
-
-    return this;
   }
 
   /**
@@ -822,7 +789,7 @@ public class DjVuAnno
                     ((Number)shape.elementAt(1)).intValue(),
                     ((Number)shape.elementAt(2)).intValue(),
                     ((Number)shape.elementAt(3)).intValue());
-                xmap_area = Rect.createRect(this).init(grect);
+                xmap_area = new Rect().init(grect);
               }
               else if(Line.LINE_TAG.equals(shape.getName()))
               {
@@ -830,7 +797,7 @@ public class DjVuAnno
                 final int y0=((Number)shape.elementAt(1)).intValue();
                 final int x1=((Number)shape.elementAt(2)).intValue();
                 final int y1=((Number)shape.elementAt(3)).intValue();
-                xmap_area = Line.createLine(this).init(x0,y0,x1,y1);
+                xmap_area = new Line().init(x0,y0,x1,y1);
               }
               else if(Poly.POLY_TAG.equals(shape.getName()))
               {
@@ -844,8 +811,7 @@ public class DjVuAnno
                   yy[i]   = ((Number)shape.elementAt(j++)).intValue();
                 }
 
-                xmap_area =
-                  Poly.createPoly(this).init(xx, yy, points);
+                xmap_area = new Poly().init(xx, yy, points);
               }
               else if(Oval.OVAL_TAG.equals(shape.getName()))
               {
@@ -855,7 +821,7 @@ public class DjVuAnno
                     ((Number)shape.elementAt(1)).intValue(),
                     ((Number)shape.elementAt(2)).intValue(),
                     ((Number)shape.elementAt(3)).intValue());
-                xmap_area = Oval.createOval(this).init(grect);
+                xmap_area = new Oval().init(grect);
               }
               else if(Text.TEXT_TAG.equals(shape.getName()))
               {
@@ -865,7 +831,7 @@ public class DjVuAnno
                     ((Number)shape.elementAt(1)).intValue(),
                     ((Number)shape.elementAt(2)).intValue(),
                     ((Number)shape.elementAt(3)).intValue());
-                xmap_area = Text.createText(this).init(grect);
+                xmap_area = new Text().init(grect);
               }
             }
 
@@ -1012,7 +978,7 @@ public class DjVuAnno
           }
           catch(final Throwable exp)
           {
-            printStackTrace(exp);
+            Utils.printStackTrace(exp);
           }
         }
       }
@@ -1283,7 +1249,7 @@ public class DjVuAnno
       }
       catch(final Throwable exp)
       {
-        printStackTrace(exp);
+        Utils.printStackTrace(exp);
       }
     }
 
@@ -1408,7 +1374,8 @@ public class DjVuAnno
      *
      * @return the wrapped string.
      */
-    public String toString()
+    @Override
+	public String toString()
     {
       return symbol;
     }

@@ -53,7 +53,6 @@ package com.lizardtech.djvu;
  * @version $Revision: 1.7 $
  */
 public class BitContext
-  implements Cloneable
 {
   //~ Instance fields --------------------------------------------------------
 
@@ -83,27 +82,6 @@ public class BitContext
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Clone this object.
-   *
-   * @return the newly created clone
-   */
-  @Override
-public Object clone()
-  {
-    //DjVuOptions.out.println("1. BitContext clone");
-    Cloneable retval = null;
-
-    try
-    {
-      retval = (BitContext)super.clone();
-    }
-    catch(final CloneNotSupportedException ignored) {}
-
-    //DjVuOptions.out.println("2. BitContext clone");
-    return retval;
-  }
 
   /**
    * Set the byte value.

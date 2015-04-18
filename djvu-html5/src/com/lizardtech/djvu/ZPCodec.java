@@ -51,7 +51,6 @@ import java.io.*;
 // Referenced classes of package com.lizardtech.javadjvu:
 //            BitContext, DjVuStatic
 public class ZPCodec
-  extends DjVuObject
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -397,22 +396,6 @@ public class ZPCodec
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Creates an instance of ZPCodec with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of ZPCodec.
-   */
-  public static ZPCodec createZPCodec(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    ZPCodec zpCodec = new ZPCodec();
-    zpCodec.setDjVuOptions(options);
-    return zpCodec;
-  }
 
   /**
    * DOCUMENT ME!

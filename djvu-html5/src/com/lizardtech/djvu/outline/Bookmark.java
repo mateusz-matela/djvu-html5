@@ -58,15 +58,12 @@ import java.util.*;
  * @version $Revision: 1.8 $
  */
 public class Bookmark
-  implements Codec, DjVuInterface
+  implements Codec
 {
   //~ Instance fields --------------------------------------------------------
 
   // DjVmDir object
   private DjVmDir djvmDir = null;
-
-  // Reference for inheriting DjVuOptions.
-  private DjVuObject djvuObject = new DjVuObject();
 
   // Object: If String relative or blank url.  If Number, page number.
   private Object object = null;
@@ -167,7 +164,7 @@ public class Bookmark
 
         for(Enumeration e = files_list.elements(); e.hasMoreElements();)
         {
-          final Bookmark bookmark = createBookmark(this);
+          final Bookmark bookmark = new Bookmark();
           DjVmDir.File   file = (DjVmDir.File)e.nextElement();
 
           if(file.is_page())
@@ -193,26 +190,6 @@ public class Bookmark
   public DjVmDir getDjVmDir()
   {
     return djvmDir;
-  }
-
-  /**
-   * Set the DjVuOptions used by this object.
-   *
-   * @param options The DjVuOptions used by this object.
-   */
-  public void setDjVuOptions(final DjVuOptions options)
-  {
-    djvuObject.setDjVuOptions(options);
-  }
-
-  /**
-   * Query the DjVuOptions used by this object.
-   *
-   * @return the DjVuOptions used by this object.
-   */
-  public DjVuOptions getDjVuOptions()
-  {
-    return djvuObject.getDjVuOptions();
   }
 
   /**
@@ -279,22 +256,6 @@ public class Bookmark
   public void addElement(final Bookmark child)
   {
     getChildren().addElement(child);
-  }
-
-  /**
-   * Creates an instance of Bookmark with the options interherited from the
-   * specified reference.
-   *
-   * @param ref Object to interherit DjVuOptions from.
-   *
-   * @return a new instance of Bookmark.
-   */
-  public static Bookmark createBookmark(final DjVuInterface ref)
-  {
-    final DjVuOptions options = ref.getDjVuOptions();
-    Bookmark bookmark = new Bookmark();
-    bookmark.setDjVuOptions(options);
-    return bookmark;
   }
 
   /**
@@ -444,7 +405,7 @@ public class Bookmark
   private int readElement(final CachedInputStream input)
     throws IOException
   {
-    final Bookmark bookmark = createBookmark(this);
+    final Bookmark bookmark = new Bookmark();
     int            count = input.read();
 
     if(count < 0)
