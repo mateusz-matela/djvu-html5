@@ -46,6 +46,7 @@
 package com.lizardtech.djvu.text;
 
 import com.lizardtech.djvu.*;
+import com.lizardtech.djvu.ByteArrayOutputStream;
 import com.lizardtech.djvu.InputStream;
 
 import java.io.*;
@@ -177,7 +178,8 @@ public class DjVuText
    *
    * @return false
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return false;
   }
@@ -269,7 +271,8 @@ public class DjVuText
    *
    * @throws IOException if an error occures.
    */
-  public void decode(CachedInputStream input)
+  @Override
+public void decode(CachedInputStream input)
     throws IOException
   {
     if("TXTz".equals(input.getName()))
@@ -719,7 +722,8 @@ public class DjVuText
    *
    * @return the converted string
    */
-  public String toString()
+  @Override
+public String toString()
   {
     return getString(0, textByteArray.length);
   }
@@ -778,7 +782,7 @@ public class DjVuText
   // Returns TRUE, if the 'ch' is a separator, or is punctuation.
   private static boolean isJavaIdentifier(final char value)
   {
-    return Character.isJavaIdentifierPart(value);
+    return Character.isLetterOrDigit(value) || value == '$' || value == '_';
   }
 
   // Returns TRUE, if the 'ch' is a separator, or is punctuation.
@@ -832,7 +836,7 @@ public class DjVuText
   private static boolean isspace(final int value)
   {
     return (value == 0)
-    || (((value & 0xffff) == value) && Character.isWhitespace((char)value));
+    || (((value & 0xffff) == value) && Character.isSpace((char)value));
   }
 
   // Find the next character in a utf8 encoded byte array
@@ -1229,7 +1233,7 @@ public class DjVuText
   {
     final int length = string.length();
 
-    while((pos < length) && !Character.isWhitespace(string.charAt(pos)))
+    while((pos < length) && !Character.isSpace(string.charAt(pos)))
     {
       pos++;
     }
@@ -1840,7 +1844,8 @@ public class DjVuText
   
   private class ByteVector extends ByteArrayOutputStream
   {
-    public int size() { return count; }
+    @Override
+	public int size() { return count; }
     public int getByte(int loc) { return buf[loc]; }
   }
 }

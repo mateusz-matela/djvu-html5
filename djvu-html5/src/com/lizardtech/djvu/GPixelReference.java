@@ -45,9 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
-
 
 /**
  * DOCUMENT ME!
@@ -211,7 +208,8 @@ public final class GPixelReference
    * @param green pixel value
    * @param red pixel value
    */
-  public void setBGR(
+  @Override
+public void setBGR(
     final int blue,
     final int green,
     final int red)
@@ -226,7 +224,8 @@ public final class GPixelReference
    *
    * @param blue pixel value
    */
-  public void setBlue(final byte blue)
+  @Override
+public void setBlue(final byte blue)
   {
     parent.data[offset+blueOffset] = blue;
   }
@@ -236,7 +235,8 @@ public final class GPixelReference
    *
    * @return blue pixel value
    */
-  public byte blueByte()
+  @Override
+public byte blueByte()
   {
     return parent.data[offset+blueOffset];
   }
@@ -314,7 +314,8 @@ public final class GPixelReference
    *
    * @param green pixel value
    */
-  public void setGreen(final byte green)
+  @Override
+public void setGreen(final byte green)
   {
     parent.data[offset + greenOffset] = green;
   }
@@ -324,7 +325,8 @@ public final class GPixelReference
    *
    * @return green pixel value
    */
-  public byte greenByte()
+  @Override
+public byte greenByte()
   {
     return parent.data[offset + greenOffset];
   }
@@ -353,7 +355,8 @@ public final class GPixelReference
    *
    * @param red pixel value
    */
-  public void setRed(final byte red)
+  @Override
+public void setRed(final byte red)
   {
     parent.data[offset + redOffset] = red;
   }
@@ -363,7 +366,8 @@ public final class GPixelReference
    *
    * @return red pixel value
    */
-  public byte redByte()
+  @Override
+public byte redByte()
   {
     return parent.data[offset + redOffset];
   }

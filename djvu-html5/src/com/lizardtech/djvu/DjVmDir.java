@@ -66,9 +66,9 @@ public final class DjVmDir
   //~ Instance fields --------------------------------------------------------
 
   private String initURL = null;
-  private final Hashtable id2file = new Hashtable();
-  private final Hashtable name2file = new Hashtable();
-  private final Hashtable title2file = new Hashtable();
+  private final HashMap<String, File> id2file = new HashMap<>();
+  private final HashMap<String, File> name2file = new HashMap<>();
+  private final HashMap<String, File> title2file = new HashMap<>();
   private final Vector<File> files_list = new Vector<>();
   private final Vector<File> page2file = new Vector<>();
 
@@ -234,8 +234,9 @@ public synchronized void decode(final CachedInputStream pool)
     int files = str.read();
     files = (files << 8) | str.read();
 
-    if(files > 0)
-    {
+    if(files == 0)
+    	return;
+
       for(int i = 0; i < files; i++)
       {
         final File file = createFile();
@@ -323,8 +324,9 @@ public synchronized void decode(final CachedInputStream pool)
         }
 
         buffer = bout.toByteArray();
+        bout.close();
 
-        Vector stringList  = new Vector();
+        Vector<String> stringList  = new Vector<>();
         int    startOffset = 0;
         int    endOffset   = 0;
 
@@ -333,7 +335,7 @@ public synchronized void decode(final CachedInputStream pool)
           if(buffer[endOffset] == 0)
           {
             String s =
-              new String(buffer, startOffset, endOffset - startOffset);
+              new String(buffer, startOffset, endOffset - startOffset, "UTF-8");
             stringList.addElement(s);
             startOffset = endOffset + 1;
           }
@@ -349,11 +351,11 @@ public synchronized void decode(final CachedInputStream pool)
         for(int i = 0, stringNo = 0; i < files_list.size(); i++)
         {
           final File file = files_list.elementAt(i);
-          file.id = (String)stringList.elementAt(stringNo++);
+          file.id = stringList.elementAt(stringNo++);
 
           if((file.flags & File.HAS_NAME) != 0)
           {
-            file.name = (String)stringList.elementAt(stringNo++);
+            file.name = stringList.elementAt(stringNo++);
           }
           else
           {
@@ -362,7 +364,7 @@ public synchronized void decode(final CachedInputStream pool)
 
           if((file.flags & File.HAS_TITLE) != 0)
           {
-            file.name = (String)stringList.elementAt(stringNo++);
+            file.name = stringList.elementAt(stringNo++);
           }
           else
           {
@@ -390,20 +392,7 @@ public synchronized void decode(final CachedInputStream pool)
       }
 
       // Now generate page=>file array for direct access
-      int pages = 0;
-
-      for(int i = 0; i < files_list.size(); i++)
-      {
-        final File file = files_list.elementAt(i);
-
-        if(file.is_page())
-        {
-          pages++;
-        }
-      }
-
       page2file.setSize(0);
-
       for(int i = 0; i < files_list.size(); i++)
       {
         final File file = files_list.elementAt(i);
@@ -420,7 +409,7 @@ public synchronized void decode(final CachedInputStream pool)
       {
         final File file = files_list.elementAt(i);
 
-        if(name2file.contains(file.name))
+        if(name2file.containsKey(file.name))
         {
           throw new IOException("DjVmDir.dupl_name " + file.name);
         }
@@ -433,7 +422,7 @@ public synchronized void decode(final CachedInputStream pool)
       {
         final File file = files_list.elementAt(i);
 
-        if(id2file.contains(file.id))
+        if(id2file.containsKey(file.id))
         {
           throw new IOException("DjVmDir.dupl_id " + file.id);
         }
@@ -448,7 +437,7 @@ public synchronized void decode(final CachedInputStream pool)
 
         if((file.title != null) && (file.title.length() > 0))
         {
-          if(title2file.contains(file.title))
+          if(title2file.containsKey(file.title))
           {
             throw new IOException("DjVmDir.dupl_title " + file.title);
           }
@@ -456,7 +445,6 @@ public synchronized void decode(final CachedInputStream pool)
           title2file.put(file.title, file);
         }
       }
-    }
   }
 
   /**
@@ -601,7 +589,7 @@ public synchronized void decode(final CachedInputStream pool)
    */
   public synchronized File id_to_file(final String id)
   {
-    return (File)id2file.get(id);
+    return id2file.get(id);
   }
 
   /**
@@ -640,12 +628,12 @@ public synchronized void decode(final CachedInputStream pool)
     }
 
     // Modify maps
-    if(id2file.contains(file.id))
+    if(id2file.containsKey(file.id))
     {
       throw new IOException("DjVmDir.dupl_id2 " + file.id);
     }
 
-    if(name2file.contains(file.name))
+    if(name2file.containsKey(file.name))
     {
       throw new IOException("DjVmDir.dupl_name2 " + file.name);
     }
@@ -655,7 +643,7 @@ public synchronized void decode(final CachedInputStream pool)
 
     if(file.title.length() > 0)
     {
-      if(title2file.contains(file.title))
+      if(title2file.containsKey(file.title))
       {
         throw new IOException("DjVmDir.dupl_title2 " + file.title);
       }
@@ -743,7 +731,7 @@ public synchronized void decode(final CachedInputStream pool)
    */
   public synchronized File name_to_file(final String name)
   {
-    return (File)name2file.get(name);
+    return name2file.get(name);
   }
 
   /**
@@ -784,7 +772,7 @@ public synchronized void decode(final CachedInputStream pool)
       }
     }
 
-    File file = (File)id2file.get(id);
+    File file = id2file.get(id);
 
     // Check if ID is valid
     if(file == null)
@@ -821,7 +809,7 @@ public synchronized void decode(final CachedInputStream pool)
     }
 
     // Check if ID is valid
-    File file = (File)id2file.get(id);
+    File file = id2file.get(id);
 
     if(file == null)
     {
@@ -842,7 +830,7 @@ public synchronized void decode(final CachedInputStream pool)
    */
   public synchronized File title_to_file(final String title)
   {
-    return (File)title2file.get(title);
+    return title2file.get(title);
   }
 
   //~ Inner Classes ----------------------------------------------------------

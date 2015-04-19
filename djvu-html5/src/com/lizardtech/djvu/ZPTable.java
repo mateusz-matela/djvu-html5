@@ -45,8 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-
 
 /**
  * DOCUMENT ME!

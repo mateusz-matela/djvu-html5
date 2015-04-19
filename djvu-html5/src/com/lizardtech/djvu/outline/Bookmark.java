@@ -46,6 +46,7 @@
 package com.lizardtech.djvu.outline;
 
 import com.lizardtech.djvu.*;
+
 import java.io.*;
 import java.util.*;
 
@@ -87,7 +88,8 @@ public class Bookmark
    *
    * @return false
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return false;
   }
@@ -295,7 +297,8 @@ public class Bookmark
    *
    * @param input - the BSInputStream to read from.
    */
-  public void decode(final CachedInputStream input)
+  @Override
+public void decode(final CachedInputStream input)
   {
     setSize(0);
     setObject(null);
@@ -410,14 +413,14 @@ public class Bookmark
 
     if(count < 0)
     {
-      throw new EOFException("Unexpected EOF");
+      throw new IllegalStateException("Unexpected EOF");
     }
 
     int textsize = input.read24();
 
     if(textsize < 0)
     {
-      throw new EOFException("Unexpected EOF");
+      throw new IllegalStateException("Unexpected EOF");
     }
 
     if(textsize > 0)
@@ -429,7 +432,7 @@ public class Bookmark
 
     if(textsize < 0)
     {
-      throw new EOFException("Unexpected EOF");
+      throw new IllegalStateException("Unexpected EOF");
     }
 
     if(textsize > 0)

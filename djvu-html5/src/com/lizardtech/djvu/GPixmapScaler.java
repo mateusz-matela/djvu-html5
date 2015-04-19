@@ -45,9 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
-
 
 /**
  * The GPixmapScaler class provides a method to rescale portions of GPixmap

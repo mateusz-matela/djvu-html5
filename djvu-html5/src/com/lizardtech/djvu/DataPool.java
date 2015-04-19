@@ -45,8 +45,14 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
+import java.io.IOException;
 import java.util.*;
+
+import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+import com.google.gwt.xhr.client.ReadyStateChangeHandler;
+import com.google.gwt.xhr.client.XMLHttpRequest;
+import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
 
 
 /**
@@ -66,39 +72,19 @@ public class DataPool
   public static final int BLOCKSIZE = 8192;
     
   /** Object for caching raw data. ! */
-  public static Hashtable cache = new Hashtable();
+  public static HashMap<String, DataPool> cache = new HashMap<>();
 
   //~ Instance fields --------------------------------------------------------
 
   // This contains the data we a buffering.
-  private final Vector buffer = new Vector();
+  private final Vector<byte[]> buffer = new Vector<>();
 
   // The end of the stream, or a number larger than the end of the stream.
-  private int endOffset=Integer.MAX_VALUE;
-  
-  // The url we are reading.
-  private String url=null;
-  
-  // The input stream we are reading.
-  private InputStream input=null;
-  
-  // True if we might be able random access memory blocks on a server.
-  private boolean rangeAccepted=true;
-  
-  // The pointer for a simple cache of blocks reciently accessed.
-  private int cacheAccessIndex=0;
+  private int endOffset=0;
 
-  // A simple cache of blocks accessed.
-  private Object [] cacheAccessArray=new Object[256];
-  
-  // The pointer for a simple cache of blocks created.
-  private int cacheCreatedIndex=0;
-  
-  // A simple cache of blocks created.
-  private Object [] cacheCreatedArray=new Object[256];
-  
-  // The largest end offset of read data.
-  private int currentSize=0;
+  private boolean isReady = false;
+
+  private Vector<InputStateListener> listeners = new Vector<>();
   
   //~ Constructors -----------------------------------------------------------
 
@@ -119,46 +105,90 @@ public class DataPool
    * 
    * @return an initialized DataPool
    */
-  public DataPool init(final String url)
+  public DataPool init(final String url, InputStateListener listener)
   {
-    this.url=url;
     DataPool retval=this;
     if(url != null)
     {
-      retval=(DataPool)cache.get(url);
+      retval=cache.get(url);
       if(retval == null)
       {
         retval=this;
-        cache.put(
-          url,
-          this);
+        cache.put(url, this);
+        startDownload(url);
       }
     }
+    if (listener != null)
+    	retval.listeners.add(listener);
     return retval;
   }
   
-  /**
+	private void startDownload(final String url) {
+		XMLHttpRequest request = XMLHttpRequest.create();
+		request.open("GET", url);
+		request.setResponseType(ResponseType.ArrayBuffer);
+		request.setOnReadyStateChange(new ReadyStateChangeHandler() {
+
+			@Override
+			public void onReadyStateChange(XMLHttpRequest xhr) {
+				if (xhr.getReadyState() == XMLHttpRequest.DONE) {
+					if (xhr.getStatus() == 200) {
+						long startTime = System.currentTimeMillis();
+						Uint8Array array = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
+						endOffset = array.length();
+						int blocks = 0;
+						while (blocks * BLOCKSIZE < endOffset) {
+							byte[] bytes = new byte[BLOCKSIZE];
+							buffer.add(bytes);
+							for (int i = 0; i < BLOCKSIZE && blocks * BLOCKSIZE + i < endOffset; i++)
+								bytes[i] = (byte) array.get(blocks * BLOCKSIZE + i);
+							blocks++;
+						}
+						System.out.println("Response conversion time: " + (System.currentTimeMillis() - startTime));
+					} else {
+						DjVuOptions.err.println("Error downloading " + url);
+						DjVuOptions.err.println("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
+					}
+					isReady = true;
+					fireReady();
+				}
+			}
+		});
+		request.send();
+	}
+
+	protected void fireReady() {
+		for (InputStateListener listener : listeners)
+			listener.inputReady();
+	}
+
+/**
    * Initialize this map to read the specified stream
    * 
    * @param input the InputStream to read
    * 
    * @return the initialized DataPool
    */
-  public DataPool init(final InputStream input)
+  public DataPool init(final InputStream input) throws IOException
   {
-    this.input=input;
-    rangeAccepted=false;
+	  int totalBytesRead = 0;
+	  for (;;) {
+		  byte[] bytes = new byte[BLOCKSIZE];
+		  buffer.add(bytes);
+		  int bytesRead = 0;
+		  int lastRead = 1;
+		  while (lastRead > 0 && bytesRead < BLOCKSIZE) {
+			  lastRead = input.read(bytes, bytesRead, BLOCKSIZE - bytesRead);
+			  bytesRead += lastRead;
+		  }
+		  totalBytesRead += bytesRead;
+		  if (lastRead <= 0)
+			  break;
+	  }
+	  endOffset = totalBytesRead;
+	  isReady = true;
+	  input.close();
     return this;
-  }
-  
-  /** 
-   * Query the largest read end offset.
-   *
-   * @return the largest read end offset
-   */
-  public int getCurrentSize()
-  {
-    return currentSize;
   }
   
   /**
@@ -178,216 +208,15 @@ public class DataPool
     }
     if(index < buffer.size())
     {
-      Object block=buffer.elementAt(index);
+      byte[] block=buffer.elementAt(index);
       if(block != null)
       {
-        if(block.getClass().isArray())
-        {
-          return (byte[])block;
-        }
-        if(block != null)
-        {
-          if(read && (cacheAccessArray[cacheAccessIndex%cacheAccessArray.length] != block))
-          {
-            cacheAccessArray[cacheAccessIndex++%cacheAccessArray.length]=block;
-          }
-          return (byte[])block;
-        }
+        return block;
       }
     }
-    return read?readBlock(index):null;
+    return null;
   }
 
-  // Read the specified block of data.  Synchronization should happen prior to calling this
-  // routine.  Data may be read either sequentially, or in random order if the server supports
-  // http 1.1 range specifiers.
-  private synchronized byte [] readBlock(final int index)
-  {
-    byte [] retval=getBlock(index,false);
-    if(retval == null)
-    {
-      int retry=0;
-      int start=index*BLOCKSIZE;
-      int end=(index+1)*BLOCKSIZE;
-      InputStream input=this.input;
-      for(;(input != null)&&(buffer.size() < index);input=this.input)
-      {
-        if(getBlock(buffer.size(), true) == null)
-        {
-          return null;
-        }
-      }
-      while((start < endOffset) && (start < end) )
-      {
-        if(input == null)
-        {
-          if(rangeAccepted&&(url != null))
-          {
-            try
-            {
-              URLConnection connection=url.openConnection();
-              if(connection instanceof HttpURLConnection)
-              {
-                connection.setRequestProperty("Range", "bytes="+start+"-"+(end-1));
-                connection.connect();
-                final int response=((HttpURLConnection)connection).getResponseCode();
-                if(response == 206)
-                {
-                  input=connection.getInputStream();  
-                }
-                else if ((response / 100 == 2)&&(start == 0))
-                {
-                  this.input=input=connection.getInputStream();
-                  rangeAccepted=false;
-                }
-                else if(end < currentSize)
-                {
-                  connection=null;
-                  System.gc();
-                  try
-                  {
-                    Thread.sleep(200L);
-                  }
-                  catch(final InterruptedException ignored) {}
-                  continue;
-                }
-                else
-                {
-                  DjVuOptions.out.println("Server response "+response+" requested "+start+","+end);                  
-                }
-              }
-              else if((start == 0)&&(connection != null))
-              {
-                this.input=input=connection.getInputStream();
-                rangeAccepted=false;
-              }
-            }
-            catch(final IOException exp)
-            {
-              Utils.printStackTrace(exp);
-              if(input != null)
-              {
-                try
-                {
-                  input.close();
-                }
-                catch(final Throwable ignored) {}
-                input=null;
-              }
-              System.gc();
-              try
-              {
-                  Thread.sleep(200L);
-              }
-              catch(final Throwable ignored) {}
-              if(rangeAccepted&&(++retry < 10))
-              {
-                continue;
-              }
-            }
-          }
-          if(input == null)
-          {
-            end=start;
-            setEndOffset(end);
-            break;
-          }
-        }
-        if(retval == null)
-        {
-          retval=new byte[BLOCKSIZE]; 
-        }
-        for(int size = end-start;size > 0;size=start-end)
-        {
-          int offset=start%BLOCKSIZE;
-          int len=0;
-          try
-          {
-            len = input.read(retval, offset, size);
-          }
-          catch(final Throwable exp)
-          {
-            Utils.printStackTrace(exp);
-            if(rangeAccepted&&(++retry < 10))
-            {
-              try
-              {
-                input.close();
-              } catch(final Throwable ignored) {}
-              input=null;
-              continue;
-            }
-            len=0;
-          }
-          retry=0;
-          if(len <= 0)
-          {
-            try
-            {
-              input.close();
-            }
-            catch(final IOException ignored) {}
-            input=null;
-            this.input=null;
-            end=start;
-            setEndOffset(end);
-            if(offset > 0)
-            {
-              byte [] xretval=new byte[offset];
-              System.arraycopy(retval, 0, xretval, 0, offset);
-              retval=xretval;
-            }
-            else
-            {
-              retval=null;
-            }
-            break;
-          }
-          start+=len;
-        }
-      }
-      if(retval != null)
-      {
-        if(buffer.size() <= index)
-        {
-          buffer.setSize(index+1);
-        }
-        if(rangeAccepted&&(index > 0))
-        {
-		buffer.setElementAt(retval, index);
-          cacheCreatedArray[cacheCreatedIndex++%cacheCreatedArray.length]=retval;
-        }
-        else
-        {
-          buffer.setElementAt(retval, index);          
-        }
-        if(end > currentSize)
-        {
-          currentSize=end;
-        }
-      }
-    }
-    return retval;
-  }
-
-  /**
-   * Set the end position.  This value may only be reduced, never increased.
-   *
-   * @param offset new end offset
-   */
-  protected synchronized void setEndOffset(final int offset)
-  {
-    if(offset < endOffset)
-    {
-      endOffset=offset;
-      final int size=(offset+BLOCKSIZE-1)/BLOCKSIZE;
-      if(size > buffer.size())
-      {
-        buffer.setSize(size);
-      }
-    }
-  }
-  
   /**
    * Query the size of this vector.
    *
@@ -396,6 +225,11 @@ public class DataPool
   public int getEndOffset()
   {
     return endOffset;
+  }
+
+  public boolean isReady()
+  {
+	  return isReady;
   }
 
 }

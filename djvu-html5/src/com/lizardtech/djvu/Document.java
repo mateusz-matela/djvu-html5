@@ -48,6 +48,7 @@ package com.lizardtech.djvu;
 import java.io.*;
 import java.util.*;
 
+import com.lizardtech.djvu.DjVmDir.File;
 import com.lizardtech.djvu.outline.Bookmark;
 
 
@@ -58,29 +59,14 @@ import com.lizardtech.djvu.outline.Bookmark;
  * @version $Revision: 1.23 $
  */
 public class Document
-  implements Runnable
 {
   //~ Static fields/initializers ---------------------------------------------
 
   /** These are the magic numbers at the start of every DjVu file. */
   public static final byte[] octets = {0x41, 0x54, 0x26, 0x54};
-  public static int MAX_PRIORITY=1;
-  public static int MIN_PRIORITY=0;
 
-  //~ Instance fields --------------------------------------------------------
-
-  /** Used to keep track of the prefetchThread. */
-  public Thread prefetchThread=null;
-  
-  private static Vector[] prefetchVector = {new Vector(),new Vector()};
-  private static int prefetchCount=0;
-
-  
-  // The status string.
-  private String status=null;
-  
   /** A map of saved pages for this document. */
-  private Hashtable<String, CachedInputStream> cachedInputStreamMap = new Hashtable<>();
+  private HashMap<String, CachedInputStream> cachedInputStreamMap = new HashMap<>();
 
   // The bookmark Codec for this document.
   private Codec    bookmark = null;
@@ -91,14 +77,6 @@ public class Document
   // The file index for this document
   private DjVmDir dir        = null;
   
-  // A reference to a parent object used in the prefetching thread
-  private Object  parentRef  = null;
-  
-  // true if we should use asynchronous decoding
-  private boolean asyncValue = false;
-  
-  
-
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -108,63 +86,8 @@ public class Document
   {
     dir = new DjVmDir();
   }
-
-  /**
-   * Set the status string and fire a property change event "status".
-   *
-   * @param status new status string
-   */
-  public void setStatus(final String status)
-  {
-    final String s=this.status;
-    this.status=status;
-  }
-
-  /**
-   * Query the status string.
-   *
-   * @return the status string
-   */
-  public String getStatus()
-  {
-      return status;
-  }
   
-  /**
-   * Creates a new Document object.
-   *
-   * @param url DOCUMENT ME!
-   *
-   * @throws IOException DOCUMENT ME!
-   */
-  public Document(final String url)
-    throws IOException
-  {
-    this();
-    init(url);
-  }
-
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Set the flag to allow or disallow asynchronous operations.
-   *
-   * @param value true if asynchronous operations should be used.
-   */
-  public final void setAsync(final boolean value)
-  {
-    asyncValue = value;
-  }
-
-  /**
-   * Query if the asynchronous flag is set.
-   *
-   * @return true if the asynchronous operations are set.
-   */
-  public final boolean isAsync()
-  {
-    return asyncValue;
-  }
 
   /**
    * Query the bookmark codec for this document
@@ -198,19 +121,16 @@ public class Document
    * is used, this call will block until the page is decoded.
    *
    * @param pageno page number to get
-   * @param priority decode priority
-   * @param dataWait True if bundled pages should be opened even when the 
-   *        data is not ready.
    *
    * @return the DjVuPage object
    *
    * @throws IOException if an error occurs
    */
-  public DjVuPage getPage(final int pageno,final int priority,final boolean dataWait)
+  public DjVuPage getPage(final int pageno)
     throws IOException
   {
     final String name=getDjVmDir().page_to_file(pageno).get_load_name();
-    final DjVuPage retval=getPage(name,priority,dataWait);
+    final DjVuPage retval=getPage(name);
     return retval;
   }
 
@@ -220,55 +140,28 @@ public class Document
    *
    * @param id the page name
    * @param priority decode priority
-   * @param dataWait True if bundled pages should be opened even when the 
-   *        data is not ready.
    *
    * @return the DjVuPage object
    *
    * @throws IOException if an error occurs
    */
-  public DjVuPage getPage(final String id,final int priority,final boolean dataWait)
+  public DjVuPage getPage(final String id)
     throws IOException
   {
     DjVuPage page = null;
 
-    if(page == null)
-    {
-      CachedInputStream data=get_data(id);
-      if(! dataWait)
-      {
-        prefetch(id,MAX_PRIORITY);
-      }
-      if(dataWait || (data.available() > 0))
+      CachedInputStream data=get_data(id, null);
+      if((data.available() > 0))
       {
         String url=getDjVmDir().getInitURL();
         if(url != null)
         {
           url=Utils.url(url,id);
         }
-        page = createDjVuPage(url);
-        page.setAsync(isAsync());
-        page.setPriority(priority);
+        page = new DocumentDjVuPage(url);
         page.decode(data);
       }
-    }
-    if((page != null)&&!dataWait)
-    {
-      int p=getPageno('#'+id);
-      synchronized(prefetchVector)
-      {
-        prefetchVector[MAX_PRIORITY].setSize(0);
-        prefetchVector[MIN_PRIORITY].setSize(0);
-        prefetchCount=0;
-        prefetch(id, MAX_PRIORITY);
-        prefetch(0, MIN_PRIORITY);
-        prefetch(size()-1, MIN_PRIORITY);
-        prefetch(p-2, MIN_PRIORITY);
-        prefetch(p+2, MIN_PRIORITY);
-        prefetch(p-1, MIN_PRIORITY);
-        prefetch(p+1, MIN_PRIORITY);
-      }        
-    }
+
     return page;
   }
 
@@ -286,16 +179,6 @@ public class Document
   }
 
   /**
-   * Create an overloaded DjVuPage object
-   *
-   * @return the newly created object
-   */
-  public DjVuPage createDjVuPage(final String url)
-  {
-    return new DocumentDjVuPage(url);
-  }
-
-  /**
    * Remove the named file from the index
    *
    * @param id name to remove
@@ -305,7 +188,7 @@ public class Document
   public void delete_file(final String id)
     throws IOException
   {
-    if(!cachedInputStreamMap.contains(id))
+    if(!cachedInputStreamMap.containsKey(id))
     {
       throw new IOException("Can not delete " + id);
     }
@@ -318,12 +201,13 @@ public class Document
    * Query the data for the specified name.
    *
    * @param id name of the file
+ * @param listener 
    *
    * @return the requested data
    *
    * @throws IOException if an error occurs
    */
-  public CachedInputStream get_data(final String id)
+  public CachedInputStream get_data(final String id, InputStateListener listener)
     throws IOException
   {
     if(id == null)
@@ -331,7 +215,7 @@ public class Document
       throw new IOException("Can not find blank name.");
     }
 
-    CachedInputStream pool = (CachedInputStream)cachedInputStreamMap.get(id);
+    CachedInputStream pool = cachedInputStreamMap.get(id);
 
     final DjVmDir      djvmDir = getDjVmDir();
     if(pool == null)
@@ -349,7 +233,7 @@ public class Document
         }
 
         final String fileurl = Utils.url(initURL, id);
-        pool = new CachedInputStream().init(fileurl,false);
+        pool = new CachedInputStream().init(fileurl,listener);
         insert_file(pool, DjVmDir.File.INCLUDE, id, id);
       }
       else if(this.pool != null)
@@ -361,12 +245,12 @@ public class Document
       }
       else if(initURL != null)
       {
-        pool = new CachedInputStream().init(Utils.url(initURL, id), false);
+        pool = new CachedInputStream().init(Utils.url(initURL, id), listener);
         cachedInputStreamMap.put(id, pool);
       }
     }
 
-    if(!djvmDir.is_bundled())
+    if(!djvmDir.is_bundled() && pool.isReady())
     {
       final Enumeration iff_in = pool.getIFFChunks();
       if((iff_in == null)||!iff_in.hasMoreElements())
@@ -381,32 +265,16 @@ public class Document
    * Query the data for a page.
    *
    * @param page_num the page number to request
+ * @param listener 
    *
    * @return the requested data
    *
    * @throws IOException if an error occurs
    */
-  public CachedInputStream get_data(final int page_num)
+  public CachedInputStream get_data(final int page_num, InputStateListener listener)
     throws IOException
   {
-    return get_data(getDjVmDir().page_to_file(page_num).get_load_name());
-  }
-
-  /**
-   * Initialize this document from the specified URL.
-   *
-   * @param url the url to initialize from
-   *
-   * @return the initialized document
-   *
-   * @throws IOException if an error occurs
-   */
-  public Document init(final String url)
-    throws IOException
-  {
-    read(url);
-
-    return this;
+    return get_data(getDjVmDir().page_to_file(page_num).get_load_name(), listener);
   }
 
   /**
@@ -582,7 +450,7 @@ public class Document
       throw new IOException("No zero file.");
     }
 
-    if(cachedInputStreamMap.contains(f.get_load_name()))
+    if(cachedInputStreamMap.containsKey(f.get_load_name()))
     {
       throw new IOException("No duplicates allowed.");
     }
@@ -608,136 +476,6 @@ public class Document
       data_pool);
     getDjVmDir().insert_file(f, pos);
   }
-  
-  public void prefetch(final int pageno,final int priority)
-  {
-    try
-    {
-      prefetch(getDjVmDir().page_to_file(pageno).get_load_name(), priority);
-    }
-    catch(final Throwable ignored) {}
-  }
-  
-  /**
-   * Call to prefetch all the data for this document.
-   */
-  public void prefetch(final String id,final int priority)
-  {
-    if(size() > 0)
-    {
-      synchronized(prefetchVector)
-      {
-        prefetchVector[priority].addElement(id);
-        prefetchCount++;
-        prefetchVector.notifyAll();
-        Thread thread=prefetchThread;  
-        if((thread == null)||!prefetchThread.isAlive())
-        {
-          final Document runnable = new Document();
-          runnable.parentRef      = this;
-          runnable.dir            = getDjVmDir();
-          runnable.cachedInputStreamMap    = cachedInputStreamMap;
-          runnable.prefetchVector = prefetchVector;
-          prefetchThread=thread=new Thread(runnable);
-          thread.start();
-        }
-      }
-    }
-  }
-
-  /**
-   * Called to initialize from the specified stream.
-   *
-   * @param input stream to read
-   *
-   * @throws IOException if an error occurs
-   */
-  public void read(final InputStream input)
-    throws IOException
-  {
-    read(new CachedInputStream().init(input));
-  }
-
-  /**
-   * Called to initialize from the specified stream.
-   *
-   * @param data_pool data to read
-   *
-   * @throws IOException if an error occurs
-   */
-  public void read(final CachedInputStream data_pool)
-    throws IOException
-  {
-    final DjVmDir djvmDir = getDjVmDir();
-    djvmDir.setInitURL(null);
-
-    final Enumeration<CachedInputStream> iff = data_pool.getIFFChunks();
-    if((iff == null)||!iff.hasMoreElements())
-    {
-        throw new IOException("EOF");
-    }
-    final CachedInputStream formStream = iff.nextElement();
-    if(! "FORM:DJVM".equals(formStream.getName()))
-    {
-      insert_file(data_pool, DjVmDir.File.PAGE, "noname.djvu", "noname.djvu");
-      return;
-    }
-
-    final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
-    if((formIff != null)&&!formIff.hasMoreElements())
-    {
-      throw new IOException("EOF");
-    }
-    final CachedInputStream dirmStream = formIff.nextElement();
-    if(! "DIRM".equals(dirmStream.getName()))
-    {
-      throw new IOException("No DIRM chunk");
-    }
-    
-    djvmDir.decode(dirmStream);
-
-    cachedInputStreamMap.clear();
-
-    if(djvmDir.is_indirect())
-    {
-      throw new IOException("Cannot read indirect chunk.");
-    }
-
-    this.pool = data_pool;
-
-    Vector files_list = djvmDir.get_files_list();
-
-    for(int i = 0; i < files_list.size(); i++)
-    {
-      final DjVmDir.File f = (DjVmDir.File)files_list.elementAt(i);
-
-      final CachedInputStream filePool = new CachedInputStream(data_pool);
-      filePool.skip(f.offset);
-      filePool.setSize(f.size);
-      cachedInputStreamMap.put(
-        f.get_load_name(),
-        filePool);
-    }
-
-    final Codec bookmark = getBookmark();
-
-    if(bookmark != null)
-    {
-      while(formIff.hasMoreElements())
-      {
-        CachedInputStream chunk=(CachedInputStream)formIff.nextElement();
-        final String name=chunk.getName();
-        if((name == null)|| name.startsWith("FORM"))
-        {
-          break;
-        }
-        if(name.equals("NAVM"))
-        {
-          bookmark.decode(new CachedInputStream().init(new BSInputStream().init(chunk)));
-        }
-      }
-    }
-  }
 
   /**
    * Called to initialize from the specified stream.
@@ -749,11 +487,10 @@ public class Document
   public void read(final String url)
     throws IOException
   {
-    setStatus("Read URL "+url);
     final DjVmDir djvmDir = getDjVmDir();
     djvmDir.setInitURL(null);
 
-    final CachedInputStream pool = new CachedInputStream().init(url,false);
+    final CachedInputStream pool = new CachedInputStream().init(url,null);
     final Enumeration iff = pool.getIFFChunks();
     if((iff == null)||!iff.hasMoreElements())
     {
@@ -823,91 +560,84 @@ public class Document
     }
 
     djvmDir.setInitURL(url);
-    setStatus("URL "+url+" initialized");
   }
 
   /**
-   * This run method is called by the thread created with prefetch()
+   * Called to initialize from the specified stream.
+   *
+   * @param data_pool data to read
+   *
+   * @throws IOException if an error occurs
    */
-  public void run()
+  public void read(final CachedInputStream data_pool)
+    throws IOException
   {
-    try
+    final DjVmDir djvmDir = getDjVmDir();
+    djvmDir.setInitURL(null);
+
+    final Enumeration<CachedInputStream> iff = data_pool.getIFFChunks();
+    if((iff == null)||!iff.hasMoreElements())
     {
-      final Thread current = Thread.currentThread();
-      int priority=MIN_PRIORITY;
-      String last=null;
-	final Object value = parentRef;
-//    logError("queue + "+this);
-      while( ((Document)value).prefetchThread == current)
-      {
-        String id = null;
-
-        synchronized(prefetchVector)
-        {
-		if(((Document)parentRef).prefetchCount == 0)
-          {
-            try
-            {
-              prefetchVector.wait(5000L);
-            }
-            catch(final Throwable ignored) {}
-            if(((Document)parentRef).prefetchCount == 0)
-            {
-			((Document)parentRef).prefetchThread = null;
-
-              break;
-            }
-          }
-          priority=prefetchVector.length;
-          while(priority>0)
-          {
-            final Vector prefetch=prefetchVector[--priority];
-            if(prefetch.size() > 0)
-            {
-              id=(String)prefetch.lastElement();
-              prefetch.removeElementAt(prefetch.size() - 1);
-              ((Document)parentRef).prefetchCount--;
-              if(id != null)
-              {
-                if(id.equals(last))
-                {
-                  id=null;  
-                }
-                else
-                {
-                  if(priority < MAX_PRIORITY)
-                  {
-                    final Vector q=prefetchVector[priority+1];
-                    q.addElement(id);
-                    ((Document)parentRef).prefetchCount++;
-                    id=null;
-                    try { prefetchVector.wait(200L); } catch(final Throwable ignored) {}
-                  }
-                  break;
-                }
-              }
-            }
-          }
-        }
-        if(id != null)
-        {
-          last=id;
-          try
-          {
-			((Document)parentRef).setStatus("fetching "+id);
-            ((Document)parentRef).get_data(id).prefetchWait();
-            ((Document)parentRef).setStatus("fetched "+id);
-          }
-          catch(final Throwable ignored) {}
-        }
- 
-      }
+        throw new IOException("EOF");
     }
-    catch(final Throwable ignored) {}
-//    if(bundled && (getFromReference(parentRef) == null))
-//    {
-//      CachedInputStream.cache.setSize(0);
-//    }
+    final CachedInputStream formStream = iff.nextElement();
+    if(! "FORM:DJVM".equals(formStream.getName()))
+    {
+      insert_file(data_pool, DjVmDir.File.PAGE, "noname.djvu", "noname.djvu");
+      return;
+    }
+
+    final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
+    if((formIff != null)&&!formIff.hasMoreElements())
+    {
+      throw new IOException("EOF");
+    }
+    final CachedInputStream dirmStream = formIff.nextElement();
+    if(! "DIRM".equals(dirmStream.getName()))
+    {
+      throw new IOException("No DIRM chunk");
+    }
+    
+    djvmDir.decode(dirmStream);
+
+    cachedInputStreamMap.clear();
+
+    if(djvmDir.is_indirect())
+    {
+      throw new IOException("Cannot read indirect chunk.");
+    }
+
+    this.pool = data_pool;
+
+    Vector<File> files_list = djvmDir.get_files_list();
+
+    for(int i = 0; i < files_list.size(); i++)
+    {
+      final DjVmDir.File f = files_list.elementAt(i);
+
+      final CachedInputStream filePool = new CachedInputStream(data_pool);
+      filePool.skip(f.offset);
+      filePool.setSize(f.size);
+      cachedInputStreamMap.put(
+        f.get_load_name(),
+        filePool);
+    }
+
+    final Codec bookmark = getBookmark();
+
+      while(formIff.hasMoreElements())
+      {
+        CachedInputStream chunk=formIff.nextElement();
+        final String name=chunk.getName();
+        if((name == null)|| name.startsWith("FORM"))
+        {
+          break;
+        }
+        if(name.equals("NAVM"))
+        {
+          bookmark.decode(new CachedInputStream().init(new BSInputStream().init(chunk)));
+        }
+      }
   }
 
   /**
@@ -949,10 +679,11 @@ public class Document
      *
      * @throws IOException if an error occurs
      */
-    CachedInputStream createCachedInputStream(final String id)
+    @Override
+	CachedInputStream createCachedInputStream(final String id)
       throws IOException
     {
-      return Document.this.get_data(id);
+      return Document.this.get_data(id, null);
     }    
   }
 }

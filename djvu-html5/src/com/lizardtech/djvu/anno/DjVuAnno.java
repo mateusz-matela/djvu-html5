@@ -299,7 +299,7 @@ public boolean isImageData()
 
     while(i > 0)
     {
-      if(!Character.isWhitespace(raw.charAt(--i)))
+      if(!Character.isSpace(raw.charAt(--i)))
       {
         ++i;
 
@@ -1189,7 +1189,7 @@ public void decode(CachedInputStream input)
               break;
             }
 
-            if(Character.isWhitespace(ch))
+            if(Character.isSpace(ch))
             {
               break;
             }
@@ -1223,7 +1223,7 @@ public void decode(CachedInputStream input)
           {
             case Token.OPEN_PAR :
             {
-              if(Character.isWhitespace(string.charAt(start.intValue())))
+              if(Character.isSpace(string.charAt(start.intValue())))
               {
                 throw new IllegalArgumentException("Expected Token");
               }
@@ -1260,7 +1260,7 @@ public void decode(CachedInputStream input)
     {
       for(;; pos++)
       {
-        if(!Character.isWhitespace(str.charAt(pos)))
+        if(!Character.isSpace(str.charAt(pos)))
         {
           return pos;
         }

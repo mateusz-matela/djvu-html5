@@ -73,7 +73,7 @@ public class Palette
   public int[] colordata = null;
 
   /** DOCUMENT ME! */
-  private final Hashtable pmap = new Hashtable();
+  private final HashMap pmap = new HashMap();
 
   // Quantization data
   private GPixel[] palette = null;

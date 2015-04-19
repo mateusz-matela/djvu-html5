@@ -45,7 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
+import java.io.IOException;
 import java.util.Arrays;
 
 

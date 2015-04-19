@@ -615,7 +615,8 @@ public class Rect
    *
    * @return DOCUMENT ME!
    */
-  public String getTarget()
+  @Override
+public String getTarget()
   {
     return target;
   }
@@ -641,7 +642,8 @@ public class Rect
    *
    * @return the URL string
    */
-  public String getURL()
+  @Override
+public String getURL()
   {
     return url;
   }

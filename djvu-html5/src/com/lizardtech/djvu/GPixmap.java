@@ -404,9 +404,7 @@ public class GPixmap
    */
   public final void applyGammaCorrection(final double gamma)
   {
-    if(
-      true
-      || ((gamma > 0.999D)
+    if(((gamma > 0.999D)
       && (gamma < 1.0009999999999999D)))
     {
       return;
@@ -819,7 +817,8 @@ public class GPixmap
    * @param dx horizontal position to insert at
    * @param dy vertical position to insert at
    */
-  public void fill(
+  @Override
+public void fill(
     final GMap ref,
     final int  dx,
     final int  dy)
@@ -1231,7 +1230,8 @@ public class GPixmap
    *
    * @return the translated image
    */
-  public GMap translate(
+  @Override
+public GMap translate(
     final int dx,
     final int dy,
     GMap      retval)

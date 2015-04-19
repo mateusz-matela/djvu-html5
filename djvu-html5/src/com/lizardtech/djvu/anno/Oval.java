@@ -46,7 +46,6 @@
 package com.lizardtech.djvu.anno;
 
 import com.lizardtech.djvu.*;
-import java.util.*;
 
 
 /**
@@ -76,7 +75,8 @@ public class Oval
    *
    * @return MAP_OVAL
    */
-  public int getMapType()
+  @Override
+public int getMapType()
   {
     return MAP_OVAL;
   }
@@ -96,7 +96,8 @@ public class Oval
    *
    * @return true if valid
    */
-  public boolean isValid()
+  @Override
+public boolean isValid()
   {
     final int    border_type  = getBorderType();
     final int hilite_color = getHiliteColor();
@@ -115,7 +116,8 @@ public class Oval
    *
    * @return true if the given point is inside the hyperlink area
    */
-  public boolean contains(
+  @Override
+public boolean contains(
     final int x,
     final int y)
   {

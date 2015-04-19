@@ -1,27 +1,15 @@
 package pl.djvuhtml5.client;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
-import java.net.URL;
 
 import pl.djvuhtml5.shared.FieldVerifier;
 
 import com.google.gwt.core.client.EntryPoint;
-import com.google.gwt.core.client.GWT;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyUpEvent;
 import com.google.gwt.event.dom.client.KeyUpHandler;
-import com.google.gwt.http.client.Request;
-import com.google.gwt.http.client.RequestBuilder;
-import com.google.gwt.http.client.RequestCallback;
-import com.google.gwt.http.client.RequestException;
-import com.google.gwt.http.client.Response;
-import com.google.gwt.typedarrays.client.Uint8ArrayNative;
-import com.google.gwt.typedarrays.shared.ArrayBuffer;
-import com.google.gwt.user.client.rpc.AsyncCallback;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.DialogBox;
 import com.google.gwt.user.client.ui.HTML;
@@ -29,12 +17,10 @@ import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.VerticalPanel;
-import com.google.gwt.xhr.client.ReadyStateChangeHandler;
-import com.google.gwt.xhr.client.XMLHttpRequest;
-import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
-import com.lizardtech.djvu.DjVuInfo;
-import com.lizardtech.djvu.DjVuPage;
+import com.lizardtech.djvu.CachedInputStream;
+import com.lizardtech.djvu.DjVmDir;
 import com.lizardtech.djvu.Document;
+import com.lizardtech.djvu.InputStateListener;
 
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
@@ -47,6 +33,9 @@ public class Djvu_html5 implements EntryPoint {
 	 */
 	private static final String SERVER_ERROR = "An error occurred while "
 			+ "attempting to contact the server. Please check your network " + "connection and try again.";
+	private String url;
+	private Document document;
+	private Label errorLabel;
 
 	/**
 	 * This is the entry point method.
@@ -55,7 +44,7 @@ public class Djvu_html5 implements EntryPoint {
 		final Button sendButton = new Button("Send");
 		final TextBox nameField = new TextBox();
 		nameField.setText("GWT User");
-		final Label errorLabel = new Label();
+		errorLabel = new Label();
 
 		// We can add style names to widgets
 		sendButton.addStyleName("sendButton");
@@ -144,45 +133,45 @@ public class Djvu_html5 implements EntryPoint {
 		sendButton.addClickHandler(handler);
 		nameField.addKeyUpHandler(handler);
 
-//        try {
-//			Document djvuDoc = new Document("http://localhost:8080/sample/directory.djvu");
-//			DjVuPage page = djvuDoc.getPage(1, 1, true);
-//			DjVuInfo info = page.getInfo();
-//			System.out.println(info.width + " x " + info.height);
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
+		url = "http://127.0.0.1:8888/sample/index.djvu";
+		new CachedInputStream().init(url, new InputStateListener() {
 
-//        RequestBuilder builder = new RequestBuilder(RequestBuilder.GET, "http://127.0.0.1:8888/sample/index.djvu");
-//
+			@Override
+			public void inputReady() {
+				parseDocument();
+			}
+		});
+	}
+
+	private void parseDocument() {
 		try {
-			XMLHttpRequest request = XMLHttpRequest.create();
-			request.setResponseType(ResponseType.ArrayBuffer);
-			request.open("GET", "http://127.0.0.1:8888/sample/index.djvu");
-			request.setOnReadyStateChange(new ReadyStateChangeHandler() {
-
+			document = new Document();
+			document.read(url);
+			DjVmDir djVmDir = document.getDjVmDir();
+			int filesCount = djVmDir.get_files_num();
+			System.out.println("document read, found " + filesCount + " files.");
+			final int[] countDown = { filesCount };
+			InputStateListener listener = new InputStateListener() {
+				
 				@Override
-				public void onReadyStateChange(XMLHttpRequest xhr) {
-					if (xhr.getReadyState() == XMLHttpRequest.DONE) {
-						if (xhr.getStatus() == 200) {
-							ArrayBuffer buffer = xhr.getResponseArrayBuffer();
-							Uint8ArrayNative array = Uint8ArrayNative.create(buffer);
-							System.out.println("got " + array.length() + " bytes: ");
-							for (int i = 0; i < array.length(); i++) {
-								System.out.println(array.get(i));
-							}
-						} else {
-							System.out.println("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
-						}
+				public void inputReady() {
+					countDown[0]--;
+					if (countDown[0] <= 0) {
+						parsePages();
 					}
 				}
-			});
-			request.send();
-
-		} catch (Exception e) {
-			System.out.println("exception caught");
+			};
+			for (int i = 0; i < filesCount; i++) {
+				document.get_data(i, listener);
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	protected void parsePages() {
+		System.out.println("all pages downloaded!");
+		errorLabel.setText("all downloaded");
 	}
 }

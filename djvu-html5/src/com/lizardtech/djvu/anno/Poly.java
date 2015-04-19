@@ -86,7 +86,8 @@ public class Poly
    *
    * @return the bounding rectangle
    */
-  public GRect getBounds()
+  @Override
+public GRect getBounds()
   {
     GRect retval = bounds;
 
@@ -132,7 +133,8 @@ public class Poly
    *
    * @return MAP_POLY
    */
-  public int getMapType()
+  @Override
+public int getMapType()
   {
     return MAP_POLY;
   }
@@ -142,7 +144,8 @@ public class Poly
    *
    * @return true if closed or does not have valid data.
    */
-  public boolean isEmpty()
+  @Override
+public boolean isEmpty()
   {
     return !(isOpen()||isDataValid());
   }
@@ -220,7 +223,8 @@ public class Poly
    *
    * @return the vector of points
    */
-  public Vector getPoints()
+  @Override
+public Vector getPoints()
   {
     return pointVector;
   }
@@ -240,7 +244,8 @@ public class Poly
    *
    * @return true if valid
    */
-  public boolean isValid()
+  @Override
+public boolean isValid()
   {
     final int    border_type  = getBorderType();
     final int hilite_color = getHiliteColor();
@@ -277,7 +282,8 @@ public class Poly
    *
    * @return true if the given point is inside the hyperlink area
    */
-  public boolean contains(
+  @Override
+public boolean contains(
     final int xin,
     final int yin)
   {
@@ -450,7 +456,8 @@ public class Poly
    *
    * @param mapper used to remap the points
    */
-  public void map(Mapper mapper)
+  @Override
+public void map(Mapper mapper)
   {
     for(int i = 0; i < pointVector.size(); i++)
     {
@@ -468,7 +475,8 @@ public class Poly
    * @param dx Delta x value to add.
    * @param dy Delta y value to add.
    */
-  public void move(
+  @Override
+public void move(
     int dx,
     int dy)
   {
@@ -552,7 +560,8 @@ public class Poly
    * @param width horizontal length to scale to
    * @param height vertical length to scale to
    */
-  public void resize(
+  @Override
+public void resize(
     final int width,
     final int height)
   {
@@ -582,7 +591,8 @@ public class Poly
    * @param cx horizontal position of the center of rotation
    * @param cy vertical position of the center of rotation
    */
-  public void rotateArea(
+  @Override
+public void rotateArea(
     int rot,
     final int cx,
     final int cy)
@@ -658,7 +668,8 @@ public class Poly
    *
    * @param grect the new bounding rectangle
    */
-  public void transform(final GRect grect)
+  @Override
+public void transform(final GRect grect)
   {
     final GRect bounds = getBounds();
 
@@ -691,7 +702,8 @@ public class Poly
    *
    * @param mapper the mapper to transform the coordinates
    */
-  public void unmap(Mapper mapper)
+  @Override
+public void unmap(Mapper mapper)
   {
     for(int i = 0; i < pointVector.size(); i++)
     {
@@ -706,7 +718,8 @@ public class Poly
   /**
    * Resets cached results.
    */
-  public void reset()
+  @Override
+public void reset()
   {
     bounds         = null;
     hasValidData   = null;

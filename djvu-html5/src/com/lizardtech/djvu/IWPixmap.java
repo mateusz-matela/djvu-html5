@@ -128,7 +128,8 @@ public class IWPixmap
    *
    * @return true
    */
-  public boolean isImageData()
+  @Override
+public boolean isImageData()
   { 
       return true;
   }  
@@ -154,7 +155,8 @@ public class IWPixmap
    *
    * @throws IOException DOCUMENT ME!
    */
-  public void decode(final CachedInputStream bs)
+  @Override
+public void decode(final CachedInputStream bs)
     throws IOException
   {
     if(ycodec == null)

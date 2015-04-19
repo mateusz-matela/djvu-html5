@@ -45,9 +45,10 @@
 //
 package com.lizardtech.djvu;
 
-import java.beans.*;
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Vector;
 
 import com.lizardtech.djvu.anno.DjVuAnno;
 import com.lizardtech.djvu.text.DjVuText;
@@ -109,7 +110,6 @@ import com.lizardtech.djvu.text.DjVuText;
  * </pre>
  */
 public class DjVuPage
-  implements Runnable
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -122,30 +122,12 @@ public class DjVuPage
   /** This is the newest version of DjVu we should attempt to decode. */
   public static final int DJVUVERSION_TOO_NEW = 22;
   
-  /** The thread used for asynchronious decoding. */
-  protected static Thread           queueThread = null;
-  
-  /** An array of vectors listing pages which need decoding. */
-  protected static Vector[] queueVector = {null,null};
-  protected static int queueCount=0;
-  public static int MAX_PRIORITY=1;
-  public static int MIN_PRIORITY=0;
-
   /**
    * This number is incremented for each instance and used for logging.  Note
    * that there is no locking done when incrementing, so this number is not
    * guarenteed to be unique.
    */
   private static int idCount = 1;
-  
-  static
-  {
-    queueVector=new Vector[1+MAX_PRIORITY-MIN_PRIORITY];
-    for(int i=0;i<queueVector.length;)
-    {
-      queueVector[i++]=new Vector();
-    }
-  }
 
   //~ Instance fields --------------------------------------------------------
 
@@ -154,9 +136,6 @@ public class DjVuPage
 
   /** Lock used for accessing the background IWPixmap codec. */
   public final Object bgIWPixmapLock = new String("bgIWPixmap");
-
-  /** Lock to signal decoding is done. */
-  public final Object doneLock = new String("done");
 
   /** Lock used for accessing the foreground IWPixmap codec. */
   public final Object fgIWPixmapLock = new String("fgIWPixmap");
@@ -194,14 +173,11 @@ public class DjVuPage
   /** Sets the data pool for this page. */
   private CachedInputStream pool=null;
 
-  // The status string.
-  private String status=null;
-
   /**
    * All the codec are stored in a hash table to make adding new codecs
    * easier.
    */
-  private Hashtable codecTable = new Hashtable();
+  private HashMap<Object, Codec> codecTable = new HashMap<>();
 
   /**
    * A reference to the foreground pixmap.  This will be regenerated if the
@@ -209,17 +185,11 @@ public class DjVuPage
    */
   private Object fgPixmapReference = null;
 
-  // Used to propigate change events
-  private final PropertyChangeSupport change;
-
   /** In an exception is thrown in the decoding thread, we save it here. */
   private Throwable caughtException = null;
 
   /** The URL for this page. */
   protected String url = null;
-
-  /** True if a separate thread should be used for decoding. */
-  private boolean asyncValue = false;
 
   /** True if decode has been called. */
   private boolean decodeCalled = false;
@@ -230,8 +200,6 @@ public class DjVuPage
   /** A unique number assign from idCount used for logging. */
   private final long id;
   
-  private int priority=MAX_PRIORITY;
-
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -239,51 +207,10 @@ public class DjVuPage
    */
   public DjVuPage()
   {
-    change   = new PropertyChangeSupport(this);
     id       = idCount++;
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  /**
-   * Set the flag to allow or disallow asynchronous operations.
-   *
-   * @param value true if asynchronous operations should be used.
-   */
-  public final synchronized void setAsync(final boolean value)
-  {
-    asyncValue = value;
-  }
-
-  /**
-   * Query if the asynchronous flag is set.
-   *
-   * @return true if the asynchronous operations are set.
-   */
-  public final boolean isAsync()
-  {
-    return asyncValue;
-  }
-
-  /**
-   * Set the decode priority.  Must be called prior to decoding.
-   *
-   * @param value the decode priority
-   */
-  public final synchronized void setPriority(final int value)
-  {
-    this.priority = Math.max(MIN_PRIORITY,Math.min(value,MAX_PRIORITY));
-  }
-
-  /**
-   * Query if the asynchronous flag is set.  Must be called prior to decoding.
-   *
-   * @return true if the asynchronous operations are set.
-   */
-  public final int getPriority()
-  {
-    return priority;
-  }
 
   /**
    * Get the background pixmap.
@@ -317,7 +244,7 @@ public class DjVuPage
 
     double gamma_correction = 1.0D;
 
-    if((gamma > 0.0D) && (info != null))
+    if(gamma > 0.0D)
     {
       gamma_correction = gamma / info.gamma;
     }
@@ -371,8 +298,8 @@ public class DjVuPage
         GRect xrect = new GRect();
         xrect.xmin   = (int)Math.floor(rect.xmin*4D/3D);
         xrect.ymin   = (int)Math.floor(rect.ymin*4D/3D);
-        xrect.xmax   = (int)Math.ceil((double)rect.xmax*4D/3D);
-        xrect.ymax   = (int)Math.ceil((double)rect.ymax*4D/3D);
+        xrect.xmax   = (int)Math.ceil(rect.xmax*4D/3D);
+        xrect.ymax   = (int)Math.ceil(rect.ymax*4D/3D);
         final GRect nrect=new GRect(0,0, rect.width(), rect.height());
         if(xrect.xmax > w)
         {
@@ -508,7 +435,7 @@ public class DjVuPage
   {
     synchronized(nameLock)
     {
-      return (Codec)codecTable.get(nameLock);
+      return codecTable.get(nameLock);
     }
   }
 
@@ -647,16 +574,6 @@ public class DjVuPage
   }
 
   /**
-   * Query the DjVuInfo for this page.
-   *
-   * @return DjVuInfo for this page.
-   */
-  public DjVuInfo getInfoWait()
-  {
-    return (DjVuInfo)waitForCodec(infoLock, 0L);
-  }
-
-  /**
    * Query the progressive count.
    *
    * @return the named Codec for this page.
@@ -674,18 +591,7 @@ public class DjVuPage
   public Codec getText()
   {
     // There is no need to synchronize since we won't access data which could be updated.
-    return (Codec)codecTable.get(textLock);
-  }
-
-  /**
-   * Add a listener for property change events.
-   *
-   * @param listener to add
-   */
-  public void addPropertyChangeListener(
-    final PropertyChangeListener listener)
-  {
-    change.addPropertyChangeListener(listener);
+    return codecTable.get(textLock);
   }
 
   /**
@@ -735,20 +641,6 @@ public class DjVuPage
   }
 
   /**
-   * Decode the specified URL.
-   *
-   * @param url URL to decode.
-   *
-   * @throws IOException if an error occures.
-   */
-  public void decode(final String url)
-    throws IOException
-  {
-    this.url = url;
-    decode(new CachedInputStream().init(url,false));
-  }
-
-  /**
    * Decode the specified CachedInputStream.
    * 
    * @param pool CachedInputStream to decode.
@@ -773,26 +665,7 @@ public class DjVuPage
 
     this.pool = pool;
 
-    if(isAsync())
-    {
-      synchronized(queueVector)
-      {
-        queueVector[getPriority()].addElement(this);
-        queueCount++;
-
-        if(queueThread == null)
-        {
-          queueThread = new Thread(new DjVuPage());
-          queueThread.start();
-        }
-        else
-        {
-          queueVector.notifyAll();
-        }
-      }
-    }
-    else
-    {
+   
       decode();
 
       if(caughtException instanceof IOException)
@@ -803,7 +676,6 @@ public class DjVuPage
       {
         throw (RuntimeException)caughtException;
       }
-    }
   }
 
   /**
@@ -815,7 +687,7 @@ public class DjVuPage
    */
   public boolean hasCodec(final Object nameLock)
   {
-    return (codecTable.get(nameLock) instanceof Codec);
+    return (codecTable.get(nameLock) != null);
   }
 
   /**
@@ -842,17 +714,6 @@ public class DjVuPage
 
     return hasCodec(bgIWPixmapLock) && !hasCodec(fgJb2Lock)
     && !hasCodec(fgIWPixmapLock);
-  }
-
-  /**
-   * Remove a listener for PropertyChangeEvent.
-   *
-   * @param listener to remove
-   */
-  public void removePropertyChangeListener(
-    final PropertyChangeListener listener)
-  {
-    change.removePropertyChangeListener(listener);
   }
 
   /**
@@ -948,7 +809,7 @@ public class DjVuPage
     final GRect  rect,
     final int    subsample,
     final int    align,
-    final Vector components)
+    final Vector<Number> components)
   {
     if(rect.isEmpty())
     {
@@ -1075,99 +936,6 @@ public class DjVuPage
   }
 
   /**
-   * This thread processes the asynchronous queue.  Only one page is decoded
-   * at a time, with the most recient requested page processed  first.
-   */
-  public void run()
-  {
-    final Thread current = Thread.currentThread();
-    int priority=MIN_PRIORITY;
-//    logError("queue + "+this);
-    while(queueThread == current)
-    {
-      DjVuPage page = null;
-
-      synchronized(queueVector)
-      {
-        if(queueCount == 0)
-        {
-          try
-          {
-            queueVector.wait(5000L);
-          }
-          catch(final Throwable ignored) {}
-          if(queueCount == 0)
-          {
-            queueThread = null;
-
-            break;
-          }
-        }
-        priority=queueVector.length;
-        while(priority>0)
-        {
-            final Vector queue=queueVector[--priority];
-            if(queue.size() > 0)
-            {
-              final Object ref=queue.lastElement();
-              page = (DjVuPage)ref;
-              queue.removeElementAt(queue.size() - 1);
-              queueCount--;
-              if(page != null)
-              {
-                if(priority < MAX_PRIORITY)
-                {
-                  final Vector q=queueVector[priority+1];
-                  q.addElement(ref);
-                  queueCount++;
-                  page=null;
-                  try { queueVector.wait(200L); } catch(final Throwable ignored) {}
-                }
-                break;
-              }
-            }
-        }
-      }
-
-      if(page != null)
-      {
-        try
-        {
-//          logError("queue decode + "+page);
-          page.decode();
-        }
-        catch(final Throwable exp)
-        {
-          Utils.printStackTrace(exp);
-        }
-      }
-    }
-//    logError("queue - "+this);
-  }
-
-  /**
-   * Set the status string and fire a property change event "status".
-   *
-   * @param status new status string
-   */
-  public void setStatus(final String status)
-  {
-    final String s=this.status;
-    this.status=status;
-    change.firePropertyChange("status", s, status);
-  }
-
-  /**
-   * Query the status string.
-   *
-   * @return the status string
-   */
-  public String getStatus()
-  {
-      return status;
-  }
-
-  /**
    * Create an image by stenciling the foreground onto the background.
    *
    * @param pm the background image to stencil
@@ -1222,7 +990,7 @@ public class DjVuPage
 
       if(fgPalette != null)
       {
-        Vector  components = new Vector();
+        Vector<Number>  components = new Vector<>();
         GBitmap bm = get_bitmap(rect, subsample, 1, components);
 
         if(fgJb2.get_blit_count() != fgPalette.colordata.length)
@@ -1246,20 +1014,20 @@ public class DjVuPage
 
         colors.applyGammaCorrection(gamma_correction);
 
-        Vector compset = new Vector();
+        Vector<Number> compset = new Vector<>();
 
         while(components.size() > 0)
         {
           int       lastx      = 0;
           final int colorindex =
-            fgPalette.colordata[((Number)components.elementAt(0)).intValue()];
+            fgPalette.colordata[components.elementAt(0).intValue()];
           GRect     comprect = new GRect();
           compset.setSize(0);
 
           for(int pos = 0; pos < components.size();)
           {
             final int     blitno =
-              ((Number)components.elementAt(pos)).intValue();
+              components.elementAt(pos).intValue();
             final JB2Blit pblit = fgJb2.get_blit(blitno);
 
             if(pblit.left < lastx)
@@ -1313,7 +1081,7 @@ public class DjVuPage
           for(int pos = 0; pos < compset.size(); ++pos)
           {
             final int      blitno =
-              ((Number)compset.elementAt(pos)).intValue();
+              compset.elementAt(pos).intValue();
             final JB2Blit  pblit  = fgJb2.get_blit(blitno);
             final JB2Shape pshape = fgJb2.get_shape(pblit.shapeno);
             bm.blit(
@@ -1375,61 +1143,6 @@ public class DjVuPage
   }
 
   /**
-   * Query the named Codec for this page.  If the Codec is not available, and
-   * decoding is in progress then wait for it.
-   *
-   * @param nameLock the name lock of the codec to wait for
-   * @param maxTime the maximum amount of time to wait for the specified
-   *        codec
-   *
-   * @return the named Codec for this page.
-   */
-  public Codec waitForCodec(
-    final Object nameLock,
-    final long   maxTime)
-  {
-    boolean active;
-    Codec   retval;
-
-//    logError("wait + "+this+" "+nameLock);
-    do
-    {
-      synchronized(nameLock)
-      {
-        active   = isDecoding();
-        retval   = (Codec)codecTable.get(nameLock);
-
-        if(active && (retval == null))
-        {
-          active = isDecoding();
-
-          if(active)
-          {
-            // We wait a maximum of 5 seconds instead of forever to avoid deadlocks...
-            try
-            {
-              nameLock.wait((maxTime <= 0L)
-                ? 5000L
-                : maxTime);
-            }
-            catch(final Throwable ignored) {}
-
-            retval = (Codec)codecTable.get(nameLock);
-          }
-        }
-      }
-    }
-    while(
-      active
-      && (retval == null)
-      && (maxTime <= 0L)
-      && (nameLock != progressiveLock));
-
-//    logError("wait - "+this+" "+nameLock);
-    return retval;
-  }
-
-  /**
    * Called after processing each chunk to log progress and optionally run
    * the garbage collector.
    *
@@ -1437,13 +1150,13 @@ public class DjVuPage
    */
   protected void clean(final String chkid)
   {
-    final Runtime run  = Runtime.getRuntime();
-    final long    used = run.totalMemory() - run.freeMemory();
-    final long    t    = System.currentTimeMillis() - startTime;
-    final String  d    = "000" + t;
-    Utils.verbose(
-      id + ". chkid=" + chkid + ",memory=" + used + " time=" + (t / 1000L)
-      + "." + d.substring(d.length() - 3));
+//    final Runtime run  = Runtime.getRuntime();
+//    final long    used = run.totalMemory() - run.freeMemory();
+//    final long    t    = System.currentTimeMillis() - startTime;
+//    final String  d    = "000" + t;
+//    Utils.verbose(
+//      id + ". chkid=" + chkid + ",memory=" + used + " time=" + (t / 1000L)
+//      + "." + d.substring(d.length() - 3));
 
     if(DjVuOptions.COLLECT_GARBAGE)
     {
@@ -1641,7 +1354,7 @@ public class DjVuPage
    * @throws IOException if an error occurs
    */
   protected void decodeChunks(
-    final Enumeration iff,
+    final Enumeration<CachedInputStream> iff,
     final boolean     isInclude)
     throws IOException
   {
@@ -1653,7 +1366,7 @@ public class DjVuPage
     if(!hasCodec(infoLock))
     {
 
-      final CachedInputStream chunk=(CachedInputStream)iff.nextElement();
+      final CachedInputStream chunk=iff.nextElement();
       if(!"INFO".equals(chunk.getName()))
       {
         throw new IOException(
@@ -1669,7 +1382,7 @@ public class DjVuPage
     while(iff.hasMoreElements())
     {
       decodeChunk(
-        (CachedInputStream)iff.nextElement(),
+        iff.nextElement(),
         isInclude);
     }
   }
@@ -1685,13 +1398,13 @@ public class DjVuPage
   protected void decodeInclude(CachedInputStream pool)
     throws IOException
   {
-    final Enumeration iff = pool.getIFFChunks();
+    final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
       if((iff == null)||!iff.hasMoreElements())
       {
         throw new IOException("EOF");
       }
-      final CachedInputStream formStream=(CachedInputStream)iff.nextElement();
-      final Enumeration formIff=formStream.getIFFChunks();
+      final CachedInputStream formStream=iff.nextElement();
+      final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
       if((formIff != null)&&"FORM:DJVI".equals(formStream.getName()))
       {
         decodeChunks(formIff, true);
@@ -1748,7 +1461,7 @@ public class DjVuPage
   CachedInputStream createCachedInputStream(final String id)
     throws IOException
   {
-    return new CachedInputStream().init(Utils.url(url, id), false);
+    return new CachedInputStream().init(Utils.url(url, id), null);
   }
 
   /**
@@ -1764,24 +1477,13 @@ public class DjVuPage
     final Codec  codec)
   {
     Codec        retval;
-    final String name = (String)nameLock;
 
     synchronized(nameLock)
     {
       retval =
-        (Codec)((codec == null)
+        (codec == null)
         ? codecTable.remove(nameLock)
-        : codecTable.put(nameLock, codec));
-      nameLock.notifyAll();
-
-      if(retval != codec)
-      {
-        change.firePropertyChange(name, retval, codec);
-      }
-      else if(nameLock.equals(annoLock))
-      {
-        change.firePropertyChange((String)annoLock, null, codec);
-      }
+        : codecTable.put(nameLock, codec);
     }
 
     if((codec != null)&&codec.isImageData())
@@ -1790,11 +1492,6 @@ public class DjVuPage
       {
         final Number count = progressiveCount;
         progressiveCount = new Integer(count.intValue() + 1);
-        progressiveLock.notifyAll();
-        change.firePropertyChange(
-          (String)progressiveLock,
-          count,
-          progressiveCount);
       }
     }
     return retval;
@@ -1832,22 +1529,16 @@ public class DjVuPage
     try
     {
       startTime = System.currentTimeMillis();
-      final String url=this.url;
-      if(url != null)
-      {
-        setStatus("decoding "+url); 
-      }
       final CachedInputStream pool = this.pool;
       this.pool = null;
 
-      final Enumeration iff = pool.getIFFChunks();
-      try
-      {
+      final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
+
         if((iff == null)||!iff.hasMoreElements())
         {
           throw new IOException("EOF");
         }
-        CachedInputStream formStream=(CachedInputStream)iff.nextElement();
+        CachedInputStream formStream=iff.nextElement();
         if("FORM:DJVU".equals(formStream.getName()))
         {
           mimetype = "image/djvu";
@@ -1874,13 +1565,13 @@ public class DjVuPage
         {
           mimetype = "image/iw44";
           IWPixmap img44 = null;
-          final Enumeration formIff=formStream.getIFFChunks();
+          final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
           while((formIff != null)&&formIff.hasMoreElements())
           {
-            CachedInputStream chunk=(CachedInputStream)formIff.nextElement();
+            CachedInputStream chunk=formIff.nextElement();
             if("PM44".equals(chunk.getName()) || "BM44".equals(chunk.getName()))
             {
-              if(img44 != null)
+              if(img44 == null)
               {
                 img44 = new IWPixmap();
                 img44.decode(chunk);
@@ -1922,14 +1613,6 @@ public class DjVuPage
           throw new IllegalStateException(
             "DejaVu decoder: a DJVU or IW44 image was expected");
         }
-      }
-      finally
-      {
-        if(url != null)
-        {
-          setStatus("decoded "+url); 
-        }
-      }
     }
     catch(final Throwable exp)
     {
@@ -1937,35 +1620,5 @@ public class DjVuPage
       Utils.printStackTrace(exp);
     }
     lockWait = false;
-
-    try
-    {
-//        logError("0. finish "+this);
-      final Object[] lockArray =
-      {
-        infoLock, fgIWPixmapLock, annoLock, textLock, bgIWPixmapLock,
-        fgJb2Lock, fgPaletteLock, fgJb2DictLock, progressiveLock, doneLock
-      };
-
-      for(int i = 0; i < lockArray.length; i++)
-      {
-//          logError(i+". finish "+this);
-        synchronized(lockArray[i])
-        {
-          lockArray[i].notifyAll();
-        }
-      }
-//        logError("x. finish "+this);
-      change.firePropertyChange(
-        doneLock.toString(),
-        null,
-        this);
-
-//        logError("xx. finish "+this);
-    }
-    catch(final Throwable exp)
-    {
-      Utils.printStackTrace(exp);
-    }
   }
 }

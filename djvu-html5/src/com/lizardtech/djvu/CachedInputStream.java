@@ -45,7 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
+import java.io.IOException;
 import java.util.*;
 
   /**
@@ -123,7 +123,7 @@ public class CachedInputStream
      * 
      * @return the initialized stream
      */
-    public CachedInputStream init(final DataPool buffer,final int startOffset,final int endOffset)
+    private CachedInputStream init(final DataPool buffer,final int startOffset,final int endOffset)
     {
       this.buffer=buffer;
       markOffset=offset=startOffset;
@@ -135,13 +135,12 @@ public class CachedInputStream
      * Initialize the stream with a data source, startOffset, and endOffset.
      *
      * @param url URL to read.
-     * @param prefetch True if data should be prefetched.  (Temporarily broken)
      *
      * @return the initialized stream
      */
-    public CachedInputStream init(final String url,final boolean prefetch)
+    public CachedInputStream init(final String url, InputStateListener listener)
     {
-      return init(new DataPool().init(url),0, Integer.MAX_VALUE);
+      return init(new DataPool().init(url, listener),0, Integer.MAX_VALUE);
     }
     
     /**
@@ -151,7 +150,7 @@ public class CachedInputStream
      *
      * @return the initialized stream
      */
-    public CachedInputStream init(final InputStream input)
+    public CachedInputStream init(final InputStream input) throws IOException
     {
       if(input instanceof CachedInputStream)
       {
@@ -199,8 +198,8 @@ public class CachedInputStream
     @Override
 	public int available()
     {
-      final int position = buffer.getCurrentSize();
-      final int retval=(position < endOffset)?position:endOffset;
+      final int bufferEndOffset = buffer.getEndOffset();
+      final int retval=(bufferEndOffset < endOffset)?bufferEndOffset:endOffset;
       return (retval > 0)?retval:0;
     }
 
@@ -209,20 +208,10 @@ public class CachedInputStream
      *
      * @param readLimit ignored
      */
-    @Override
+	@Override
 	public void mark(int readLimit)
     {
       markOffset = offset;
-    }
-
-    /**
-     * Query if mark is supported.
-     *
-     * @return true
-     */
-    public boolean markSuppoted()
-    {
-      return true;
     }
 
     /**
@@ -366,7 +355,7 @@ public class CachedInputStream
      *
      * @throws IOException if an error occurs
      */
-    @Override
+	@Override
 	public void reset()
       throws IOException
     {
@@ -380,7 +369,7 @@ public class CachedInputStream
      *
      * @return number of bytes actually skipped
      */
-    @Override
+	@Override
 	public long skip(final long n)
     {
       final int endOffset=getEndOffset();
@@ -395,22 +384,6 @@ public class CachedInputStream
       }
       return retval;
     }
-    
-  /**
-   * Prefetch data in the same thread.
-   */
-  public void prefetchWait()
-  {
-    try
-    {
-      for(int i=offset/DataPool.BLOCKSIZE;i<getEndOffset()/DataPool.BLOCKSIZE;i++)
-      {
-        buffer.getBlock(i,true);
-      }
-      buffer.getBlock((getEndOffset()-1)/DataPool.BLOCKSIZE, true);
-    }
-    catch(final Throwable ignored) {}
-  }
   
   /**
    * Convert the accessable data into a string.  First a java modified UTF-8
@@ -446,38 +419,13 @@ public class CachedInputStream
     throws IOException
   {
     final ByteArrayOutputStream output=new ByteArrayOutputStream();
-    output.write(0);
-    output.write(0);
     for(int i=read();i>=0;i=read())
     {
       output.write(i);
     }
     final byte[] array = output.toByteArray();
-    try
-    {
-      // The string is too long for readUTF.  Try using standard UTF-8.  This
-      // will fail with the Microsoft JVM.
-      if(array.length > 65537)
-      {
-        return new String(array, 2, array.length - 2, "UTF-8");
-      }
-
-      // Try reading modified UTF-8.  This should be supported with all
-      // versions of Java.
-      array[0]=(byte)((array.length-2)>>8);
-      array[1]=(byte)((array.length-2)&0xff);
-      final DataInputStream input =
-        new DataInputStream(new ByteArrayInputStream(array));
-
-      return input.readUTF();
-    }
-    catch(final Throwable exp)
-    {
-      exp.printStackTrace(DjVuOptions.err);
-      System.gc();
-    }
-
-    return new String(array, 2, array.length - 2);
+    output.close();
+    return new String(array, 0, array.length, "UTF-8");
   }
   
   /**
@@ -525,5 +473,10 @@ public class CachedInputStream
       retval=new IFFEnumeration().init(this);
     }
     return retval;
+  }
+
+  public boolean isReady()
+  {
+	  return buffer != null && buffer.isReady();
   }
 }

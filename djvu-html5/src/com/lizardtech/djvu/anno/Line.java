@@ -77,7 +77,8 @@ public class Line
    *
    * @return MAP_TEXT
    */
-  public int getMapType()
+  @Override
+public int getMapType()
   {
     return MAP_LINE;
   }
@@ -98,7 +99,8 @@ public class Line
    *
    * @return a vector of points
    */
-  public Vector getPoints()
+  @Override
+public Vector getPoints()
   {
     final GRect  bounds = getBounds();
     final int[]  point1 = {xlow?bounds.xmin:(bounds.xmax-1), ylow?bounds.ymin:(bounds.ymax-1)};

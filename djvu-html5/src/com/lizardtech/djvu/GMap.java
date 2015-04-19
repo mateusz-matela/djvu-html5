@@ -59,7 +59,7 @@ public abstract class GMap
   //~ Instance fields --------------------------------------------------------
 
   /** properties associated with this image map */
-  public final Hashtable properties = new Hashtable();
+  public final HashMap properties = new HashMap();
 
   /** The number of bytes per pixel */
   protected final int ncolors;
