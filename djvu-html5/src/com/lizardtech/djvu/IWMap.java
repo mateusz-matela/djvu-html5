@@ -501,17 +501,7 @@ final class IWMap
 
       if(fast&& (i >= 4))
       {
-        for(
-          int ii = comp.ymin, pp = (comp.ymin * dataw);
-          ii < comp.ymax;
-          ii += 2, pp += (dataw + dataw))
-        {
-          for(int jj = comp.xmin; jj < comp.xmax; jj += 2)
-          {
-            data[pp + jj + dataw] =
-              data[pp + jj + dataw + 1] = data[pp + jj + 1] = data[pp + jj];
-          }
-        }
+    	workaround(dataw, data, comp);
 
         break;
       }
@@ -555,6 +545,20 @@ final class IWMap
       }
     }
   }
+
+  	/**
+	 * This must be a separate method to work around issue
+	 * https://code.google.com/p/google-web-toolkit/issues/detail?id=9184
+	 */
+	private void workaround(final int dataw, final short[] data, GRect comp) {
+		int pp = (comp.ymin * dataw);
+		for (int ii = comp.ymin; ii < comp.ymax; ii += 2) {
+			for (int jj = comp.xmin; jj < comp.xmax; jj += 2) {
+				data[pp + jj + dataw] = data[pp + jj + dataw + 1] = data[pp + jj + 1] = data[pp + jj];
+			}
+			pp += (dataw + dataw);
+		}
+	}
 
   /**
    * DOCUMENT ME!
