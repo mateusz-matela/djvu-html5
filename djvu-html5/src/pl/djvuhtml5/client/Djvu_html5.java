@@ -6,6 +6,7 @@ import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.lizardtech.djvu.CachedInputStream;
 import com.lizardtech.djvu.DjVmDir;
@@ -30,6 +31,7 @@ public class Djvu_html5 implements EntryPoint {
 	@Override
 	public void onModuleLoad() {
 
+
 		Canvas canvas = Canvas.createIfSupported();
 		if (canvas == null) {
 			// TODO
@@ -38,12 +40,22 @@ public class Djvu_html5 implements EntryPoint {
 		canvas.setSize("1000px", "1000px");
 		canvas.setCoordinateSpaceWidth(1000);
 		canvas.setCoordinateSpaceHeight(1000);
-		RootPanel.get("djvuContainer").add(canvas);
-
 		drawingContext = canvas.getContext2d();
-		drawingContext.fillRect(10, 10, 200, 200);
+		RootPanel container = RootPanel.get("djvuContainer");
+		container.add(canvas);
 
-		url = "http://127.0.0.1:8888/sample/index.djvu";
+		DjvuContext.init(drawingContext);
+
+		url = Window.Location.getParameter("file");
+		if (url == null || url.isEmpty())
+			url = container.getElement().getAttribute("file");
+		if (url == null || url.isEmpty())
+			url = DjvuContext.getIndexFile();
+		if (url ==  null || url.isEmpty()) {
+			DjvuContext.printError("No djvu file defined");
+			return;
+		}
+
 		new CachedInputStream().init(url, new InputStateListener() {
 
 			@Override
