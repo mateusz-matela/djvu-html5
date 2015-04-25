@@ -11,6 +11,8 @@ public class DjvuContext {
 
 	private static Context2d drawingContext;
 
+	private static int tileSize;
+
 	public static final void init(Context2d drawingContext) {
 		context = Dictionary.getDictionary(CONTEXT_GLOBAL_VARIABLE);
 		DjvuContext.drawingContext = drawingContext;
@@ -24,14 +26,38 @@ public class DjvuContext {
 		drawingContext.restore();
 	}
 
-	public static final String getIndexFile() {
+	public static String getIndexFile() {
 		return getString("file", null);
 	}
 
-	private static String getString(String key, String defaultValue) {
-		if (context.keySet().contains(key))
-			return context.get(key);
-		return defaultValue;
+	public static int getTileSize() {
+		if (tileSize == 0)
+			tileSize = getInt("tileSize", 256);
+		return tileSize;
 	}
 
+	public static int getTileCacheSize() {
+		return getInt("tileCacheSize", 512);
+	}
+
+	public static String getBackground() {
+		return getString("background", "#666");
+	}
+
+	private static String getString(String key, String defaultValue) {
+		if (!context.keySet().contains(key))
+			return defaultValue;
+		return context.get(key);
+	}
+
+	private static int getInt(String key, int defaultValue) {
+		if (!context.keySet().contains(key))
+			return defaultValue;
+		String value = context.get(key);
+		try {
+			return Integer.valueOf(value);
+		} catch (NumberFormatException e) {
+			return defaultValue;
+		}
+	}
 }

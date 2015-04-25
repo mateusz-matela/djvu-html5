@@ -19,6 +19,7 @@
 
   <!-- Other module inherits                                      -->
   <inherits name='com.lizardtech.djvu'/>
+  <inherits name="com.google.gwt.logging.Logging"/>
 
   <!-- Specify the app entry point class.                         -->
   <entry-point class='pl.djvuhtml5.client.Djvu_html5'/>

@@ -2,6 +2,8 @@ package pl.djvuhtml5.client;
 
 import java.io.IOException;
 
+import pl.djvuhtml5.client.TileCache.TileInfo;
+
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.canvas.dom.client.ImageData;
@@ -34,6 +36,8 @@ public class Djvu_html5 implements EntryPoint {
 	private Document document;
 	private Canvas canvas;
 	private Context2d drawingContext;
+	private SinglePageLayout pageLayout;
+
 	/**
 	 * This is the entry point method.
 	 */
@@ -101,6 +105,8 @@ public class Djvu_html5 implements EntryPoint {
 		canvas.setCoordinateSpaceWidth(width);
 		canvas.setHeight(height + "px");
 		canvas.setCoordinateSpaceHeight(height);
+		if (pageLayout != null)
+			pageLayout.canvasResized();
 	}
 
 	private Widget prepareToolBar() {
@@ -124,6 +130,8 @@ public class Djvu_html5 implements EntryPoint {
 	private void parseDocument() {
 		try {
 			document = new Document();
+			pageLayout = new SinglePageLayout(canvas, document);
+
 			document.read(url);
 			DjVmDir djVmDir = document.getDjVmDir();
 			int filesCount = djVmDir.get_files_num();
@@ -161,28 +169,31 @@ public class Djvu_html5 implements EntryPoint {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		}
-		try {
-			DjVuPage page = document.getPage(0);
-			int w = Math.min(canvas.getCoordinateSpaceWidth(), page.getInfo().width);
-			int h = Math.min(canvas.getCoordinateSpaceHeight(), page.getInfo().height);
-			GRect segment = new GRect(0, page.getInfo().height - h, w, h);
-			GMap map = page.getMap(segment, 1, null);
-			byte[] data = map.getData();
-			ImageData imageData = drawingContext.createImageData(w, h);
-			for (int y = 0; y < h; y++) {
-				for (int x = 0; x < w; x++) {
-					int offset = 3 * ((h - y - 1) * w + x);
-					imageData.setRedAt(data[offset + map.getRedOffset()] & 0xFF, x, y);
-					imageData.setGreenAt(data[offset + map.getGreenOffset()] & 0xFF, x, y);
-					imageData.setBlueAt(data[offset + map.getBlueOffset()] & 0xFF, x, y);
-					imageData.setAlphaAt(255, x, y);
-				}
-			}
-			drawingContext.putImageData(imageData, 0, 0);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+//		try {
+//			DjVuPage page = document.getPage(0);
+//			int w = Math.min(canvas.getCoordinateSpaceWidth(), page.getInfo().width);
+//			int h = Math.min(canvas.getCoordinateSpaceHeight(), page.getInfo().height);
+//			GRect segment = new GRect(0, page.getInfo().height - h, w, h);
+//			GMap map = page.getMap(segment, 1, null);
+//			byte[] data = map.getData();
+//			ImageData imageData = drawingContext.createImageData(w, h);
+//			for (int y = 0; y < h; y++) {
+//				for (int x = 0; x < w; x++) {
+//					int offset = 3 * ((h - y - 1) * w + x);
+//					imageData.setRedAt(data[offset + map.getRedOffset()] & 0xFF, x, y);
+//					imageData.setGreenAt(data[offset + map.getGreenOffset()] & 0xFF, x, y);
+//					imageData.setBlueAt(data[offset + map.getBlueOffset()] & 0xFF, x, y);
+//					imageData.setAlphaAt(255, x, y);
+//				}
+//			}
+//			drawingContext.putImageData(imageData, 0, 0);
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+		int a = 0;
+		pageLayout.setPage(0);
+		pageLayout.zoomToFitPage();
+		pageLayout.redraw();
 	}
 }
