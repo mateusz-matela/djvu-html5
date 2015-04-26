@@ -75,8 +75,6 @@ public class Djvu_html5 implements EntryPoint {
 			throw new RuntimeException("Canvas not supported!");
 		}
 		drawingContext = canvas.getContext2d();
-		disableAntialias(drawingContext);
-		drawingContext.translate(0.5, 0.5);
 
 		final SimplePanel panel = new SimplePanel(canvas);
 		panel.setStyleName("content");
@@ -152,8 +150,4 @@ public class Djvu_html5 implements EntryPoint {
 			Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
 		}
 	}
-
-	public final native void disableAntialias(Context2d context2d) /*-{
-		context2d.imageSmoothingEnabled= false;
-	}-*/;
 }

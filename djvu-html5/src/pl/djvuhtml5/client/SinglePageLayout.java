@@ -86,28 +86,29 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			graphics2d.setFillStyle(background);
 			graphics2d.fillRect(0, 0, w, h);
 		}
-		double scale = 1 / tileCache.getScale(zoom);
+		double scale = tileCache.getScale(zoom);
 		graphics2d.save();
+		int startX = w / 2 - centerX, startY = h / 2 - centerY;
+		graphics2d.translate(startX, startY);
 		graphics2d.scale(scale, scale);
+		graphics2d.translate(-startX, -startY);
+
 		int tileSize = tileCache.tileSize;
 		int fromX = Math.max(0, centerX - w / 2) / tileSize;
-		int toX = Math.min(pw, centerX + w / 2) / tileSize;
+		int toX = Math.min((int) Math.ceil(pw / scale), centerX + w / 2) / tileSize;
 		int fromY = Math.max(0, centerY - h / 2) / tileSize;
-		int toY = Math.min(ph, centerY + h / 2) / tileSize;
+		int toY = Math.min((int) Math.ceil(ph / scale), centerY + h / 2) / tileSize;
 		tileInfoTemp.page = page;
 		tileInfoTemp.subsample = tileCache.getSubsample(zoom);
-		for (int  x = fromX; x <= toX; x++) {
-			for (int y = fromY; y <= toY; y++) {
+		for (int y = toY; y >= fromY; y--) { //reversed order for nicer effect of cache filling
+			for (int  x = toX; x >= fromX; x--) { 
 				tileInfoTemp.x = x;
 				tileInfoTemp.y = y;
 				Image tileImage = tileCache.getTileImage(tileInfoTemp);
 				graphics2d.drawImage(ImageElement.as(tileImage.getElement()),
-						x * tileSize - centerX + w / 2, y * tileSize - centerY + h / 2);
+						startX + x * tileSize, startY + y * tileSize);
 			}
 		}
-//		int pageEndX = pw - centerX + w / 2, pageEndY = ph - centerY + h / 2;
-//		graphics2d.fillRect(pageEndX, 0, w - pageEndX, h);
-//		graphics2d.fillRect(0, pageEndY, w, h - pageEndY);
 		graphics2d.restore();
 	}
 

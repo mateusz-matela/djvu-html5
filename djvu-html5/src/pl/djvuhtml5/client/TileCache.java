@@ -24,15 +24,11 @@ public class TileCache {
 
 	private final Context2d bufferContext;
 
-	private final ImageData bufferData;
-
-	private GMap bufferGMap;
-
 	private final PageCache pageCache;
 
 	private HashMap<TileInfo, CachedItem> cache = new HashMap<>();
 
-	private ArrayList<TileInfo> fetchNeeded = new ArrayList<>();
+	private final Fetcher fetcher;
 
 	private ArrayList<TileCacheListener> listeners = new ArrayList<>();
 
@@ -49,21 +45,12 @@ public class TileCache {
 		buffer.setHeight(tileSize + "px");
 		buffer.setCoordinateSpaceHeight(tileSize);
 		bufferContext = buffer.getContext2d();
-		bufferContext.setFillStyle("#AAA");
-		bufferData = bufferContext.createImageData(tileSize, tileSize);
 
-		Scheduler.get().scheduleFixedPeriod(new RepeatingCommand() {
-			
-			@Override
-			public boolean execute() {
-				fetch();
-				return true;
-			}
-		}, 100);
+		fetcher = new Fetcher();
 	}
 
 	public int getSubsample(float zoom) {
-		int subsample = (int) Math.ceil(1 /zoom);
+		int subsample = (int) Math.floor(1 / zoom);
 		subsample = Math.max(0, Math.min(12, subsample));
 		return subsample;
 	}
@@ -71,73 +58,35 @@ public class TileCache {
 	public double getScale(float zoom) {
 		int subsample = getSubsample(zoom);
 		double zoom2 = 1.0 / subsample;
-		return zoom2 / zoom;
-	}
-
-	protected void fetch() {
-		for (int i = fetchNeeded.size() - 1; i >= 0; i--) {
-			final TileInfo tileInfo = fetchNeeded.get(i);
-			CachedItem cachedItem = cache.get(tileInfo);
-			if (cachedItem != null && cachedItem.isFetched)
-				continue;
-			DjVuPage page = pageCache.getPage(tileInfo.page);
-			if (page == null)
-				continue;
-			fetchNeeded.remove(i);
-			if (cachedItem == null) {
-				cachedItem = new CachedItem();
-				cache.put(tileInfo, cachedItem);
-			}
-
-			tileInfo.fillRect(tempRect, tileSize, page.getInfo());
-			int w = tempRect.width(), h = tempRect.height();
-			bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
-			int r = bufferGMap.getRedOffset(), g = bufferGMap.getGreenOffset(), b = bufferGMap.getBlueOffset();
-			byte[] data = bufferGMap.getData();
-			for (int y = 0; y < h; y++) {
-				for (int x = 0; x < w; x++) {
-					int offset = 3 * ((h - y - 1) * w + x);
-					bufferData.setRedAt(data[offset + r] & 0xFF, x, y);
-					bufferData.setGreenAt(data[offset + g] & 0xFF, x, y);
-					bufferData.setBlueAt(data[offset + b] & 0xFF, x, y);
-					bufferData.setAlphaAt(255, x, y);
-				}
-			}
-			CanvasElement canvas = bufferContext.getCanvas();
-			canvas.setWidth(w);
-			canvas.setHeight(h);
-			bufferContext.putImageData(bufferData, 0, 0);
-			cachedItem.image = new Image(canvas.toDataUrl());
-
-			Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-				
-				@Override
-				public void execute() {
-					for (TileCacheListener listener : listeners)
-						listener.tileAvailable(tileInfo);
-				}
-			});
-		}
+		return zoom / zoom2;
 	}
 
 	public Image getTileImage(TileInfo tileInfo) {
 		CachedItem cachedItem = cache.get(tileInfo);
 		if (cachedItem == null) {
-			bufferContext.clearRect(0, 0, tileSize, tileSize);
-			final int count = 16;
-			final int size = tileSize / count;
+			tileInfo.getRect(tempRect, tileSize, pageCache.getPage(tileInfo.page).getInfo());
+			CanvasElement canvas = bufferContext.getCanvas();
+			canvas.setWidth(tempRect.width());
+			canvas.setHeight(tempRect.height());
+			bufferContext.setFillStyle("white");
+			bufferContext.fillRect(0, 0, tempRect.width(), tempRect.height());
+			bufferContext.setFillStyle("#999");
+			final int count = tileSize / 16;
 			for (int x = 0; x < count; x++)
 				for (int y = 0; y < count; y++)
-					if ((x + y) % 2 == 1)
-						bufferContext.fillRect(x * size, y * size, size, size);
+					if ((x + y) % 2 == 1) {
+						int x1 = tileSize * x / count, x2 = tileSize * (x + 1) / count;
+						int y1 = tileSize * y / count, y2 = tileSize * (y + 1) / count;
+						bufferContext.fillRect(x1, y1, x2 - x1, y2 - y1);
+					}
 
 			//TODO fill with rescaled other tiles
 
 			cachedItem = new CachedItem();
-			cachedItem.image = new Image(bufferContext.getCanvas().toDataUrl());
+			cachedItem.image = new Image(canvas.toDataUrl());
 			tileInfo = new TileInfo(tileInfo);
 			cache.put(tileInfo, cachedItem);
-			fetchNeeded.add(tileInfo);
+			fetcher.fetch(tileInfo);
 		}
 		cachedItem.lastUsed = System.currentTimeMillis();
 		return cachedItem.image;
@@ -146,6 +95,73 @@ public class TileCache {
 	public void addTileCacheListener(TileCacheListener listener) {
 		listeners.add(listener);
 	}
+
+	private class Fetcher implements RepeatingCommand {
+		private boolean isRunning = false;
+
+		private final ArrayList<TileInfo> tilesToFetch = new ArrayList<>();
+
+		private final ImageData bufferData = bufferContext.createImageData(tileSize, tileSize);
+
+		private GMap bufferGMap;
+
+		public void fetch(TileInfo tileInfo) {
+			tilesToFetch.add(tileInfo);
+			if (!isRunning)
+				Scheduler.get().scheduleIncremental(this);
+			isRunning = true;
+		}
+
+		@Override
+		public boolean execute() {
+			for (int i = tilesToFetch.size() - 1; i >= 0; i--) {
+				final TileInfo tileInfo = tilesToFetch.get(i);
+				CachedItem cachedItem = cache.get(tileInfo);
+				if (cachedItem != null && cachedItem.isFetched)
+					continue;
+				DjVuPage page = pageCache.getPage(tileInfo.page);
+				if (page == null)
+					continue;
+				tilesToFetch.remove(i);
+				if (cachedItem == null) {
+					cachedItem = new CachedItem();
+					cache.put(tileInfo, cachedItem);
+				}
+		
+				tileInfo.getRect(tempRect, tileSize, page.getInfo());
+				int w = tempRect.width(), h = tempRect.height();
+				bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
+				int r = bufferGMap.getRedOffset(), g = bufferGMap.getGreenOffset(), b = bufferGMap.getBlueOffset();
+				byte[] data = bufferGMap.getData();
+				for (int y = 0; y < h; y++) {
+					for (int x = 0; x < w; x++) {
+						int offset = 3 * ((h - y - 1) * w + x);
+						bufferData.setRedAt(data[offset + r] & 0xFF, x, y);
+						bufferData.setGreenAt(data[offset + g] & 0xFF, x, y);
+						bufferData.setBlueAt(data[offset + b] & 0xFF, x, y);
+						bufferData.setAlphaAt(0xFF, x, y);
+					}
+				}
+				CanvasElement canvas = bufferContext.getCanvas();
+				canvas.setWidth(w);
+				canvas.setHeight(h);
+				bufferContext.putImageData(bufferData, 0, 0);
+				cachedItem.image = new Image(canvas.toDataUrl());
+		
+				Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+					
+					@Override
+					public void execute() {
+						for (TileCacheListener listener : listeners)
+							listener.tileAvailable(tileInfo);
+					}
+				});
+				return true;
+			}
+			isRunning = false;
+			return false;
+		}
+	};
 
 	public static final class TileInfo {
 		public int page;
@@ -160,7 +176,7 @@ public class TileCache {
 			this.y = y;
 		}
 
-		private void fillRect(GRect rect, int tileSize, DjVuInfo info) {
+		private void getRect(GRect rect, int tileSize, DjVuInfo info) {
 			int pw = (info.width + subsample - 1) / subsample, ph = (info.height + subsample - 1) / subsample;
 			rect.xmin = x * tileSize;
 			rect.xmax = Math.min((x + 1) * tileSize, pw);
