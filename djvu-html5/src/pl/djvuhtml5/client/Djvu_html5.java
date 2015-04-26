@@ -1,14 +1,16 @@
 package pl.djvuhtml5.client;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import pl.djvuhtml5.client.TileCache.TileInfo;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
-import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.logical.shared.ResizeEvent;
@@ -16,15 +18,12 @@ import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.lizardtech.djvu.CachedInputStream;
-import com.lizardtech.djvu.DjVmDir;
-import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
-import com.lizardtech.djvu.GMap;
-import com.lizardtech.djvu.GRect;
 import com.lizardtech.djvu.InputStateListener;
 
 /**
@@ -76,6 +75,8 @@ public class Djvu_html5 implements EntryPoint {
 			throw new RuntimeException("Canvas not supported!");
 		}
 		drawingContext = canvas.getContext2d();
+		disableAntialias(drawingContext);
+		drawingContext.translate(0.5, 0.5);
 
 		final SimplePanel panel = new SimplePanel(canvas);
 		panel.setStyleName("content");
@@ -119,7 +120,21 @@ public class Djvu_html5 implements EntryPoint {
 			
 			@Override
 			public void onClick(ClickEvent event) {
-				parsePages();
+				//				pageLayout.redraw();
+				TileInfo tileInfo = new TileInfo(0, 1, 0, 0);
+				Image tileImage = pageLayout.tileCache.getTileImage(tileInfo);
+				drawingContext.drawImage(ImageElement.as(tileImage.getElement()), 0, 0);
+			}
+		});
+		toolBar.add(button);
+
+		button = new Button();
+		button.setStyleName("toolbarSquareButton");
+		button.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				pageLayout.redraw();
 			}
 		});
 		toolBar.add(button);
@@ -130,70 +145,15 @@ public class Djvu_html5 implements EntryPoint {
 	private void parseDocument() {
 		try {
 			document = new Document();
-			pageLayout = new SinglePageLayout(canvas, document);
 
 			document.read(url);
-			DjVmDir djVmDir = document.getDjVmDir();
-			int filesCount = djVmDir.get_files_num();
-			filesCount = 1;
-			System.out.println("document read, found " + filesCount + " files.");
-			final int[] countDown = { filesCount };
-			InputStateListener listener = new InputStateListener() {
-
-				@Override
-				public void inputReady() {
-					countDown[0]--;
-					if (countDown[0] <= 0) {
-						parsePages();
-					}
-				}
-			};
-			for (int i = 0; i < filesCount; i++) {
-				document.get_data(i, listener);
-			}
+			pageLayout = new SinglePageLayout(canvas, document);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
 		}
 	}
 
-	protected void parsePages() {
-		System.out.println("all pages downloaded!");
-//		try {
-//			for (int i = 0; i < document.size(); i++) {
-//				DjVuPage page = document.getPage(i);
-//				DjVuInfo info = page.getInfo();
-//				System.out.println("page " + i + ": " + info.width + " x " + info.height);
-//			}
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		try {
-//			DjVuPage page = document.getPage(0);
-//			int w = Math.min(canvas.getCoordinateSpaceWidth(), page.getInfo().width);
-//			int h = Math.min(canvas.getCoordinateSpaceHeight(), page.getInfo().height);
-//			GRect segment = new GRect(0, page.getInfo().height - h, w, h);
-//			GMap map = page.getMap(segment, 1, null);
-//			byte[] data = map.getData();
-//			ImageData imageData = drawingContext.createImageData(w, h);
-//			for (int y = 0; y < h; y++) {
-//				for (int x = 0; x < w; x++) {
-//					int offset = 3 * ((h - y - 1) * w + x);
-//					imageData.setRedAt(data[offset + map.getRedOffset()] & 0xFF, x, y);
-//					imageData.setGreenAt(data[offset + map.getGreenOffset()] & 0xFF, x, y);
-//					imageData.setBlueAt(data[offset + map.getBlueOffset()] & 0xFF, x, y);
-//					imageData.setAlphaAt(255, x, y);
-//				}
-//			}
-//			drawingContext.putImageData(imageData, 0, 0);
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		int a = 0;
-		pageLayout.setPage(0);
-		pageLayout.zoomToFitPage();
-		pageLayout.redraw();
-	}
+	public final native void disableAntialias(Context2d context2d) /*-{
+		context2d.imageSmoothingEnabled= false;
+	}-*/;
 }

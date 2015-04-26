@@ -11,8 +11,6 @@ public class DjvuContext {
 
 	private static Context2d drawingContext;
 
-	private static int tileSize;
-
 	public static final void init(Context2d drawingContext) {
 		context = Dictionary.getDictionary(CONTEXT_GLOBAL_VARIABLE);
 		DjvuContext.drawingContext = drawingContext;
@@ -30,10 +28,12 @@ public class DjvuContext {
 		return getString("file", null);
 	}
 
+	public static int getParallelDownloads() {
+		return getInt("parallelDownloads", 3);
+	}
+
 	public static int getTileSize() {
-		if (tileSize == 0)
-			tileSize = getInt("tileSize", 256);
-		return tileSize;
+		return getInt("tileSize", 256);
 	}
 
 	public static int getTileCacheSize() {
@@ -42,6 +42,10 @@ public class DjvuContext {
 
 	public static String getBackground() {
 		return getString("background", "#666");
+	}
+
+	public static int getFitToPageMargin() {
+		return getInt("fitToPageMargin", 8);
 	}
 
 	private static String getString(String key, String defaultValue) {
