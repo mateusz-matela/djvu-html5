@@ -4,21 +4,24 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import pl.djvuhtml5.client.TileCache.TileInfo;
-
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.Scheduler;
-import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.MouseMoveEvent;
+import com.google.gwt.event.dom.client.MouseMoveHandler;
+import com.google.gwt.event.dom.client.MouseOutEvent;
+import com.google.gwt.event.dom.client.MouseOutHandler;
+import com.google.gwt.event.dom.client.MouseOverEvent;
+import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
+import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Button;
-import com.google.gwt.user.client.ui.HorizontalPanel;
-import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
@@ -44,8 +47,8 @@ public class Djvu_html5 implements EntryPoint {
 	public void onModuleLoad() {
 
 		RootPanel container = RootPanel.get("djvuContainer");
-		container.add(prepareToolBar());
 		container.add(prepareCanvas());
+		container.add(prepareToolBar());
 
 		DjvuContext.init(drawingContext);
 
@@ -109,8 +112,10 @@ public class Djvu_html5 implements EntryPoint {
 	}
 
 	private Widget prepareToolBar() {
-		HorizontalPanel toolBar = new HorizontalPanel();
+		final FlowPanel toolBar = new FlowPanel();
 		toolBar.setStyleName("toolbar");
+
+		new ToolBarHandler(toolBar, canvas);
 
 		Button button = new Button();
 		button.setStyleName("toolbarSquareButton");
@@ -118,10 +123,7 @@ public class Djvu_html5 implements EntryPoint {
 			
 			@Override
 			public void onClick(ClickEvent event) {
-				//				pageLayout.redraw();
-				TileInfo tileInfo = new TileInfo(0, 1, 0, 0);
-				Image tileImage = pageLayout.tileCache.getTileImage(tileInfo);
-				drawingContext.drawImage(ImageElement.as(tileImage.getElement()), 0, 0);
+				toolBar.addStyleName("toolbarHidden");
 			}
 		});
 		toolBar.add(button);
@@ -149,5 +151,48 @@ public class Djvu_html5 implements EntryPoint {
 		} catch (IOException e) {
 			Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
 		}
+	}
+
+	private class ToolBarHandler implements MouseMoveHandler, MouseOverHandler, MouseOutHandler {
+
+		private static final int TOOLBAR_HIDE_DELAY = 1500;
+
+		private boolean isMouseOverToolbar = false;
+
+		private final Widget toolBar;
+
+		private final Timer timer = new Timer() {
+			
+			@Override
+			public void run() {
+				if (!isMouseOverToolbar)
+					toolBar.addStyleName("toolbarHidden");
+			}
+		};
+
+		public ToolBarHandler(Widget toolbar, Canvas canvas) {
+			this.toolBar = toolbar;
+			canvas.addMouseMoveHandler(this);
+			toolBar.addDomHandler(this, MouseOverEvent.getType());
+			toolBar.addDomHandler(this, MouseOutEvent.getType());
+		}
+
+		@Override
+		public void onMouseMove(MouseMoveEvent event) {
+			toolBar.removeStyleName("toolbarHidden");
+			timer.cancel();
+			timer.schedule(TOOLBAR_HIDE_DELAY);
+		}
+
+		@Override
+		public void onMouseOver(MouseOverEvent event) {
+			isMouseOverToolbar = true;
+		}
+
+		@Override
+		public void onMouseOut(MouseOutEvent event) {
+			isMouseOverToolbar = false;
+		}
+		
 	}
 }

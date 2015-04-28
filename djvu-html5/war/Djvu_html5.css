@@ -10,20 +10,29 @@ body {
 .toolbar {
 	overflow: hidden;
 	position: absolute;
-	height: 1cm;
-	top: 0px;
-	width: 100%;
+	height: 40px;
+	top: 10px;
+	left: 50%;
+	transform: translate(-50%, 0);
+	transition: top;
+	-webkit-transition: top 0.3s;
+	transition: top 0.3s;
+}
+
+.toolbarHidden {
+	top: -40px;
+	-webkit-transition: top 1s;
+	transition: top 1s;
 }
 
 .content {
 	overflow: hidden;
 	position: absolute;
-	top: 1cm;
-	bottom: 0px;
+	height: 100%;
 	width: 100%;
 }
 
 .toolbarSquareButton {
-	width: 1cm;
-	height: 1cm;
+	width: 40px;
+	height: 40px;
 }
