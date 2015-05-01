@@ -44,11 +44,15 @@ public class DjvuContext {
 		return getString("background", "#666");
 	}
 
-	public static int getFitToPageMargin() {
-		return getInt("fitToPageMargin", 8);
+	public static int getPageMargin() {
+		return getInt("pageMargin", 8);
 	}
 
-	private static String getString(String key, String defaultValue) {
+	public static int getScreenDPI() {
+		return getInt("screenDPI", 96);
+	}
+
+	public static String getString(String key, String defaultValue) {
 		if (!context.keySet().contains(key))
 			return defaultValue;
 		return context.get(key);

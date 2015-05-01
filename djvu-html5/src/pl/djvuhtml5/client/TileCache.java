@@ -18,6 +18,8 @@ import com.lizardtech.djvu.GRect;
 
 public class TileCache {
 
+	public final static int MAX_SUBSAMPLE = 12;
+
 	public final int tileSize;
 
 	private final int tileCacheSize;
@@ -49,16 +51,15 @@ public class TileCache {
 		fetcher = new Fetcher();
 	}
 
-	public int getSubsample(float zoom) {
+	public static int toSubsample(double zoom) {
 		int subsample = (int) Math.floor(1 / zoom);
-		subsample = Math.max(0, Math.min(12, subsample));
+		subsample = Math.max(1, Math.min(MAX_SUBSAMPLE, subsample));
 		return subsample;
 	}
 
-	public double getScale(float zoom) {
-		int subsample = getSubsample(zoom);
-		double zoom2 = 1.0 / subsample;
-		return zoom / zoom2;
+	public static double toZoom(int subsample) {
+		double zoom = 1.0 / subsample;
+		return zoom;
 	}
 
 	public Image getTileImage(TileInfo tileInfo) {

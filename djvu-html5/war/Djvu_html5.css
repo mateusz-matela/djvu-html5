@@ -14,7 +14,6 @@ body {
 	top: 10px;
 	left: 50%;
 	transform: translate(-50%, 0);
-	transition: top;
 	-webkit-transition: top 0.3s;
 	transition: top 0.3s;
 }
@@ -35,4 +34,25 @@ body {
 .toolbarSquareButton {
 	width: 40px;
 	height: 40px;
+}
+
+.zoomComboBox {
+	position: relative;
+	top: -12px;
+	vertical-align: bottom;
+}
+
+.zoomSelection {
+	min-width: 70px;
+}
+
+.zoomTextBox {
+	position: absolute;
+	left: 2px;
+	top: 2px;
+	bottom: 0px;
+	width: 55px;
+	border: none;
+	padding: 0px;
+	outline: none;
 }
