@@ -1,8 +1,8 @@
 package pl.djvuhtml5.client;
 
+import static pl.djvuhtml5.client.TileCache.MAX_SUBSAMPLE;
 import static pl.djvuhtml5.client.TileCache.toSubsample;
 import static pl.djvuhtml5.client.TileCache.toZoom;
-import static pl.djvuhtml5.client.TileCache.MAX_SUBSAMPLE;
 
 import java.util.ArrayList;
 
@@ -13,6 +13,14 @@ import pl.djvuhtml5.client.TileCache.TileInfo;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.dom.client.NativeEvent;
+import com.google.gwt.event.dom.client.MouseDownEvent;
+import com.google.gwt.event.dom.client.MouseDownHandler;
+import com.google.gwt.event.dom.client.MouseMoveEvent;
+import com.google.gwt.event.dom.client.MouseMoveHandler;
+import com.google.gwt.event.dom.client.MouseUpEvent;
+import com.google.gwt.event.dom.client.MouseUpHandler;
+import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.ui.Image;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
@@ -60,6 +68,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		this.pageMargin = DjvuContext.getPageMargin();
 
 		toolbar.setPageCount(pageCache.getPageCount());
+
+		new PanController(canvas);
 	}
 
 	public void setPage(int pageNum) {
@@ -215,5 +225,48 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	public void tileAvailable(TileInfo tileInfo) {
 		if (tileInfo.page == page)
 			redraw();
+	}
+
+	private class PanController implements MouseDownHandler, MouseUpHandler, MouseMoveHandler {
+
+		private boolean isDown = false;
+		private int x, y;
+
+		public PanController(Canvas canvas) {
+			canvas.addMouseDownHandler(this);
+			canvas.addMouseUpHandler(this);
+			canvas.addMouseMoveHandler(this);
+		}
+
+		@Override
+		public void onMouseDown(MouseDownEvent event) {
+			int button = event.getNativeButton();
+			if (button == NativeEvent.BUTTON_LEFT || button == NativeEvent.BUTTON_MIDDLE) {
+				isDown = true;
+				x = event.getX();
+				y = event.getY();
+				event.preventDefault();
+				Event.setCapture(canvas.getElement());
+			}
+		}
+
+		@Override
+		public void onMouseUp(MouseUpEvent event) {
+			isDown = false;
+			Event.releaseCapture(canvas.getElement());
+		}
+
+		@Override
+		public void onMouseMove(MouseMoveEvent event) {
+			if (isDown) {
+				centerX -= event.getX() - x;
+				centerY -= event.getY() - y;
+				x = event.getX();
+				y = event.getY();
+				checkBounds();
+				redraw();
+			}
+		}
+
 	}
 }
