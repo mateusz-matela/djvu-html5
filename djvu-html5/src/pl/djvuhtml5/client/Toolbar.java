@@ -41,16 +41,6 @@ public class Toolbar extends FlowPanel {
 
 		new ToolBarHandler(this, canvas);
 
-		Button zoomOutButton = new Button();
-		zoomOutButton.setStyleName("toolbarSquareButton");
-		zoomOutButton.addClickHandler(new ClickHandler() {
-			
-			@Override
-			public void onClick(ClickEvent event) {
-			}
-		});
-		add(zoomOutButton);
-
 		zoomCombo = new ComboBox() {
 
 			@Override
@@ -62,20 +52,13 @@ public class Toolbar extends FlowPanel {
 			protected void valueSelected() {
 				zoomSelectionChanged();
 			}
-			
+
+			@Override
+			protected void changeValueClicked(int direction) {
+				zoomChangeClicked(direction);
+			}
 		};
 		add(zoomCombo);
-
-		Button zoomInbutton = new Button();
-		zoomInbutton.setStyleName("toolbarSquareButton");
-		zoomInbutton.addClickHandler(new ClickHandler() {
-			
-			@Override
-			public void onClick(ClickEvent event) {
-			}
-		});
-		add(zoomInbutton);
-
 		setZoomOptions(zoomOptions);
 	}
 
@@ -146,6 +129,14 @@ public class Toolbar extends FlowPanel {
 		zoomTextBox.setFocus(false);
 	}
 
+	protected void zoomChangeClicked(int direction) {
+		int index = zoomCombo.selection.getSelectedIndex() - direction;
+		index = Math.min(index, zoomOptions.size() - 1);
+		index = Math.max(index, 0);
+		zoomCombo.selection.setSelectedIndex(index);
+		zoomSelectionChanged();
+	}
+
 	private static abstract class ComboBox extends FlowPanel {
 		public final ListBox selection;
 		public final TextBox textBox;
@@ -153,7 +144,20 @@ public class Toolbar extends FlowPanel {
 		public ComboBox() {
 			super(SpanElement.TAG);
 
-			setStyleName("comboBox");
+			Button leftButton = new Button();
+			leftButton.setStyleName("toolbarSquareButton");
+			leftButton.addClickHandler(new ClickHandler() {
+				
+				@Override
+				public void onClick(ClickEvent event) {
+					changeValueClicked(-1);
+				}
+			});
+			add(leftButton);
+
+			FlowPanel comboPanel = new FlowPanel(SpanElement.TAG);
+			add(comboPanel);
+			comboPanel.setStyleName("comboBox");
 			selection = new ListBox();
 			selection.setStyleName("comboBoxSelection");
 			selection.addChangeHandler(new ChangeHandler() {
@@ -163,7 +167,7 @@ public class Toolbar extends FlowPanel {
 					valueSelected();
 				}
 			});
-			add(selection);
+			comboPanel.add(selection);
 
 			textBox = new TextBox();
 			textBox.setStyleName("comboBoxText");
@@ -190,12 +194,25 @@ public class Toolbar extends FlowPanel {
 					textBox.selectAll();
 				}
 			});
-			add(textBox);
+			comboPanel.add(textBox);
+
+			Button rightButton = new Button();
+			rightButton.setStyleName("toolbarSquareButton");
+			rightButton.addClickHandler(new ClickHandler() {
+				
+				@Override
+				public void onClick(ClickEvent event) {
+					changeValueClicked(1);
+				}
+			});
+			add(rightButton);
 		}
 
 		protected abstract void valueTypedIn();
 
 		protected abstract void valueSelected();
+
+		protected abstract void changeValueClicked(int direction);
 	}
 
 	private class ToolBarHandler implements MouseMoveHandler, MouseOverHandler, MouseOutHandler {
