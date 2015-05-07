@@ -52,6 +52,10 @@ public class DjvuContext {
 		return getInt("screenDPI", 96);
 	}
 
+	public static int getMaxZoom() {
+		return getInt("maxZoom", 10000);
+	}
+
 	public static String getString(String key, String defaultValue) {
 		if (!context.keySet().contains(key))
 			return defaultValue;

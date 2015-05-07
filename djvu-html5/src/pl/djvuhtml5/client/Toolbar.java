@@ -6,10 +6,15 @@ import java.util.List;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.dom.client.SpanElement;
+import com.google.gwt.event.dom.client.BlurEvent;
+import com.google.gwt.event.dom.client.BlurHandler;
 import com.google.gwt.event.dom.client.ChangeEvent;
 import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.KeyCodes;
+import com.google.gwt.event.dom.client.KeyPressEvent;
+import com.google.gwt.event.dom.client.KeyPressHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseMoveHandler;
 import com.google.gwt.event.dom.client.MouseOutEvent;
@@ -27,7 +32,7 @@ public class Toolbar extends FlowPanel {
 
 	private SinglePageLayout pageLayout;
 
-	private List<Integer> zoomOptions = Collections.emptyList();
+	private List<Integer> zoomOptions = Arrays.asList(100);
 
 	private final ListBox zoomSelection;
 
@@ -62,6 +67,29 @@ public class Toolbar extends FlowPanel {
 		});
 		zoomComboBox.add(zoomSelection);
 		zoomTextBox.setStyleName("zoomTextBox");
+		zoomTextBox.addKeyPressHandler(new KeyPressHandler() {
+			
+			@Override
+			public void onKeyPress(KeyPressEvent event) {
+				if (event.getCharCode() == KeyCodes.KEY_ENTER) {
+					zoomTypedIn();
+				}
+			}
+		});
+		zoomTextBox.addBlurHandler(new BlurHandler() {
+			
+			@Override
+			public void onBlur(BlurEvent event) {
+				zoomTypedIn();
+			}
+		});
+		zoomTextBox.addClickHandler(new ClickHandler() {
+			
+			@Override
+			public void onClick(ClickEvent event) {
+				zoomTextBox.selectAll();
+			}
+		});
 		zoomComboBox.add(zoomTextBox);
 		add(zoomComboBox);
 
@@ -83,29 +111,26 @@ public class Toolbar extends FlowPanel {
 	}
 
 	public void setZoomOptions(List<Integer> newZoomOptions) {
-		int selected = zoomSelection.getSelectedIndex();
-		boolean fitPage = selected == -1 || selected == zoomSelection.getItemCount() - 1;
-		boolean fitWidth = selected == zoomSelection.getItemCount() - 2;
-		if (!fitPage && !fitWidth)
-			selected = this.zoomOptions.get(selected);
-
-		zoomOptions = newZoomOptions;
+		int previousIndex = zoomSelection.getSelectedIndex();
 
 		zoomSelection.clear();
-		for (int i : zoomOptions) {
+		for (int i : newZoomOptions) {
 			zoomSelection.addItem(i + "%");
 		}
 		zoomSelection.addItem(DjvuContext.getString("label_fitWidth", "Fit width"));
 		zoomSelection.addItem(DjvuContext.getString("label_fitPage", "Fit page"));
 
-		if (fitPage) {
-			zoomSelection.setSelectedIndex(zoomOptions.size() + 1);
-		} else if (fitWidth) {
-			zoomSelection.setSelectedIndex(zoomOptions.size());
+		if (previousIndex >= zoomOptions.size()) {
+			// either "fit with" or "fit page" was selected  
+			zoomSelection.setSelectedIndex(newZoomOptions.size() + (zoomOptions.size() - previousIndex));
 		} else {
-			int newSelected = Arrays.binarySearch(zoomOptions.toArray(), selected);
-			zoomSelection.setSelectedIndex(Math.min(newSelected, zoomOptions.size() - 1));
+			int zoom = previousIndex >= 0 ? zoomOptions.get(previousIndex) : 100;
+			int newSelected = Arrays.binarySearch(newZoomOptions.toArray(), zoom, Collections.reverseOrder());
+			if (newSelected < 0)
+				newSelected = -newSelected;
+			zoomSelection.setSelectedIndex(Math.min(newSelected, newZoomOptions.size() - 1));
 		}
+		zoomOptions = newZoomOptions;
 		zoomSelectionChanged();
 	}
 
@@ -129,6 +154,20 @@ public class Toolbar extends FlowPanel {
 		}
 		zoomTextBox.setText(zoomSelection.getSelectedItemText());
 		zoomSelection.setFocus(false);
+	}
+
+	protected void zoomTypedIn() {
+		String digits = zoomTextBox.getText().replaceAll("[^0-9]", "");
+		if (digits.isEmpty() || digits.length() > 6) {
+			zoomTextBox.setText(pageLayout.getZoom() + "%");
+			zoomTextBox.selectAll();
+			return;
+		}
+		int zoom = Math.min(Integer.valueOf(digits), DjvuContext.getMaxZoom());
+		zoomSelection.setSelectedIndex(-1);
+		pageLayout.setZoom(zoom);
+		zoomTextBox.setText(zoom + "%");
+		zoomTextBox.setFocus(false);
 	}
 
 	private class ToolBarHandler implements MouseMoveHandler, MouseOverHandler, MouseOutHandler {

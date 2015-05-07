@@ -28,6 +28,10 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 	private DjVuInfo pageInfo;
 
+	/**
+	 * Location of the center of the screen in the coordinates of the scaled
+	 * page (one point is one pixel on the screen).
+	 */
 	private int centerX, centerY;
 
 	final TileCache tileCache;
@@ -61,8 +65,6 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		if (currentPage != null) {
 			pageInfo = currentPage.getInfo();
 			page = pageNum;
-			if (centerX == 0)
-				zoomToFitPage();
 			toolbar.setZoomOptions(findZoomOptions());
 		}
 	}
@@ -89,7 +91,13 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	}
 
 	public void setZoom(int percent) {
+		if (pageInfo == null)
+			return;
 		doSetZoom(percent * zoom100 / 100);
+	}
+
+	public int getZoom() {
+		return (int) (zoom / zoom100 * 100 + 0.5);
 	}
 
 	private void doSetZoom(double zoom) {
@@ -136,13 +144,15 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		if (pw < w) {
 			centerX = pw / 2;
 		} else {
-			
+			centerX = Math.max(centerX, w / 2 - pageMargin);
+			centerX = Math.min(centerX, pw - w / 2 + pageMargin);
 		}
 	
 		if (ph < h) {
 			centerY = ph / 2;
 		} else {
-			
+			centerY = Math.max(centerY, h / 2 - pageMargin);
+			centerY = Math.min(centerY, ph - h / 2 + pageMargin);
 		}
 	}
 
