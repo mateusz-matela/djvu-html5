@@ -24,6 +24,7 @@ import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlowPanel;
+import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
@@ -41,7 +42,7 @@ public class Toolbar extends FlowPanel {
 
 		new ToolBarHandler(this, canvas);
 
-		zoomCombo = new ComboBox() {
+		zoomCombo = new ComboBox("buttonZoomOut", "buttonZoomIn") {
 
 			@Override
 			protected void valueTypedIn() {
@@ -141,11 +142,12 @@ public class Toolbar extends FlowPanel {
 		public final ListBox selection;
 		public final TextBox textBox;
 
-		public ComboBox() {
+		public ComboBox(String leftButtonStyle, String rightButtonStyle) {
 			super(SpanElement.TAG);
 
 			Button leftButton = new Button();
 			leftButton.setStyleName("toolbarSquareButton");
+			leftButton.addStyleName(leftButtonStyle);
 			leftButton.addClickHandler(new ClickHandler() {
 				
 				@Override
@@ -198,6 +200,7 @@ public class Toolbar extends FlowPanel {
 
 			Button rightButton = new Button();
 			rightButton.setStyleName("toolbarSquareButton");
+			rightButton.addStyleName(rightButtonStyle);
 			rightButton.addClickHandler(new ClickHandler() {
 				
 				@Override

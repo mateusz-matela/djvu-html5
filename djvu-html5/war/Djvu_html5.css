@@ -34,6 +34,21 @@ body {
 .toolbarSquareButton {
 	width: 40px;
 	height: 40px;
+	background-repeat: no-repeat;
+	background-size: contain;
+}
+
+.buttonZoomIn {
+	background-image: url("img/zoom-in.png");	
+}
+.buttonZoomOut {
+	background-image: url("img/zoom-out.png");	
+}
+.buttonPagePrev {
+	background-image: url("img/page-prev.png");	
+}
+.buttonPageNext {
+	background-image: url("img/page-next.png");
 }
 
 .comboBox {
