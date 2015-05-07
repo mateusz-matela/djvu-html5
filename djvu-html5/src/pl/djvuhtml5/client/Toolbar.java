@@ -34,9 +34,7 @@ public class Toolbar extends FlowPanel {
 
 	private List<Integer> zoomOptions = Arrays.asList(100);
 
-	private final ListBox zoomSelection;
-
-	private TextBox zoomTextBox;
+	private final ComboBox zoomCombo;
 
 	public Toolbar(Canvas canvas) {
 		setStyleName("toolbar");
@@ -53,45 +51,20 @@ public class Toolbar extends FlowPanel {
 		});
 		add(zoomOutButton);
 
-		FlowPanel zoomComboBox = new FlowPanel(SpanElement.TAG);
-		zoomTextBox = new TextBox();
-		zoomComboBox.setStyleName("zoomComboBox");
-		zoomSelection = new ListBox();
-		zoomSelection.setStyleName("zoomSelection");
-		zoomSelection.addChangeHandler(new ChangeHandler() {
-			
+		zoomCombo = new ComboBox() {
+
 			@Override
-			public void onChange(ChangeEvent event) {
-				zoomSelectionChanged();
-			}
-		});
-		zoomComboBox.add(zoomSelection);
-		zoomTextBox.setStyleName("zoomTextBox");
-		zoomTextBox.addKeyPressHandler(new KeyPressHandler() {
-			
-			@Override
-			public void onKeyPress(KeyPressEvent event) {
-				if (event.getCharCode() == KeyCodes.KEY_ENTER) {
-					zoomTypedIn();
-				}
-			}
-		});
-		zoomTextBox.addBlurHandler(new BlurHandler() {
-			
-			@Override
-			public void onBlur(BlurEvent event) {
+			protected void valueTypedIn() {
 				zoomTypedIn();
 			}
-		});
-		zoomTextBox.addClickHandler(new ClickHandler() {
-			
+
 			@Override
-			public void onClick(ClickEvent event) {
-				zoomTextBox.selectAll();
+			protected void valueSelected() {
+				zoomSelectionChanged();
 			}
-		});
-		zoomComboBox.add(zoomTextBox);
-		add(zoomComboBox);
+			
+		};
+		add(zoomCombo);
 
 		Button zoomInbutton = new Button();
 		zoomInbutton.setStyleName("toolbarSquareButton");
@@ -111,6 +84,7 @@ public class Toolbar extends FlowPanel {
 	}
 
 	public void setZoomOptions(List<Integer> newZoomOptions) {
+		ListBox zoomSelection = zoomCombo.selection;
 		int previousIndex = zoomSelection.getSelectedIndex();
 
 		zoomSelection.clear();
@@ -137,6 +111,7 @@ public class Toolbar extends FlowPanel {
 	protected void zoomSelectionChanged() {
 		if (pageLayout == null)
 			return;
+		ListBox zoomSelection = zoomCombo.selection;
 		int index = zoomSelection.getSelectedIndex();
 		if (index < zoomOptions.size()) {
 			pageLayout.setZoom(zoomOptions.get(index));
@@ -152,11 +127,12 @@ public class Toolbar extends FlowPanel {
 				throw new RuntimeException();
 			}
 		}
-		zoomTextBox.setText(zoomSelection.getSelectedItemText());
+		zoomCombo.textBox.setText(zoomSelection.getSelectedItemText());
 		zoomSelection.setFocus(false);
 	}
 
 	protected void zoomTypedIn() {
+		TextBox zoomTextBox = zoomCombo.textBox;
 		String digits = zoomTextBox.getText().replaceAll("[^0-9]", "");
 		if (digits.isEmpty() || digits.length() > 6) {
 			zoomTextBox.setText(pageLayout.getZoom() + "%");
@@ -164,10 +140,62 @@ public class Toolbar extends FlowPanel {
 			return;
 		}
 		int zoom = Math.min(Integer.valueOf(digits), DjvuContext.getMaxZoom());
-		zoomSelection.setSelectedIndex(-1);
+		zoomCombo.selection.setSelectedIndex(-1);
 		pageLayout.setZoom(zoom);
 		zoomTextBox.setText(zoom + "%");
 		zoomTextBox.setFocus(false);
+	}
+
+	private static abstract class ComboBox extends FlowPanel {
+		public final ListBox selection;
+		public final TextBox textBox;
+
+		public ComboBox() {
+			super(SpanElement.TAG);
+
+			setStyleName("comboBox");
+			selection = new ListBox();
+			selection.setStyleName("comboBoxSelection");
+			selection.addChangeHandler(new ChangeHandler() {
+				
+				@Override
+				public void onChange(ChangeEvent event) {
+					valueSelected();
+				}
+			});
+			add(selection);
+
+			textBox = new TextBox();
+			textBox.setStyleName("comboBoxText");
+			textBox.addKeyPressHandler(new KeyPressHandler() {
+				
+				@Override
+				public void onKeyPress(KeyPressEvent event) {
+					if (event.getCharCode() == KeyCodes.KEY_ENTER) {
+						valueTypedIn();
+					}
+				}
+			});
+			textBox.addBlurHandler(new BlurHandler() {
+				
+				@Override
+				public void onBlur(BlurEvent event) {
+					valueTypedIn();
+				}
+			});
+			textBox.addClickHandler(new ClickHandler() {
+				
+				@Override
+				public void onClick(ClickEvent event) {
+					textBox.selectAll();
+				}
+			});
+			add(textBox);
+		}
+
+		protected abstract void valueTypedIn();
+
+		protected abstract void valueSelected();
 	}
 
 	private class ToolBarHandler implements MouseMoveHandler, MouseOverHandler, MouseOutHandler {

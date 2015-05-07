@@ -36,17 +36,17 @@ body {
 	height: 40px;
 }
 
-.zoomComboBox {
+.comboBox {
 	position: relative;
 	top: -12px;
 	vertical-align: bottom;
 }
 
-.zoomSelection {
+.comboBoxSelection {
 	min-width: 70px;
 }
 
-.zoomTextBox {
+.comboBoxText {
 	position: absolute;
 	left: 2px;
 	top: 2px;
