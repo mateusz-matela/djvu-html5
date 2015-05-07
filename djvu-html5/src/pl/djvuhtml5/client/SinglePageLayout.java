@@ -20,11 +20,11 @@ import com.lizardtech.djvu.Document;
 
 public class SinglePageLayout implements PageDownloadListener, TileCacheListener {
 
-	private double zoom = 1;
+	private double zoom = 0;
 
 	private double zoom100;
 
-	private int page;
+	private int page = 0;
 
 	private DjVuInfo pageInfo;
 
@@ -58,14 +58,18 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 		this.background = DjvuContext.getBackground();
 		this.pageMargin = DjvuContext.getPageMargin();
+
+		toolbar.setPageCount(pageCache.getPageCount());
 	}
 
 	public void setPage(int pageNum) {
-		DjVuPage currentPage = pageCache.getPage(pageNum);
-		if (currentPage != null) {
-			pageInfo = currentPage.getInfo();
-			page = pageNum;
+		page = pageNum;
+		DjVuPage newPage = pageCache.getPage(pageNum);
+		if (newPage != null) {
+			pageInfo = newPage.getInfo();
 			toolbar.setZoomOptions(findZoomOptions());
+			checkBounds();
+			redraw();
 		}
 	}
 
@@ -117,6 +121,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		if (toZoom(subsample) / zoom100 > zoom100 / toZoom(subsample + 1))
 			subsample++;
 		zoom100 = toZoom(subsample);
+
+		if (zoom == 0)
+			zoom = zoom100;
 
 		double z = zoom100;
 		for (int i = subsample + 1; i <= MAX_SUBSAMPLE; i++) {

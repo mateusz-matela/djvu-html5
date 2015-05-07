@@ -39,16 +39,23 @@ body {
 }
 
 .buttonZoomIn {
-	background-image: url("img/zoom-in.png");	
+	background-image: url("img/zoom-in.png");
 }
+
 .buttonZoomOut {
-	background-image: url("img/zoom-out.png");	
+	background-image: url("img/zoom-out.png");
 }
+
 .buttonPagePrev {
-	background-image: url("img/page-prev.png");	
+	background-image: url("img/page-prev.png");
 }
+
 .buttonPageNext {
 	background-image: url("img/page-next.png");
+}
+
+.toolbarDivisor {
+	margin-left: 30px;
 }
 
 .comboBox {

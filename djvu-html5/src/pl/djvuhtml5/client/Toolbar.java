@@ -24,7 +24,6 @@ import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlowPanel;
-import com.google.gwt.user.client.ui.Image;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
@@ -36,6 +35,10 @@ public class Toolbar extends FlowPanel {
 	private List<Integer> zoomOptions = Arrays.asList(100);
 
 	private final ComboBox zoomCombo;
+
+	private int pagesCount;
+
+	private final ComboBox pageCombo;
 
 	public Toolbar(Canvas canvas) {
 		setStyleName("toolbar");
@@ -61,6 +64,29 @@ public class Toolbar extends FlowPanel {
 		};
 		add(zoomCombo);
 		setZoomOptions(zoomOptions);
+
+		FlowPanel divisor = new FlowPanel(SpanElement.TAG);
+		divisor.setStyleName("toolbarDivisor");
+		add(divisor);
+
+		pageCombo = new ComboBox("buttonPagePrev", "buttonPageNext") {
+			
+			@Override
+			protected void valueTypedIn() {
+				pageTypedIn();
+			}
+			
+			@Override
+			protected void valueSelected() {
+				pageSelectionChanged();
+			}
+			
+			@Override
+			protected void changeValueClicked(int direction) {
+				pageChangeClicked(direction);
+			}
+		};
+		add(pageCombo);
 	}
 
 	public void setPageLayout(SinglePageLayout pageLayout) {
@@ -82,14 +108,28 @@ public class Toolbar extends FlowPanel {
 			// either "fit with" or "fit page" was selected  
 			zoomSelection.setSelectedIndex(newZoomOptions.size() + (zoomOptions.size() - previousIndex));
 		} else {
-			int zoom = previousIndex >= 0 ? zoomOptions.get(previousIndex) : 100;
+			int zoom = pageLayout != null ? pageLayout.getZoom() : 100;
 			int newSelected = Arrays.binarySearch(newZoomOptions.toArray(), zoom, Collections.reverseOrder());
-			if (newSelected < 0)
-				newSelected = -newSelected;
-			zoomSelection.setSelectedIndex(Math.min(newSelected, newZoomOptions.size() - 1));
+			if (newSelected >= 0) {
+				zoomSelection.setSelectedIndex(Math.min(newSelected, newZoomOptions.size() - 1));
+				zoomOptions = newZoomOptions;
+				zoomSelectionChanged();
+			} else {
+				zoomSelection.setSelectedIndex(-1);
+				zoomOptions = newZoomOptions;
+			}
 		}
-		zoomOptions = newZoomOptions;
-		zoomSelectionChanged();
+	}
+
+	public void setPageCount(int pagesCount) {
+		this.pagesCount = pagesCount;
+		ListBox pageSelection = pageCombo.selection;
+		pageSelection.clear();
+		for (int i = 1; i <= pagesCount; i++) {
+			pageSelection.addItem(i + "");
+		}
+		pageSelection.setSelectedIndex(0);
+		pageSelectionChanged();
 	}
 
 	protected void zoomSelectionChanged() {
@@ -116,6 +156,8 @@ public class Toolbar extends FlowPanel {
 	}
 
 	protected void zoomTypedIn() {
+		if (pageLayout == null)
+			return;
 		TextBox zoomTextBox = zoomCombo.textBox;
 		String digits = zoomTextBox.getText().replaceAll("[^0-9]", "");
 		if (digits.isEmpty() || digits.length() > 6) {
@@ -124,6 +166,7 @@ public class Toolbar extends FlowPanel {
 			return;
 		}
 		int zoom = Math.min(Integer.valueOf(digits), DjvuContext.getMaxZoom());
+		zoom = Math.max(zoom, zoomOptions.get(zoomOptions.size() - 1));
 		zoomCombo.selection.setSelectedIndex(-1);
 		pageLayout.setZoom(zoom);
 		zoomTextBox.setText(zoom + "%");
@@ -131,11 +174,53 @@ public class Toolbar extends FlowPanel {
 	}
 
 	protected void zoomChangeClicked(int direction) {
-		int index = zoomCombo.selection.getSelectedIndex() - direction;
+		if (pageLayout == null)
+			return;
+		int index = Arrays.binarySearch(zoomOptions.toArray(), pageLayout.getZoom(), Collections.reverseOrder());
+		if (index >= 0) {
+			index -= direction;
+		} else {
+			index = -index - (direction == 1 ? 2 : 1); 
+		}
 		index = Math.min(index, zoomOptions.size() - 1);
 		index = Math.max(index, 0);
 		zoomCombo.selection.setSelectedIndex(index);
 		zoomSelectionChanged();
+	}
+
+	protected void pageSelectionChanged() {
+		int page = pageCombo.selection.getSelectedIndex();
+		if (pageLayout != null)
+			pageLayout.setPage(page);
+		pageCombo.textBox.setText((page + 1) + "");
+		pageCombo.selection.setFocus(false);
+	}
+
+	protected void pageTypedIn() {
+		if (pageLayout == null)
+			return;
+		TextBox pageTextBox = pageCombo.textBox;
+		String digits = pageTextBox.getText().replaceAll("[^0-9]", "");
+		if (digits.isEmpty() || digits.length() > 6) {
+			pageTextBox.setText(pageCombo.selection.getSelectedItemText());
+			pageTextBox.selectAll();
+			return;
+		}
+		int page = Math.min(Integer.valueOf(digits), pagesCount) - 1;
+		page = Math.max(page, 0);
+		pageCombo.selection.setSelectedIndex(page);
+		pageLayout.setPage(page);
+		pageTextBox.setText((page + 1) + "");
+		pageTextBox.setFocus(false);
+	}
+
+	protected void pageChangeClicked(int direction) {
+		if (pageLayout == null)
+			return;
+		int page = pageCombo.selection.getSelectedIndex() + direction;
+		page = Math.max(0, Math.min(pagesCount - 1, page));
+		pageCombo.selection.setSelectedIndex(page);
+		pageSelectionChanged();
 	}
 
 	private static abstract class ComboBox extends FlowPanel {
