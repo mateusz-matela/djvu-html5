@@ -1,7 +1,12 @@
 package pl.djvuhtml5.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import pl.djvuhtml5.client.PageCache.PageDownloadListener;
 
@@ -12,6 +17,7 @@ import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.CanvasElement;
+import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.user.client.ui.Image;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
@@ -30,10 +36,10 @@ public class TileCache {
 
 	private final PageCache pageCache;
 
-	private HashMap<TileInfo, CachedItem> cache = new HashMap<>();
+	private final HashMap<TileInfo, CachedItem> cache = new HashMap<>();
 
 	/** All tiles of max subsample are stored here and will never be thrown away */
-	private HashMap<TileInfo, CachedItem> smallCache = new HashMap<>();
+	private final HashMap<TileInfo, CachedItem> smallCache = new HashMap<>();
 
 	private final Fetcher fetcher;
 
@@ -71,7 +77,8 @@ public class TileCache {
 	public Image getTileImage(TileInfo tileInfo) {
 		CachedItem cachedItem = getItem(tileInfo);
 		if (cachedItem == null) {
-			tileInfo.getRect(tempRect, tileSize, pageCache.getPage(tileInfo.page).getInfo());
+			DjVuInfo pageInfo = pageCache.getPage(tileInfo.page).getInfo();
+			tileInfo.getScreenRect(tempRect, tileSize, pageInfo);
 			CanvasElement canvas = bufferContext.getCanvas();
 			canvas.setWidth(tempRect.width());
 			canvas.setHeight(tempRect.height());
@@ -87,7 +94,42 @@ public class TileCache {
 						bufferContext.fillRect(x1, y1, x2 - x1, y2 - y1);
 					}
 
-			//TODO fill with rescaled other tiles
+			// fill with rescaled other tiles
+			ArrayList<TileInfo> fetched = new ArrayList<>();
+			tileInfo.getPageRect(tempRect, tileSize, pageInfo);
+			GRect tempRect2 = new GRect();
+			for (Map<TileInfo, CachedItem> map : Arrays.asList(smallCache, cache)) {
+				for (Entry<TileInfo, CachedItem> entry : map.entrySet()) {
+					TileInfo ti = entry.getKey();
+					if (ti.page == tileInfo.page && entry.getValue().isFetched) {
+						ti.getPageRect(tempRect2, tileSize, pageInfo);
+						if (tempRect2.intersect(tempRect2, tempRect))
+							fetched.add(ti);
+					}
+				}
+			}
+			if (fetched.isEmpty())
+				return new Image(canvas.toDataUrl());
+
+			Collections.sort(fetched, new Comparator<TileInfo>() {
+				@Override
+				public int compare(TileInfo ti1, TileInfo ti2) {
+					return ti2.subsample - ti1.subsample;
+				}
+			});
+			tileInfo.getScreenRect(tempRect, tileSize, pageInfo);
+			double zoom = toZoom(tileInfo.subsample);
+			double pageHeight = pageInfo.height * zoom;
+			for (TileInfo ti : fetched) {
+				bufferContext.save();
+				double scale = zoom / toZoom(ti.subsample);
+				ti.getScreenRect(tempRect2, tileSize, pageInfo);
+				bufferContext.translate(-tempRect.xmin, -pageHeight + tempRect.ymax);
+				bufferContext.scale(scale, scale);
+				bufferContext.translate(tempRect2.xmin, +pageHeight / scale - tempRect2.ymax);
+				bufferContext.drawImage(ImageElement.as(getItem(ti).image.getElement()), 0, 0);
+				bufferContext.restore();
+			}
 
 			cachedItem = new CachedItem();
 			cachedItem.image = new Image(canvas.toDataUrl());
@@ -125,7 +167,7 @@ public class TileCache {
 		private GMap bufferGMap;
 
 		public void fetch(TileInfo tileInfo) {
-			tilesToFetch.add(tileInfo);
+			tilesToFetch.add(new TileInfo(tileInfo));
 			if (!isRunning)
 				Scheduler.get().scheduleIncremental(this);
 			isRunning = true;
@@ -165,7 +207,7 @@ public class TileCache {
 				putItem(tileInfo, cachedItem);
 			}
 
-			tileInfo.getRect(tempRect, tileSize, page.getInfo());
+			tileInfo.getScreenRect(tempRect, tileSize, page.getInfo());
 			int w = tempRect.width(), h = tempRect.height();
 			bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
 			int r = bufferGMap.getRedOffset(), g = bufferGMap.getGreenOffset(), b = bufferGMap.getBlueOffset();
@@ -259,8 +301,16 @@ public class TileCache {
 			return true;
 		}
 
-		private void getRect(GRect rect, int tileSize, DjVuInfo info) {
+		void getScreenRect(GRect rect, int tileSize, DjVuInfo info) {
 			int pw = (info.width + subsample - 1) / subsample, ph = (info.height + subsample - 1) / subsample;
+			getRect(rect, tileSize, pw, ph);
+		}
+
+		void getPageRect(GRect rect, int tileSize, DjVuInfo info) {
+			getRect(rect, tileSize * subsample, info.width, info.height);
+		}
+
+		private void getRect(GRect rect, int tileSize, int pw, int ph) {
 			rect.xmin = x * tileSize;
 			rect.xmax = Math.min((x + 1) * tileSize, pw);
 			rect.ymin = Math.max(ph - (y + 1) * tileSize, 0);
