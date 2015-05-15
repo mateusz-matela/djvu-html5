@@ -18,6 +18,7 @@ import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Image;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
@@ -145,16 +146,40 @@ public class TileCache {
 	}
 
 	private void putItem(TileInfo tileInfo, CachedItem cachedItem) {
-		if (tileInfo.subsample == MAX_SUBSAMPLE)
+		if (tileInfo.subsample == MAX_SUBSAMPLE) {
 			smallCache.put(new TileInfo(tileInfo), cachedItem);
-		else
+		} else {
+			removeStaleItems();
 			cache.put(new TileInfo(tileInfo), cachedItem);
+		}
 	}
 
 	private CachedItem getItem(TileInfo tileInfo) {
 		if (tileInfo.subsample == MAX_SUBSAMPLE)
 			return smallCache.get(tileInfo);
 		return cache.get(tileInfo);
+	}
+
+	private void removeStaleItems() {
+		if (cache.size() < tileCacheSize)
+			return;
+
+		Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+			@Override
+			public void execute() {
+				ArrayList<Entry<TileInfo, CachedItem>> cacheEntries = new ArrayList<>(cache.entrySet());
+				Collections.sort(cacheEntries, new Comparator<Entry<TileInfo, CachedItem>>() {
+					@Override
+					public int compare(Entry<TileInfo, CachedItem> e1, Entry<TileInfo, CachedItem> e2) {
+						long d = e1.getValue().lastUsed - e2.getValue().lastUsed;
+						return d > 0 ? 1 : d < 0 ? -1 : 0;
+					}
+				});
+				for (int i = 0; i < tileCacheSize / 4; i++) {
+					cache.remove(cacheEntries.get(i).getKey());
+				}
+			}
+		});
 	}
 
 	private class Fetcher implements RepeatingCommand, PageDownloadListener {
