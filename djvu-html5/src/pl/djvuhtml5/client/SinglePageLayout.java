@@ -176,16 +176,11 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	public void redraw() {
 		Context2d graphics2d = canvas.getContext2d();
 		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
-		if (pageInfo == null) {
-			graphics2d.setFillStyle(background);
-			graphics2d.fillRect(0, 0, w, h);
+		graphics2d.setFillStyle(background);
+		graphics2d.fillRect(0, 0, w, h);
+		if (pageInfo == null)
 			return;
-		}
-		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
-		if (pw < w || ph < h) {
-			graphics2d.setFillStyle(background);
-			graphics2d.fillRect(0, 0, w, h);
-		}
+
 		int subsample = toSubsample(zoom);
 		double scale = zoom / toZoom(subsample);
 		graphics2d.save();
@@ -195,6 +190,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		graphics2d.translate(-startX, -startY);
 
 		int tileSize = tileCache.tileSize;
+		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
 		int fromX = Math.max(0, centerX - w / 2) / tileSize;
 		int toX = Math.min((int) Math.ceil(pw / scale), centerX + w / 2) / tileSize;
 		int fromY = Math.max(0, centerY - h / 2) / tileSize;
