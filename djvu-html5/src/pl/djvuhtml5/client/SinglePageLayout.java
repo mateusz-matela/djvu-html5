@@ -58,8 +58,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 	public SinglePageLayout(Canvas canvas, Toolbar toolbar, Document document) {
 		this.pageCache = new PageCache(document);
-		pageCache.addPageDownloadListener(this);
 		this.tileCache = new TileCache(pageCache);
+		pageCache.addPageDownloadListener(this);
 		tileCache.addTileCacheListener(this);
 		this.canvas = canvas;
 		this.toolbar = toolbar;

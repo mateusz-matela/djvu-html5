@@ -3,6 +3,8 @@ package pl.djvuhtml5.client;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import pl.djvuhtml5.client.PageCache.PageDownloadListener;
+
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.canvas.dom.client.ImageData;
@@ -30,6 +32,9 @@ public class TileCache {
 
 	private HashMap<TileInfo, CachedItem> cache = new HashMap<>();
 
+	/** All tiles of max subsample are stored here and will never be thrown away */
+	private HashMap<TileInfo, CachedItem> smallCache = new HashMap<>();
+
 	private final Fetcher fetcher;
 
 	private ArrayList<TileCacheListener> listeners = new ArrayList<>();
@@ -49,6 +54,7 @@ public class TileCache {
 		bufferContext = buffer.getContext2d();
 
 		fetcher = new Fetcher();
+		pageCache.addPageDownloadListener(fetcher);
 	}
 
 	public static int toSubsample(double zoom) {
@@ -63,7 +69,7 @@ public class TileCache {
 	}
 
 	public Image getTileImage(TileInfo tileInfo) {
-		CachedItem cachedItem = cache.get(tileInfo);
+		CachedItem cachedItem = getItem(tileInfo);
 		if (cachedItem == null) {
 			tileInfo.getRect(tempRect, tileSize, pageCache.getPage(tileInfo.page).getInfo());
 			CanvasElement canvas = bufferContext.getCanvas();
@@ -85,8 +91,7 @@ public class TileCache {
 
 			cachedItem = new CachedItem();
 			cachedItem.image = new Image(canvas.toDataUrl());
-			tileInfo = new TileInfo(tileInfo);
-			cache.put(tileInfo, cachedItem);
+			putItem(tileInfo, cachedItem);
 			fetcher.fetch(tileInfo);
 		}
 		cachedItem.lastUsed = System.currentTimeMillis();
@@ -97,7 +102,20 @@ public class TileCache {
 		listeners.add(listener);
 	}
 
-	private class Fetcher implements RepeatingCommand {
+	private void putItem(TileInfo tileInfo, CachedItem cachedItem) {
+		if (tileInfo.subsample == MAX_SUBSAMPLE)
+			smallCache.put(new TileInfo(tileInfo), cachedItem);
+		else
+			cache.put(new TileInfo(tileInfo), cachedItem);
+	}
+
+	private CachedItem getItem(TileInfo tileInfo) {
+		if (tileInfo.subsample == MAX_SUBSAMPLE)
+			return smallCache.get(tileInfo);
+		return cache.get(tileInfo);
+	}
+
+	private class Fetcher implements RepeatingCommand, PageDownloadListener {
 		private boolean isRunning = false;
 
 		private final ArrayList<TileInfo> tilesToFetch = new ArrayList<>();
@@ -117,38 +135,16 @@ public class TileCache {
 		public boolean execute() {
 			for (int i = tilesToFetch.size() - 1; i >= 0; i--) {
 				final TileInfo tileInfo = tilesToFetch.get(i);
-				CachedItem cachedItem = cache.get(tileInfo);
+				CachedItem cachedItem = getItem(tileInfo);
 				if (cachedItem != null && cachedItem.isFetched)
 					continue;
 				DjVuPage page = pageCache.getPage(tileInfo.page);
 				if (page == null)
 					continue;
 				tilesToFetch.remove(i);
-				if (cachedItem == null) {
-					cachedItem = new CachedItem();
-					cache.put(tileInfo, cachedItem);
-				}
-		
-				tileInfo.getRect(tempRect, tileSize, page.getInfo());
-				int w = tempRect.width(), h = tempRect.height();
-				bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
-				int r = bufferGMap.getRedOffset(), g = bufferGMap.getGreenOffset(), b = bufferGMap.getBlueOffset();
-				byte[] data = bufferGMap.getData();
-				for (int y = 0; y < h; y++) {
-					for (int x = 0; x < w; x++) {
-						int offset = 3 * ((h - y - 1) * w + x);
-						bufferData.setRedAt(data[offset + r] & 0xFF, x, y);
-						bufferData.setGreenAt(data[offset + g] & 0xFF, x, y);
-						bufferData.setBlueAt(data[offset + b] & 0xFF, x, y);
-						bufferData.setAlphaAt(0xFF, x, y);
-					}
-				}
-				CanvasElement canvas = bufferContext.getCanvas();
-				canvas.setWidth(w);
-				canvas.setHeight(h);
-				bufferContext.putImageData(bufferData, 0, 0);
-				cachedItem.image = new Image(canvas.toDataUrl());
-		
+
+				prepareItem(tileInfo, cachedItem, page);
+
 				Scheduler.get().scheduleDeferred(new ScheduledCommand() {
 					
 					@Override
@@ -161,6 +157,53 @@ public class TileCache {
 			}
 			isRunning = false;
 			return false;
+		}
+
+		private void prepareItem(TileInfo tileInfo, CachedItem cachedItem, DjVuPage page) {
+			if (cachedItem == null) {
+				cachedItem = new CachedItem();
+				putItem(tileInfo, cachedItem);
+			}
+
+			tileInfo.getRect(tempRect, tileSize, page.getInfo());
+			int w = tempRect.width(), h = tempRect.height();
+			bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
+			int r = bufferGMap.getRedOffset(), g = bufferGMap.getGreenOffset(), b = bufferGMap.getBlueOffset();
+			byte[] data = bufferGMap.getData();
+			for (int y = 0; y < h; y++) {
+				for (int x = 0; x < w; x++) {
+					int offset = 3 * ((h - y - 1) * w + x);
+					bufferData.setRedAt(data[offset + r] & 0xFF, x, y);
+					bufferData.setGreenAt(data[offset + g] & 0xFF, x, y);
+					bufferData.setBlueAt(data[offset + b] & 0xFF, x, y);
+					bufferData.setAlphaAt(0xFF, x, y);
+				}
+			}
+			CanvasElement canvas = bufferContext.getCanvas();
+			canvas.setWidth(w);
+			canvas.setHeight(h);
+			bufferContext.putImageData(bufferData, 0, 0);
+			cachedItem.image = new Image(canvas.toDataUrl());
+			cachedItem.isFetched = true;
+		}
+
+		@Override
+		public void pageAvailable(int pageNum) {
+			// prepare full view for the lowest quality
+			DjVuPage page = pageCache.getPage(pageNum);
+			DjVuInfo info = page.getInfo();
+			int w = (info.width + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
+			int h = (info.height + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
+			TileInfo tileInfo = new TileInfo();
+			tileInfo.page = pageNum;
+			tileInfo.subsample = MAX_SUBSAMPLE;
+			for (int x = 0; x * tileSize < w; x++) {
+				for (int y = 0; y * tileSize < h; y++) {
+					tileInfo.x = x;
+					tileInfo.y = y;
+					prepareItem(tileInfo, null, page);
+				}
+			}
 		}
 	};
 
@@ -175,14 +218,6 @@ public class TileCache {
 			this.subsample = subsample;
 			this.x = x;
 			this.y = y;
-		}
-
-		private void getRect(GRect rect, int tileSize, DjVuInfo info) {
-			int pw = (info.width + subsample - 1) / subsample, ph = (info.height + subsample - 1) / subsample;
-			rect.xmin = x * tileSize;
-			rect.xmax = Math.min((x + 1) * tileSize, pw);
-			rect.ymin = Math.max(ph - (y + 1) * tileSize, 0);
-			rect.ymax = ph - y * tileSize;
 		}
 
 		public TileInfo(TileInfo toCopy) {
@@ -222,6 +257,14 @@ public class TileCache {
 			if (subsample != other.subsample)
 				return false;
 			return true;
+		}
+
+		private void getRect(GRect rect, int tileSize, DjVuInfo info) {
+			int pw = (info.width + subsample - 1) / subsample, ph = (info.height + subsample - 1) / subsample;
+			rect.xmin = x * tileSize;
+			rect.xmax = Math.min((x + 1) * tileSize, pw);
+			rect.ymin = Math.max(ph - (y + 1) * tileSize, 0);
+			rect.ymax = ph - y * tileSize;
 		}
 	}
 
