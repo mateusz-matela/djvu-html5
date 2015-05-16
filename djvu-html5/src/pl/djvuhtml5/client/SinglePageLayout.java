@@ -25,6 +25,7 @@ import com.google.gwt.user.client.ui.Image;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
+import com.lizardtech.djvu.GRect;
 
 public class SinglePageLayout implements PageDownloadListener, TileCacheListener {
 
@@ -54,7 +55,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	
 	private final int pageMargin;
 
-	private TileInfo tileInfoTemp = new TileInfo();
+	private Image[][] imagesArray;
+
+	private GRect range = new GRect();
 
 	public SinglePageLayout(Canvas canvas, Toolbar toolbar, Document document) {
 		this.pageCache = new PageCache(document);
@@ -88,6 +91,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	}
 
 	public void canvasResized() {
+		checkBounds();
 		redraw();
 	}
 
@@ -191,21 +195,16 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 		int tileSize = tileCache.tileSize;
 		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
-		int fromX = Math.max(0, centerX - w / 2) / tileSize;
-		int toX = Math.min((int) Math.ceil(pw / scale), centerX + w / 2) / tileSize;
-		int fromY = Math.max(0, centerY - h / 2) / tileSize;
-		int toY = Math.min((int) Math.ceil(ph / scale), centerY + h / 2) / tileSize;
-		tileInfoTemp.page = page;
-		tileInfoTemp.subsample = subsample;
-		for (int y = toY; y >= fromY; y--) { //reversed order for nicer effect of cache filling
-			for (int  x = toX; x >= fromX; x--) { 
-				tileInfoTemp.x = x;
-				tileInfoTemp.y = y;
-				Image tileImage = tileCache.getTileImage(tileInfoTemp);
-				graphics2d.drawImage(ImageElement.as(tileImage.getElement()),
-						startX + x * tileSize, startY + y * tileSize);
+		range.xmin = Math.max(0, centerX - w / 2) / tileSize;
+		range.xmax = Math.min((int) Math.ceil(pw / scale), centerX + w / 2) / tileSize;
+		range.ymin = Math.max(0, centerY - h / 2) / tileSize;
+		range.ymax = Math.min((int) Math.ceil(ph / scale), centerY + h / 2) / tileSize;
+		imagesArray = tileCache.getTileImages(page, subsample, range , imagesArray);
+		for (int y = range.ymin; y <= range.ymax; y++)
+			for (int x = range.xmin; x <= range.xmax; x++) {
+				ImageElement imageElement = ImageElement.as(imagesArray[y - range.ymin][x - range.xmin].getElement());
+				graphics2d.drawImage(imageElement, startX + x * tileSize, startY + y * tileSize);
 			}
-		}
 		graphics2d.restore();
 	}
 

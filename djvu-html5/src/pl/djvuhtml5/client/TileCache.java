@@ -18,7 +18,6 @@ import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.ImageElement;
-import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Image;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
@@ -47,6 +46,7 @@ public class TileCache {
 	private ArrayList<TileCacheListener> listeners = new ArrayList<>();
 
 	private final GRect tempRect = new GRect();
+	private final TileInfo tempTI = new TileInfo();
 
 	public TileCache(PageCache pageCache) {
 		this.pageCache = pageCache;
@@ -75,7 +75,27 @@ public class TileCache {
 		return zoom;
 	}
 
-	public Image getTileImage(TileInfo tileInfo) {
+	public Image[][] getTileImages(int pageNum, int subsample, GRect range, Image[][] reuse) {
+		Image[][] result = reuse;
+		int w = range.width() + 1, h = range.height() + 1;
+		if (reuse == null || reuse.length != h || reuse[0].length != w) {
+			result = new Image[h][w];
+		}
+
+		tempTI.page = pageNum;
+		tempTI.subsample = subsample;
+		for (int y = range.ymax; y >= range.ymin; y--) { //reversed order for nicer effect of cache filling
+			for (int x = range.xmax; x >= range.xmin; x--) {
+				tempTI.y = y;
+				tempTI.x = x;
+				result[y - range.ymin][x - range.xmin] = getTileImage(tempTI);
+			}
+		}
+
+		return result;
+	}
+
+	private Image getTileImage(TileInfo tileInfo) {
 		CachedItem cachedItem = getItem(tileInfo);
 		if (cachedItem == null) {
 			DjVuInfo pageInfo = pageCache.getPage(tileInfo.page).getInfo();
@@ -252,6 +272,7 @@ public class TileCache {
 			bufferContext.putImageData(bufferData, 0, 0);
 			cachedItem.image = new Image(canvas.toDataUrl());
 			cachedItem.isFetched = true;
+			cachedItem.lastUsed = System.currentTimeMillis();
 		}
 
 		@Override
