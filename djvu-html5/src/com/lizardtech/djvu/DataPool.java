@@ -48,6 +48,7 @@ package com.lizardtech.djvu;
 import java.io.IOException;
 import java.util.*;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 import com.google.gwt.xhr.client.ReadyStateChangeHandler;
@@ -133,7 +134,6 @@ public class DataPool
 			public void onReadyStateChange(XMLHttpRequest xhr) {
 				if (xhr.getReadyState() == XMLHttpRequest.DONE) {
 					if (xhr.getStatus() == 200) {
-						long startTime = System.currentTimeMillis();
 						Uint8Array array = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
 						endOffset = array.length();
 						int blocks = 0;
@@ -144,10 +144,9 @@ public class DataPool
 								bytes[i] = (byte) array.get(blocks * BLOCKSIZE + i);
 							blocks++;
 						}
-						System.out.println("Response conversion time: " + (System.currentTimeMillis() - startTime));
 					} else {
-						DjVuOptions.err.println("Error downloading " + url);
-						DjVuOptions.err.println("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
+						GWT.log("Error downloading " + url);
+						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
 					}
 					isReady = true;
 					fireReady();

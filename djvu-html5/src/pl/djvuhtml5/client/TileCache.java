@@ -48,6 +48,9 @@ public class TileCache {
 	private final GRect tempRect = new GRect();
 	private final TileInfo tempTI = new TileInfo();
 
+	private int lastPageNum, lastSubsample;
+	private final GRect lastRange = new GRect();
+
 	public TileCache(PageCache pageCache) {
 		this.pageCache = pageCache;
 		this.tileCacheSize = DjvuContext.getTileCacheSize();
@@ -82,15 +85,19 @@ public class TileCache {
 			result = new Image[h][w];
 		}
 
+		if (pageNum != lastPageNum || subsample != lastSubsample || !lastRange.equals(range)) {
+			lastPageNum = pageNum;
+			lastSubsample = subsample;
+			lastRange.clear();
+			lastRange.recthull(lastRange, range);
+			fetcher.fetch();
+		}
+
 		tempTI.page = pageNum;
 		tempTI.subsample = subsample;
-		for (int y = range.ymax; y >= range.ymin; y--) { //reversed order for nicer effect of cache filling
-			for (int x = range.xmax; x >= range.xmin; x--) {
-				tempTI.y = y;
-				tempTI.x = x;
-				result[y - range.ymin][x - range.xmin] = getTileImage(tempTI);
-			}
-		}
+		for (int y = range.ymin; y <= range.ymax; y++)
+			for (int x = range.xmin; x <= range.xmax; x++)
+				result[y - range.ymin][x - range.xmin] = getTileImage(tempTI.setXY(x, y));
 
 		return result;
 	}
@@ -155,7 +162,6 @@ public class TileCache {
 			cachedItem = new CachedItem();
 			cachedItem.image = new Image(canvas.toDataUrl());
 			putItem(tileInfo, cachedItem);
-			fetcher.fetch(tileInfo);
 		}
 		cachedItem.lastUsed = System.currentTimeMillis();
 		return cachedItem.image;
@@ -203,16 +209,15 @@ public class TileCache {
 	}
 
 	private class Fetcher implements RepeatingCommand, PageDownloadListener {
-		private boolean isRunning = false;
+		private static final int PREFETCH_AGE = 500;
 
-		private final ArrayList<TileInfo> tilesToFetch = new ArrayList<>();
+		private boolean isRunning = false;
 
 		private final ImageData bufferData = bufferContext.createImageData(tileSize, tileSize);
 
 		private GMap bufferGMap;
 
-		public void fetch(TileInfo tileInfo) {
-			tilesToFetch.add(new TileInfo(tileInfo));
+		public void fetch() {
 			if (!isRunning)
 				Scheduler.get().scheduleIncremental(this);
 			isRunning = true;
@@ -220,33 +225,85 @@ public class TileCache {
 
 		@Override
 		public boolean execute() {
-			for (int i = tilesToFetch.size() - 1; i >= 0; i--) {
-				final TileInfo tileInfo = tilesToFetch.get(i);
-				CachedItem cachedItem = getItem(tileInfo);
-				if (cachedItem != null && cachedItem.isFetched)
+			if (lastRange.isEmpty() || lastSubsample == MAX_SUBSAMPLE) {
+				isRunning = false;
+				return false;
+			}
+
+			for (int pageNum : Arrays.asList(lastPageNum, lastPageNum + 1, lastPageNum - 1)) {
+				if (pageNum < 0 || pageNum >= pageCache.getPageCount())
 					continue;
-				DjVuPage page = pageCache.getPage(tileInfo.page);
+				final DjVuPage page = pageCache.getPage(pageNum);
 				if (page == null)
 					continue;
-				tilesToFetch.remove(i);
-
-				prepareItem(tileInfo, cachedItem, page);
-
-				Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-					
-					@Override
-					public void execute() {
-						for (TileCacheListener listener : listeners)
-							listener.tileAvailable(tileInfo);
+				tempTI.page = pageNum;
+				tempTI.subsample = lastSubsample;
+				for (int y = lastRange.ymin; y <= lastRange.ymax; y++) {
+					for (int x = lastRange.xmin; x <= lastRange.xmax; x++) {
+						CachedItem cachedItem = cache.get(tempTI.setXY(x, y));
+						if (cachedItem != null && cachedItem.isFetched)
+							continue;
+						CachedItem item = prepareItem(tempTI, cachedItem, page);
+						if (pageNum == lastPageNum) {
+							final TileInfo tileInfo = new TileInfo(tempTI);
+							Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+								
+								@Override
+								public void execute() {
+									for (TileCacheListener listener : listeners)
+										listener.tileAvailable(tileInfo);
+								}
+							});
+						} else {
+							item.lastUsed -= PREFETCH_AGE;
+						}
+						return true;
 					}
-				});
-				return true;
+				}
+
+				final DjVuInfo pageInfo = page.getInfo();
+				final int maxX = (int) Math.ceil(1.0 * pageInfo.width / lastSubsample / tileSize) - 1;
+				final int maxY = (int) Math.ceil(1.0 * pageInfo.height / lastSubsample / tileSize) - 1;
+				final int dx = (lastRange.width() + 1) / 2, dy = (lastRange.height() + 1) / 2;
+				for (int d = 1; d <= dx; d++) {
+					int x = lastRange.xmax + d;
+					for (int y = lastRange.ymin; y <= lastRange.ymax + Math.min(d, dy); y++) {
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
+							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+							return true;
+						}
+					}
+					x = lastRange.ymin - d;
+					for (int y = lastRange.ymin - Math.min(d, dy); y <= lastRange.ymax; y++) {
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
+							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+							return true;
+						}
+					}
+				}
+				for (int d = 1; d <= dy; d++) {
+					int y = lastRange.ymax + d;
+					for (int x = lastRange.xmin; x <= lastRange.xmax + Math.min(d, dx); x++) {
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
+							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+							return true;
+						}
+					}
+					y = lastRange.ymin - d;
+					for (int x = lastRange.xmin - Math.min(d, dx); x <= lastRange.xmax; x++) {
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
+							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+							return true;
+						}
+					}
+				}
 			}
+
 			isRunning = false;
 			return false;
 		}
 
-		private void prepareItem(TileInfo tileInfo, CachedItem cachedItem, DjVuPage page) {
+		private CachedItem prepareItem(TileInfo tileInfo, CachedItem cachedItem, DjVuPage page) {
 			if (cachedItem == null) {
 				cachedItem = new CachedItem();
 				putItem(tileInfo, cachedItem);
@@ -273,6 +330,7 @@ public class TileCache {
 			cachedItem.image = new Image(canvas.toDataUrl());
 			cachedItem.isFetched = true;
 			cachedItem.lastUsed = System.currentTimeMillis();
+			return cachedItem;
 		}
 
 		@Override
@@ -287,11 +345,11 @@ public class TileCache {
 			tileInfo.subsample = MAX_SUBSAMPLE;
 			for (int x = 0; x * tileSize < w; x++) {
 				for (int y = 0; y * tileSize < h; y++) {
-					tileInfo.x = x;
-					tileInfo.y = y;
-					prepareItem(tileInfo, null, page);
+					prepareItem(tileInfo.setXY(x, y), null, page);
 				}
 			}
+
+			fetch();
 		}
 	};
 
@@ -361,6 +419,12 @@ public class TileCache {
 			rect.xmax = Math.min((x + 1) * tileSize, pw);
 			rect.ymin = Math.max(ph - (y + 1) * tileSize, 0);
 			rect.ymax = ph - y * tileSize;
+		}
+
+		private TileInfo setXY(int x, int y) {
+			this.x = x;
+			this.y = y;
+			return this;
 		}
 	}
 

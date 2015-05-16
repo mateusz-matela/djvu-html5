@@ -2,7 +2,6 @@ package pl.djvuhtml5.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -46,7 +45,6 @@ public class PageCache {
 					downloadComplete(pageNum);
 				}
 			});
-			Arrays.fill(downloadStarted, true); //FIXME disabled download for testing
 			downloadStarted[i] = true;
 		} catch (IOException e) {
 			Logger.getGlobal().log(Level.SEVERE, "Could not initiate download of page " + pageNum, e);
