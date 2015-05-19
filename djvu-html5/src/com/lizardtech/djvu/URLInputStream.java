@@ -65,7 +65,7 @@ import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
  * @author Bill C. Riemers
  * @version $Revision: 1.13 $
  */
-public class DataPool
+public class URLInputStream extends InputStream
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -73,57 +73,73 @@ public class DataPool
   public static final int BLOCKSIZE = 8192;
     
   /** Object for caching raw data. ! */
-  public static HashMap<String, DataPool> cache = new HashMap<>();
+  public static HashMap<String, Uint8Array> cache = new HashMap<>();
+
+  private static final HashMap<String, List<InputStateListener>> listeners = new HashMap<>();
 
   //~ Instance fields --------------------------------------------------------
 
   // This contains the data we a buffering.
-  private final Vector<byte[]> buffer = new Vector<>();
+  private Uint8Array data;
 
-  // The end of the stream, or a number larger than the end of the stream.
-  private int endOffset=0;
+  private int offset;
 
-  private boolean isReady = false;
+  // Used for the mark and reset features.
+  private int markOffset=0;
 
-  private Vector<InputStateListener> listeners = new Vector<>();
-  
   //~ Constructors -----------------------------------------------------------
 
   /**
    * Creates a new DataPool object.
    */
-  public DataPool()
+  public URLInputStream()
   {
+  }
+
+  public URLInputStream(URLInputStream toCopy) {
+	  this.data = toCopy.data;
+	  this.offset = toCopy.offset;
+	  this.markOffset = toCopy.markOffset;
   }
 
   //~ Methods ----------------------------------------------------------------
 
-  /**
-   * Initialize this map to read the specified URL. If a cached DataPool for this 
-   * URL exists, it will be returned.
-   * 
-   * @param url the URL to read
-   * 
-   * @return an initialized DataPool
-   */
-  public DataPool init(final String url, InputStateListener listener)
-  {
-    DataPool retval=this;
-    if(url != null)
-    {
-      retval=cache.get(url);
-      if(retval == null)
-      {
-        retval=this;
-        cache.put(url, this);
-        startDownload(url);
-      }
-    }
-    if (listener != null)
-    	retval.listeners.add(listener);
-    return retval;
-  }
-  
+	/**
+	 * Initialize this map to read the specified URL. If a cached DataPool for
+	 * this URL exists, it will be returned.
+	 * 
+	 * @param url
+	 *            the URL to read
+	 * 
+	 * @return an initialized DataPool
+	 */
+	public URLInputStream init(final String url, final InputStateListener listener) {
+		data = cache.get(url);
+		if (data == null) {
+			startDownload(url);
+
+			if (listener != null) {
+				List<InputStateListener> listenersList = listeners.get(url);
+				if (listenersList == null) {
+					listeners.put(url, listenersList = new ArrayList<>());
+					listenersList.add(listener);
+				} else {
+					listenersList.add(new InputStateListener() {
+
+						@Override
+						public void inputReady() {
+							init(url, this);
+							listener.inputReady();
+						}
+					});
+				}
+			}
+		} else {
+			offset = 0;
+		}
+		return this;
+	}
+
 	private void startDownload(final String url) {
 		XMLHttpRequest request = XMLHttpRequest.create();
 		request.open("GET", url);
@@ -134,101 +150,70 @@ public class DataPool
 			public void onReadyStateChange(XMLHttpRequest xhr) {
 				if (xhr.getReadyState() == XMLHttpRequest.DONE) {
 					if (xhr.getStatus() == 200) {
-						Uint8Array array = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
-						endOffset = array.length();
-						int blocks = 0;
-						while (blocks * BLOCKSIZE < endOffset) {
-							byte[] bytes = new byte[BLOCKSIZE];
-							buffer.add(bytes);
-							for (int i = 0; i < BLOCKSIZE && blocks * BLOCKSIZE + i < endOffset; i++)
-								bytes[i] = (byte) array.get(blocks * BLOCKSIZE + i);
-							blocks++;
-						}
+						data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
+						cache.put(url, data);
 					} else {
 						GWT.log("Error downloading " + url);
 						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
 					}
-					isReady = true;
-					fireReady();
+					fireReady(url);
 				}
 			}
 		});
 		request.send();
 	}
 
-	protected void fireReady() {
-		for (InputStateListener listener : listeners)
-			listener.inputReady();
+	protected void fireReady(String url) {
+		List<InputStateListener> listenersList = listeners.remove(url);
+		if (listenersList != null)
+			for (InputStateListener listener : listenersList)
+				listener.inputReady();
 	}
-
-/**
-   * Initialize this map to read the specified stream
-   * 
-   * @param input the InputStream to read
-   * 
-   * @return the initialized DataPool
-   */
-  public DataPool init(final InputStream input) throws IOException
-  {
-	  int totalBytesRead = 0;
-	  for (;;) {
-		  byte[] bytes = new byte[BLOCKSIZE];
-		  buffer.add(bytes);
-		  int bytesRead = 0;
-		  int lastRead = 1;
-		  while (lastRead > 0 && bytesRead < BLOCKSIZE) {
-			  lastRead = input.read(bytes, bytesRead, BLOCKSIZE - bytesRead);
-			  bytesRead += lastRead;
-		  }
-		  totalBytesRead += bytesRead;
-		  if (lastRead <= 0)
-			  break;
-	  }
-	  endOffset = totalBytesRead;
-	  isReady = true;
-	  input.close();
-    return this;
-  }
-  
-  /**
-   * Request the specified block of data. Data may be buffered, or read.
-   *
-   * @param index the position of the block start position divided by BLOCKSIZE.
-   * @param read True if unavailable blocks should be read from the data source.
-   *
-   * @return a byte array up to size BLOCKSIZE, or null if no data is available.
-   */
-  public byte [] getBlock(final int index, final boolean read)
-  {
-    int start=index*BLOCKSIZE;
-    if((index < 0)||(start >= endOffset))
-    {
-      return null;
-    }
-    if(index < buffer.size())
-    {
-      byte[] block=buffer.elementAt(index);
-      if(block != null)
-      {
-        return block;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Query the size of this vector.
-   *
-   * @return the size of this vector
-   */
-  public int getEndOffset()
-  {
-    return endOffset;
-  }
 
   public boolean isReady()
   {
-	  return isReady;
+	  return data != null;
   }
 
+	@Override
+	public int read() {
+		if (offset < data.length()) {
+			return data.get(offset++);
+		}
+		return -1;
+	}
+
+	@Override
+	public int read(byte[] b) {
+		int i = 0;
+		for (; i < b.length && (offset + i) < data.length(); i++) {
+			b[i] = (byte) data.get(offset + i);
+		}
+		if (i == 0)
+			return -1;
+		offset += i;
+		return i;
+	}
+
+	@Override
+	public long skip(long n) throws IOException {
+		int oldOffset = offset;
+		offset = (int) Math.min(offset + n, data.length());
+		return offset - oldOffset;
+	}
+
+	@Override
+	public boolean markSupported() {
+		return true;
+	}
+
+	@Override
+	public synchronized void mark(int readlimit) {
+		markOffset = offset;
+	}
+
+	@Override
+	public synchronized void reset() throws IOException {
+		offset = markOffset;
+	}
 }

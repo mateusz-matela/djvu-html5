@@ -61,22 +61,13 @@ public class CachedInputStream
     //~ Instance fields ------------------------------------------------------
 
     // Buffer used to access data
-    private DataPool buffer=null;
+    private InputStream wrapped;
     
-    // Used for the mark and reset features.
-    private int markOffset=0;
-
     // The current position of this stream in the data pool.
     private int offset=0;
 
     // The end position of this stream in the data pool.
     private int endOffset=0;
-
-    // Index of the current data block
-    private int blockIndex=-1;
-    
-    // The data block currently being read
-    private byte block[]=null;
     
     // We can assign a name to this Stream
     private String name=null;
@@ -91,12 +82,15 @@ public class CachedInputStream
     }
 
     public CachedInputStream(CachedInputStream toCopy) {
-    	this.buffer = toCopy.buffer;
-    	this.markOffset = toCopy.markOffset;
+    	if (toCopy.wrapped instanceof URLInputStream) {
+    		this.wrapped = new URLInputStream((URLInputStream) toCopy.wrapped);
+    	} else if (toCopy.wrapped instanceof BSInputStream) {
+    		this.wrapped = new BSInputStream((BSInputStream) toCopy.wrapped);
+    	} else {
+    		this.wrapped = new CachedInputStream((CachedInputStream) toCopy.wrapped);
+    	}
     	this.offset = toCopy.offset;
     	this.endOffset = toCopy.endOffset;
-    	this.blockIndex = toCopy.blockIndex;
-    	this.block = toCopy.block;
     	this.name = toCopy.name;
     }
 
@@ -116,33 +110,18 @@ public class CachedInputStream
 
     /**
      * Initialize the stream with a data source, startOffset, and endOffset.
-     * 
-     * @param buffer DataPool containing data.
-     * @param startOffset Starting position of this stream.
-     * @param endOffset Ending position of this stream.
-     * 
-     * @return the initialized stream
-     */
-    private CachedInputStream init(final DataPool buffer,final int startOffset,final int endOffset)
-    {
-      this.buffer=buffer;
-      markOffset=offset=startOffset;
-      this.endOffset=endOffset;
-      return this;
-    }
-    
-    /**
-     * Initialize the stream with a data source, startOffset, and endOffset.
      *
      * @param url URL to read.
      *
      * @return the initialized stream
      */
-    public CachedInputStream init(final String url, InputStateListener listener)
-    {
-      return init(new DataPool().init(url, listener),0, Integer.MAX_VALUE);
-    }
-    
+	public CachedInputStream init(final String url, InputStateListener listener) {
+		wrapped = new URLInputStream().init(url, listener);
+		offset = 0;
+		endOffset = Integer.MAX_VALUE;
+		return this;
+	}
+
     /**
      * Initialize the stream by copying the supplied input.
      *
@@ -150,28 +129,12 @@ public class CachedInputStream
      *
      * @return the initialized stream
      */
-    public CachedInputStream init(final InputStream input) throws IOException
+    public CachedInputStream init(final InputStream input)
     {
-      if(input instanceof CachedInputStream)
-      {
-        final CachedInputStream i=(CachedInputStream)input;
-        return init(i.buffer,i.offset,i.getEndOffset());         
-      }
-      else
-      {
-        return init(new DataPool().init(input),0, Integer.MAX_VALUE);
-      }
-    }
-
-    /**
-     * Query the end position.  This value may only be reduced, never increased.
-     *
-     * @return an offset past the last byte of this stream
-     */
-    public int getEndOffset()
-    {
-      final int endOffset=buffer.getEndOffset();
-      return (endOffset<this.endOffset)?endOffset:this.endOffset;
+    	wrapped = input;
+    	offset = 0;
+    	endOffset = Integer.MAX_VALUE;
+    	return this;
     }
 
     
@@ -189,19 +152,6 @@ public class CachedInputStream
         this.endOffset=(int)endOffset;
       }
     }
-    
-    /**
-     * Query how much data is available.
-     *
-     * @return number of buffered bytes
-     */
-    @Override
-	public int available()
-    {
-      final int bufferEndOffset = buffer.getEndOffset();
-      final int retval=(bufferEndOffset < endOffset)?bufferEndOffset:endOffset;
-      return (retval > 0)?retval:0;
-    }
 
     /**
      * Marks the current location for a reset() later.
@@ -211,99 +161,35 @@ public class CachedInputStream
 	@Override
 	public void mark(int readLimit)
     {
-      markOffset = offset;
+      wrapped.mark(readLimit);
     }
 
-    /**
-     * Read the next byte of data ranged 0 to 255.  Returns -1 if an EOF has been read.
-     *
-     * @return next byte
-     */
+	@Override
+	public boolean markSupported() {
+		return wrapped.markSupported();
+	}
+
     @Override
-	public int read()
-    {
-      int retval=-1;
-      final int index=offset/DataPool.BLOCKSIZE;
-      if(index != blockIndex)
-      {
-        block=buffer.getBlock(index, true);
-        blockIndex=index;
-        if(block == null)
-        {
-          offset = getEndOffset();
-          blockIndex = -1;
-        }
-      }
-      if(offset < getEndOffset())
-      {
-        retval=0xff&block[offset++%DataPool.BLOCKSIZE];
-      }
-      return retval;
+    public int read() throws IOException {
+    	if (offset >= endOffset)
+    		return -1;
+    	int read = wrapped.read();
+    	if (read >= 0)
+    		offset++;
+    	return read;
     }
 
-    /**
-     * Read data into an array of bytes.
-     *
-     * @param b byte array to copy data to
-     * @param off byte array offset to start copying to
-     * @param len maximum number of bytes to copy
-     *
-     * @return number of bytes read
-     */
     @Override
-	public int read(
-      final byte[] b,
-      final int    off,
-      int          len)
-    {
-      int retval=-1;
-      final int index=offset/DataPool.BLOCKSIZE;
-      if(index != blockIndex)
-      {
-        block=buffer.getBlock(index, true);
-        blockIndex=index;
-        if(block == null)
-        {
-          offset = getEndOffset();
-          blockIndex = -1;
-        }
-      }
-      if(offset < getEndOffset())
-      {
-        final int offset=this.offset%DataPool.BLOCKSIZE;
-        retval = DataPool.BLOCKSIZE-offset;
-        if(retval > len)
-        {
-          retval = len;
-        }
-        System.arraycopy(block, offset,b,off,retval);
-        this.offset+=retval;
-      }
-      return retval;        
-    }
-
-    /**
-     * Read data into an array of bytes.  The number of bytes
-     * read is the array length unless an EOF is read.
-     *
-     * @param b byte array to copy data to
-     *
-     * @return number of bytes read
-     */
-    @Override
-	public int read(byte [] b)
-    {
-      for(int remaining=b.length;remaining > 0;)
-      {
-        int retval=b.length-remaining;
-        final int len=read(b, retval, remaining);
-        if(len < 0)
-        {
-          return (retval > 0)?retval:(-1);              
-        }
-        remaining-=len;
-      }
-      return b.length;
+    public int read(byte[] b) throws IOException {
+    	if (b.length == 0)
+    		return 0;
+    	int read = wrapped.read(b);
+    	read = Math.min(read, endOffset - offset);
+    	if (read > 0) {
+    		offset += read;
+    		return read;
+    	}
+    	return -1;
     }
 
     /**
@@ -312,7 +198,7 @@ public class CachedInputStream
      *
      * @return the value read
      */
-    public int read16()
+    public int read16() throws IOException
     {
       final int msb = read();
 
@@ -334,7 +220,7 @@ public class CachedInputStream
      *
      * @return the value read
      */
-    public int read24()
+    public int read24() throws IOException
     {
       final int msb = read16();
 
@@ -359,7 +245,7 @@ public class CachedInputStream
 	public void reset()
       throws IOException
     {
-      offset = markOffset;
+      wrapped.reset();
     }
 
     /**
@@ -370,21 +256,13 @@ public class CachedInputStream
      * @return number of bytes actually skipped
      */
 	@Override
-	public long skip(final long n)
+	public long skip(final long n) throws IOException
     {
-      final int endOffset=getEndOffset();
-      int retval=(endOffset <= n+offset)?(endOffset-offset):(int)n;
-      if(retval > 0)
-      {
-        offset+=retval;
-      }
-      else
-      {
-        retval=0;
-      }
-      return retval;
+      long skip = wrapped.skip(n);
+      offset += skip;
+      return skip;
     }
-  
+
   /**
    * Convert the accessable data into a string.  First a java modified UTF-8
    * translation will be tried.  If that fails, the data will be converted
@@ -453,10 +331,15 @@ public class CachedInputStream
    *
    * @return true if this is a valid DjVu file.
    */
-  public boolean isDjVuFile()
+  public boolean isDjVuFile() throws IOException
   {
-    final byte [] b=buffer.getBlock(0,true);
-    return (b != null)&&(b[0] == 65)&&(b[1] == 84)&&(b[2] == 38)&&(b[3] == 84);
+	  if (wrapped instanceof URLInputStream) {
+			wrapped.mark(0);
+			int d = wrapped.read(), j = wrapped.read(), v = wrapped.read(), u = wrapped.read();
+			wrapped.reset();
+			return d == 65 && j == 84 && v == 38 && u == 84;
+		}
+	  return false;
   }
 
   /**
@@ -475,8 +358,7 @@ public class CachedInputStream
     return retval;
   }
 
-  public boolean isReady()
-  {
-	  return buffer != null && buffer.isReady();
-  }
+	public boolean isReady() {
+		return !(wrapped instanceof URLInputStream) || ((URLInputStream) wrapped).isReady();
+	}
 }

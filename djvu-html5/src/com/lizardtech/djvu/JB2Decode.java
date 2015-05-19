@@ -134,7 +134,7 @@ public class JB2Decode
    * @throws IOException DOCUMENT ME!
    */
   public void init(
-    final InputStream gbs,
+    final CachedInputStream gbs,
     JB2Dict           zdict)
     throws IOException
   {

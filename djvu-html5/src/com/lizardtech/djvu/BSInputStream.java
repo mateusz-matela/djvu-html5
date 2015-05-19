@@ -48,6 +48,9 @@ package com.lizardtech.djvu;
 import java.io.IOException;
 import java.util.Arrays;
 
+import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+
 
 /**
  * This class decodes a bzz encoded InputStream.
@@ -85,7 +88,7 @@ public final class BSInputStream
   private final BitContext[] ctx = new BitContext[300];
 
   /** Decoded data. */
-  private byte[] data=null;
+  private Uint8Array data=null;
 
   /** True if an EOF has been read. */
   private boolean eof=false;
@@ -99,12 +102,13 @@ public final class BSInputStream
   /** The size of the data read. */
   private int size=0;
 
+	private final byte[] tempBuffer1 = new byte[1];
+
   //~ Constructors -----------------------------------------------------------
 
-  /**
-   * Creates a new BSInputStream object.
-   */
-  public BSInputStream() {}
+	public BSInputStream() {
+		
+	}
 
   /**
    * Creates a new BSInputStream object.
@@ -119,9 +123,28 @@ public final class BSInputStream
     init(input);
   }
 
-  //~ Methods ----------------------------------------------------------------
-
   /**
+   * Creates a new BSInputStream object.
+ * @param bsInputStream 
+   */
+  public BSInputStream(BSInputStream toCopy) {
+	  this.zp = new ZPCodec(toCopy.zp);
+	  for (int i = 0; i < toCopy.ctx.length; i++) {
+		  if (toCopy.ctx[i] != null) {
+			  ctx[i] = new BitContext((short) (toCopy.ctx[i].get() & 0xFF));
+		  }
+	  }
+	  if (toCopy.data != null) {
+		  data = TypedArrays.createUint8Array(toCopy.data.length());
+		  data.set(toCopy.data);
+	  }
+	  eof = toCopy.eof;
+	  blocksize = toCopy.blocksize;
+	  bptr = toCopy.bptr;
+	  size = toCopy.size;
+  }
+
+/**
    * Called to decode data.
    *
    * @return the number of bytes decoded
@@ -149,11 +172,11 @@ public final class BSInputStream
     if(blocksize < size)
     {
       blocksize   = size;
-      data        = new byte[blocksize];
+      data        = TypedArrays.createUint8Array(blocksize);
     }
     else if(data == null)
     {
-      data = new byte[blocksize];
+      data = TypedArrays.createUint8Array(blocksize);
     }
 
     // Decode Estimation Speed
@@ -203,7 +226,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + ctxid]) != 0)
           {
             mtfno     = 0;
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -213,7 +236,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + ctxid]) != 0)
           {
             mtfno     = 1;
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -223,7 +246,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + 0]) != 0)
           {
             mtfno     = 2 + decode_binary(ctxoff + 1, 1);
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -233,7 +256,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + 0]) != 0)
           {
             mtfno     = 4 + decode_binary(ctxoff + 1, 2);
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -243,7 +266,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + 0]) != 0)
           {
             mtfno     = 8 + decode_binary(ctxoff + 1, 3);
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -253,7 +276,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + 0]) != 0)
           {
             mtfno     = 16 + decode_binary(ctxoff + 1, 4);
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -263,7 +286,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + 0]) != 0)
           {
             mtfno     = 32 + decode_binary(ctxoff + 1, 5);
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -273,7 +296,7 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + 0]) != 0)
           {
             mtfno     = 64 + decode_binary(ctxoff + 1, 6);
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
@@ -283,13 +306,13 @@ public final class BSInputStream
           if(zp.decoder(ctx[ctxoff + 0]) != 0)
           {
             mtfno     = 128 + decode_binary(ctxoff + 1, 7);
-            data[i]   = mtf[mtfno];
+            data.set(i, mtf[mtfno]);
 
             break;
           }
 
           mtfno = 256;
-          data[i] = 0;
+          data.set(i, 0);
           markerpos = i;
 
           continue;
@@ -334,7 +357,7 @@ public final class BSInputStream
         freq[k]   = freq[k - 1];
       }
 
-      mtf[k]    = data[i];
+      mtf[k]    = (byte) data.get(i);
       freq[k]   = fc;
     }
 
@@ -364,14 +387,14 @@ public final class BSInputStream
     // Fill count buffer
     for(int i = 0; i < markerpos; i++)
     {
-      byte c = data[i];
+      byte c = (byte) data.get(i);
       pos[i] = (c << 24) | (count[0xff & c] & 0xffffff);
       count[0xff & c]++;
     }
 
     for(int i = markerpos + 1; i < size; i++)
     {
-      byte c = data[i];
+      byte c = (byte) data.get(i);
       pos[i] = (c << 24) | (count[0xff & c] & 0xffffff);
       count[0xff & c]++;
     }
@@ -394,7 +417,7 @@ public final class BSInputStream
     {
       int  n       = pos[j];
       byte c = (byte)(pos[j] >> 24);
-      data[--last]   = c;
+      data.set(--last, c);
       j              = count[0xff & c] + (n & 0xffffff);
     }
 
@@ -450,15 +473,16 @@ public final class BSInputStream
    */
   @Override
 public int read(
-    byte[] buffer,
-    int    offset,
-    int    sz)
+    byte[] buffer)
     throws IOException
   {
     if(eof)
     {
       return 0;
     }
+
+    int offset = 0;
+    int sz = buffer.length;
 
     // Loop
     int copied = 0;
@@ -487,7 +511,9 @@ public int read(
       // Transfer
       if(bytes > 0)
       {
-        System.arraycopy(data, bptr, buffer, offset, bytes);
+    	for (int i = 0; i < bytes; i++) {
+    		buffer[offset + i] = (byte) data.get(bptr + i);
+    	}
         offset += bytes;
       }
 
@@ -501,23 +527,18 @@ public int read(
     return copied;
   }
 
-  /**
-   * Called to read the next byte of data.
-   *
-   * @return the next byte in a range 0 to 255 or -1 if an EOP has been read
-   *
-   * @throws IOException if an error occurs
-   */
-  @Override
-public int read()
-    throws IOException
-  {
-    byte[] buffer = new byte[1];
-
-    return (read(buffer) == 1)
-    ? (0xff & buffer[0])
-    : (-1);
-  }
+	/**
+	 * Called to read the next byte of data.
+	 *
+	 * @return the next byte in a range 0 to 255 or -1 if an EOP has been read
+	 *
+	 * @throws IOException
+	 *             if an error occurs
+	 */
+	@Override
+	public int read() throws IOException {
+		return (read(tempBuffer1) == 1) ? (0xff & tempBuffer1[0]) : (-1);
+	}
 
   /**
    * Called to decode data bits.

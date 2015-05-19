@@ -193,7 +193,7 @@ public final void decode(final CachedInputStream pool)
    * @throws IOException DOCUMENT ME!
    */
   public void decode(
-    final InputStream gbs,
+    final CachedInputStream gbs,
     JB2Dict           zdict)
     throws IOException
   {

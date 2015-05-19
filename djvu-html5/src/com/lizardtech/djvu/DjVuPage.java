@@ -1424,7 +1424,7 @@ public class DjVuPage
    * @throws IOException if an error occurs
    * @throws IllegalStateException if an error occurs
    */
-  protected void parseSjbz(final InputStream input)
+  protected void parseSjbz(final CachedInputStream input)
     throws IOException
   {
     sjbzChunk = null;

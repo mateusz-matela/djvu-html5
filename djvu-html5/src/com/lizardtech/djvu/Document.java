@@ -151,7 +151,7 @@ public class Document
     DjVuPage page = null;
 
       CachedInputStream data=get_data(id, null);
-      if((data.available() > 0))
+      if(data.isReady())
       {
         String url=getDjVmDir().getInitURL();
         if(url != null)

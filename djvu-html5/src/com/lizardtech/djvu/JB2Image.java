@@ -371,7 +371,7 @@ public class JB2Image
    */
   @Override
 public void decode(
-    final InputStream gbs,
+    final CachedInputStream gbs,
     final JB2Dict     zdict)
     throws IOException
   {

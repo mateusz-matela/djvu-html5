@@ -46,6 +46,7 @@
 package com.lizardtech.djvu;
 
 import java.io.*;
+import java.util.Arrays;
 
 
 // Referenced classes of package com.lizardtech.javadjvu:
@@ -356,7 +357,7 @@ public class ZPCodec
 
   /** DOCUMENT ME! */
   protected int        aValue;
-  private InputStream  ibs;
+  private CachedInputStream  ibs;
   private int          buffer;
   private long         code;
   private long         fence;
@@ -388,7 +389,7 @@ public class ZPCodec
    *
    * @throws IOException DOCUMENT ME!
    */
-  public ZPCodec(final InputStream ibs)
+  public ZPCodec(final CachedInputStream ibs)
     throws IOException
   {
     this();
@@ -397,7 +398,33 @@ public class ZPCodec
 
   //~ Methods ----------------------------------------------------------------
 
-  /**
+  public ZPCodec(ZPCodec zp) {
+	for (int i = 0; i < zp.defaultZtable.length; i++) {
+		defaultZtable[i].set(zp.defaultZtable[i]);
+	}
+	bitcount = zp.bitcount;
+	for (int i = 0; i < zp.dn.length; i++) {
+		if (zp.dn[i] != null)
+			dn[i] = new BitContext((short) (zp.dn[i].get() & 0xFF));
+	}
+	ffzt = Arrays.copyOf(zp.ffzt, zp.ffzt.length);
+	System.arraycopy(zp.mArray, 0, mArray, 0, zp.mArray.length);
+	System.arraycopy(zp.pArray, 0, pArray, 0, zp.pArray.length);
+	for (int i = 0; i < zp.dn.length; i++) {
+		if (zp.up[i] != null)
+			up[i] = new BitContext((short) (zp.up[i].get() & 0xFF));
+	}
+	aValue = zp.aValue;
+	ibs = new CachedInputStream(zp.ibs);
+	buffer = zp.buffer;
+	code = zp.code;
+	fence = zp.fence;
+	delay = zp.delay;
+	scount = zp.scount;
+	zByte = zp. zByte;
+}
+
+/**
    * DOCUMENT ME!
    *
    * @return DOCUMENT ME!
@@ -680,7 +707,7 @@ public class ZPCodec
    *
    * @throws IOException DOCUMENT ME!
    */
-  public final ZPCodec init(final InputStream ibs)
+  public final ZPCodec init(final CachedInputStream ibs)
     throws IOException
   {
     this.ibs = ibs;

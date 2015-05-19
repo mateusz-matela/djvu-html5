@@ -89,4 +89,11 @@ public class ZPTable
     this.up       = up;
     this.dn       = dn;
   }
+
+	public void set(ZPTable zpTable) {
+		this.pValue = zpTable.pValue;
+		this.mValue = zpTable.mValue;
+		this.up = zpTable.up;
+		this.dn = zpTable.dn;
+	}
 }
