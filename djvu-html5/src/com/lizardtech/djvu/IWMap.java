@@ -45,6 +45,8 @@
 //
 package com.lizardtech.djvu;
 
+import com.google.gwt.typedarrays.shared.Uint8Array;
+
 
 /**
  *  This class represents structured wavelette data.
@@ -280,7 +282,7 @@ final class IWMap
    */
   void image(
     int          index,
-    final byte[] img8,
+    final Uint8Array img8,
     int          rowsize,
     int          pixsep,
     boolean          fast)
@@ -344,7 +346,7 @@ final class IWMap
           x = 127;
         }
 
-        img8[pixidx] = (byte)x;
+        img8.set(pixidx, x);
       }
     }
   }
@@ -366,7 +368,7 @@ final class IWMap
     int          subsample,
     GRect        rect,
     int          index,
-    final byte[] img8,
+    final Uint8Array img8,
     int          rowsize,
     int          pixsep,
     boolean          fast)
@@ -541,7 +543,7 @@ final class IWMap
           x = 127;
         }
 
-        img8[pixidx] = (byte)x;
+        img8.set(pixidx, x);
       }
     }
   }

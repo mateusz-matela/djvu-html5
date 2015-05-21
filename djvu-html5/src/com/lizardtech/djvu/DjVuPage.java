@@ -122,13 +122,6 @@ public class DjVuPage
   /** This is the newest version of DjVu we should attempt to decode. */
   public static final int DJVUVERSION_TOO_NEW = 22;
   
-  /**
-   * This number is incremented for each instance and used for logging.  Note
-   * that there is no locking done when incrementing, so this number is not
-   * guarenteed to be unique.
-   */
-  private static int idCount = 1;
-
   //~ Instance fields --------------------------------------------------------
 
   /** Lock used for accessing the annotation codec. */
@@ -153,7 +146,7 @@ public class DjVuPage
   public final Object infoLock = new String("info");
 
   /** Lock to signal any image update, for progressive rendering. */
-  public final Object progressiveLock = new String("progressive");
+  public final String progressiveLock = new String("progressive");
 
   /** Lock used for accessing the text codec. */
   public final Object textLock = new String("text");
@@ -196,19 +189,6 @@ public class DjVuPage
 
   /** True until the document has been decoded. */
   private boolean lockWait = true;
-
-  /** A unique number assign from idCount used for logging. */
-  private final long id;
-  
-  //~ Constructors -----------------------------------------------------------
-
-  /**
-   * Creates a new DjVuPage object.
-   */
-  public DjVuPage()
-  {
-    id       = idCount++;
-  }
 
   //~ Methods ----------------------------------------------------------------
 

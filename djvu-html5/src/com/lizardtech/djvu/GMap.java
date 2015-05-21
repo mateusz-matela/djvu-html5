@@ -47,6 +47,10 @@ package com.lizardtech.djvu;
 
 import java.util.*;
 
+import com.google.gwt.canvas.dom.client.Context2d;
+import com.google.gwt.canvas.dom.client.ImageData;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+
 
 /**
  * This is an abstract class for representing pixel maps.
@@ -58,8 +62,13 @@ public abstract class GMap
 {
   //~ Instance fields --------------------------------------------------------
 
-  /** properties associated with this image map */
-  public final HashMap properties = new HashMap();
+	public static int BYTES_PER_PIXEL = 4;
+
+  /** The raw pixel data. */
+	  public static Context2d imageContext;
+
+/** properties associated with this image map */
+  public final HashMap<String, Object> properties = new HashMap<>();
 
   /** The number of bytes per pixel */
   protected final int ncolors;
@@ -112,44 +121,6 @@ public abstract class GMap
   }
 
   /**
-   * Insert the reference map at the specified location.
-   *
-   * @param ref map to insert
-   * @param dx horizontal position to insert at
-   * @param dy vertical position to insert at
-   */
-  public abstract void fill(
-    GMap ref,
-    int  dx,
-    int  dy);
-
-  /**
-   * Fills an array of pixels from the specified values.
-   *
-   * @param x the x-coordinate of the upper-left corner of the region of
-   *        pixels
-   * @param y the y-coordinate of the upper-left corner of the region of
-   *        pixels
-   * @param w the width of the region of pixels
-   * @param h the height of the region of pixels
-   * @param pixels the array of pixels
-   * @param off the offset into the pixel array
-   * @param scansize the distance from one row of pixels to the next in the
-   *        array
-   */
-  public void fillRGBPixels(
-    final int   x,
-    final int   y,
-    final int   w,
-    final int   h,
-    final int[] pixels,
-    int         off,
-    final int   scansize)
-  {
-    createGPixelReference(0).fillRGBPixels(x, y, w, h, pixels, off, scansize);
-  }
-
-  /**
    * Query the number of rows in an image.
    *
    * @return the number of rows
@@ -158,20 +129,6 @@ public abstract class GMap
   {
       return nrows;
   }
-
-  /**
-   * Shift the origin of the image by coping the pixel data.
-   *
-   * @param dx amount to shift the origin of the x-axis
-   * @param dy amount to shift the origin of the y-axis
-   * @param retval the image to copy the data into
-   *
-   * @return the translated image
-   */
-  public abstract GMap translate(
-    int  dx,
-    int  dy,
-    GMap retval);
 
   /**
    * Create a copy of this image.
@@ -196,7 +153,7 @@ public abstract class GMap
    *
    * @return the array of pixels
    */
-  public final byte[] getData()
+  public byte[] getData()
   {
     return data;
   }
@@ -261,36 +218,6 @@ public abstract class GMap
   public final int getBlueOffset()
   {
     return blueOffset;
-  }
-  
-  
-  /**
-   * Create a GPixelReference (a pixel iterator) that refers to this map
-   * starting at the specified offset.
-   *
-   * @param offset position of the first pixel to reference
-   *
-   * @return the newly created GPixelReference
-   */
-  public GPixelReference createGPixelReference(final int offset)
-  {
-    return new GPixelReference(this, offset);
-  }
-
-  /**
-   * Create a GPixelReference (a pixel iterator) that refers to this map
-   * starting at the specified position.
-   *
-   * @param row initial vertical position
-   * @param column initial horizontal position
-   *
-   * @return the newly created GPixelReference
-   */
-  public GPixelReference createGPixelReference(
-    final int row,
-    final int column)
-  {
-    return new GPixelReference(this, row, column);
   }
 
   /**

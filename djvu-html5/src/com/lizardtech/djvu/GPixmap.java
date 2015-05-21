@@ -45,6 +45,9 @@
 //
 package com.lizardtech.djvu;
 
+import com.google.gwt.canvas.dom.client.ImageData;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+
 
 
 /**
@@ -77,6 +80,20 @@ public class GPixmap
 
   /** Used for attenuation */
   protected final static Object [] multiplierRefArray=new Object[256];
+
+//  protected ImageData imageData;
+//  protected Uint8Array data;
+//
+//  @Override
+//	public byte[] getData() {
+//		byte[] result = new byte[data.length() * 3 / 4];
+//		for (int i = 0; i < nrows * ncolumns; i++) {
+//			result[i * 3] = (byte) data.get(i * 4);
+//			result[i * 3 + 1] = (byte) data.get(i * 4 + 1);
+//			result[i * 3 + 2] = (byte) data.get(i * 4 + 2);
+//		}
+//		return result;
+//	}
   
   /**
    * Static initializers.
@@ -102,10 +119,6 @@ public class GPixmap
       multiplierRefArray[i++] = null;
     }
   }
-
-  //~ Instance fields --------------------------------------------------------
-
-  private final GPixelReference ref      = createGPixelReference(-1);
 
   //~ Constructors -----------------------------------------------------------
 
@@ -145,7 +158,7 @@ public class GPixmap
         ctable=new int[256];
         for(int i = 0; i < 256; i++)
         {
-          double x = (double)i / 255D;
+          double x = i / 255D;
 
           if(DjVuOptions.BEZIERGAMMA)
           {
@@ -419,127 +432,6 @@ public class GPixmap
   }
 
   /**
-   * Fill this image from another source at reduced resolution.  Pixel 
-   * averaging will be used.
-   * 
-   * @param src image map to reduce
-   * @param subsample rate to subsample
-   * @param pdr target bounds
-   */
-  public void downsample(
-    GMap src,
-    int  subsample,
-    GRect   pdr)
-  {
-    GRect rect =
-      new GRect(
-        0,
-        0,
-        ((src.columns() + subsample) - 1) / subsample,
-        ((src.rows() + subsample) - 1) / subsample);
-
-    if(pdr != null)
-    {
-      if(
-        (pdr.xmin < rect.xmin)
-        || (pdr.ymin < rect.ymin)
-        || (pdr.xmax > rect.xmax)
-        || (pdr.ymax > rect.ymax))
-      {
-        throw new IllegalArgumentException(
-          "(GPixmap::downsample) Specified rectangle overflows destination pixmap");
-      }
-      rect = pdr;
-    }
-
-    init(
-      rect.height(),
-      rect.width(),
-      null);
-
-    int                   sy   = rect.ymin * subsample;
-    int                   sxz  = rect.xmin * subsample;
-    int                   sidx = src.rowOffset(sy);
-    int                   didx = 0;
-
-    final GPixelReference sptr = src.createGPixelReference(0);
-    final GPixelReference dptr = createGPixelReference(0);
-
-    for(int y = 0; y < rows(); y++)
-    {
-      int sx = sxz;
-
-      for(int x = columns(); x-- > 0; dptr.incOffset())
-      {
-        int r    = 0;
-        int g    = 0;
-        int b    = 0;
-        int s    = 0;
-        int kidx = sidx;
-        int lsy  = sy + subsample;
-
-        if(lsy > src.rows())
-        {
-          lsy = src.rows();
-        }
-
-        int lsx = sx + subsample;
-
-        if(lsx > src.columns())
-        {
-          lsx = src.columns();
-        }
-
-        for(int rsy = sy; rsy < lsy; rsy++)
-        {
-          sptr.setOffset(kidx + sx);
-          if(! isRampNeeded())
-          {
-            for(int rsx = lsx - sx; rsx-- > 0; sptr.incOffset())
-            {
-              r += sptr.getRed();
-              g += sptr.getGreen();
-              b += sptr.getBlue();
-              s++;
-            }
-          }
-          else
-          {
-            for(int rsx = lsx - sx; rsx-- > 0; sptr.incOffset())
-            {
-              final GPixel pix=src.ramp(sptr);
-              r += pix.getRed();
-              g += pix.getGreen();
-              b += pix.getBlue();
-              s++;
-            }
-          }
-
-          kidx += src.getRowSize();
-        }
-
-        if(s >= invmap.length)
-        {
-          dptr.setBGR(b / s, g / s, r / s);
-        }
-        else
-        {
-          dptr.setBGR(
-            ((b * invmap[s]) + 32768) >> 16,
-            ((g * invmap[s]) + 32768) >> 16,
-            ((r * invmap[s]) + 32768) >> 16);
-        }
-
-        sx += subsample;
-      }
-
-      sy += subsample;
-      sidx += src.rowOffset(subsample);
-      dptr.setOffset(didx += getRowSize());
-    }
-  }
-
-  /**
    * Fill this image from another source at reduced resolution of 4 vertical
    * pixels to 3.  An extrapulating pixel averaging algorithm is used. 
    * 
@@ -549,13 +441,13 @@ public class GPixmap
    * @throws IllegalArgumentException if the target rectangle is out of bounds
    */
   public void downsample43(
-    final GMap src,
+    final GPixmap src,
     final GRect pdr)
   {
     final int srcwidth   = src.columns();
     final int srcheight  = src.rows();
-    int       destwidth  = (int)Math.ceil((double)srcwidth*0.75D);
-    int       destheight = (int)Math.ceil((double)srcheight*0.75D);
+    int       destwidth  = (int)Math.ceil(srcwidth*0.75D);
+    int       destheight = (int)Math.ceil(srcheight*0.75D);
     GRect     rect       = new GRect(0, 0, destwidth, destheight);
 
     if(pdr != null)
@@ -811,73 +703,6 @@ public class GPixmap
   }
 
   /**
-   * Insert the reference map at the specified location.
-   *
-   * @param ref map to insert
-   * @param dx horizontal position to insert at
-   * @param dy vertical position to insert at
-   */
-  @Override
-public void fill(
-    final GMap ref,
-    final int  dx,
-    final int  dy)
-  {
-    final int x0 = (dx > 0)
-      ? dx
-      : 0;
-    int       y0 = (dy > 0)
-      ? dy
-      : 0;
-    final int x1 = (dx < 0)
-      ? (-dx)
-      : 0;
-    int y1 = (dy < 0)
-      ? (-dy)
-      : 0;
-    final int w0 = columns() - x0;
-    final int w1 = ref.columns() - x1;
-    final int w  = (w0 < w1)
-      ? w0
-      : w1;
-    final int h0 = rows() - y0;
-    final int h1 = ref.rows() - y1;
-    int       h  = (h0 < h1)
-      ? h0
-      : h1;
-
-    if((w > 0) && (h > 0))
-    {
-      final GPixelReference pixel    = createGPixelReference(0);
-      final GPixelReference refPixel = ref.createGPixelReference(0);
-
-      do
-      {
-        pixel.setOffset(y0++, x0);
-        refPixel.setOffset(y1++, x1);
-
-
-        if(! isRampNeeded())
-        {
-          pixel.setPixels(refPixel,w);
-        }
-        else
-        {
-          int i = w;
-          do
-          {
-            pixel.set(ref.ramp(refPixel));
-            pixel.incOffset();
-            refPixel.incOffset();
-          }
-          while(--i > 0);
-        }
-      }
-      while(--h > 0);
-    }
-  }
-
-  /**
    * Initiallize this pixmap with a preallocated buffer.
    *
    * @param data buffer to use
@@ -943,13 +768,6 @@ public void fill(
           data[i++]   = r;
         }
       }
-//      else if(needFill)
-//      {
-//        for(int i = 0; i < data.length;)
-//        {
-//          data[i++] = -51;
-//        }
-//      }
     }
 
     return this;
@@ -964,7 +782,7 @@ public void fill(
    * @return the initialized pixmap
    */
   public GPixmap init(
-    final GMap  ref,
+    final GPixmap  ref,
     final GRect rect)
   {
     init(
@@ -1106,7 +924,7 @@ public void fill(
     // Compute number of rows
     int xrows = rows();
 
-    if((int)mask.rows() < xrows)
+    if(mask.rows() < xrows)
     {
       xrows = mask.rows();
     }
@@ -1119,7 +937,7 @@ public void fill(
     // Compute number of columns
     int xcolumns = columns();
 
-    if((int)mask.columns() < xcolumns)
+    if(mask.columns() < xcolumns)
     {
       xcolumns = mask.columns();
     }
@@ -1195,11 +1013,11 @@ public void fill(
             int level = multiplier[srcpix];
             dst.setBGR(
               ((dst.getBlue() * (0x10000 - level))
-              + (level * (int)gtable[fgx.getBlue()])) >> 16,
+              + (level * gtable[fgx.getBlue()])) >> 16,
               ((dst.getGreen() * (0x10000 - level))
-              + (level * (int)gtable[fgx.getGreen()])) >> 16,
+              + (level * gtable[fgx.getGreen()])) >> 16,
               ((dst.getRed() * (0x10000 - level))
-              + (level * (int)gtable[fgx.getRed()])) >> 16);
+              + (level * gtable[fgx.getRed()])) >> 16);
           }
         }
 
@@ -1220,35 +1038,32 @@ public void fill(
     }
   }
 
+  /**
+   * Create a GPixelReference (a pixel iterator) that refers to this map
+   * starting at the specified offset.
+   *
+   * @param offset position of the first pixel to reference
+   *
+   * @return the newly created GPixelReference
+   */
+  public GPixelReference createGPixelReference(final int offset)
+  {
+    return new GPixelReference(this, offset);
+  }
 
   /**
-   * Copy this image with a translated origin.
+   * Create a GPixelReference (a pixel iterator) that refers to this map
+   * starting at the specified position.
    *
-   * @param dx horizontal distance to translate
-   * @param dy vertical distance to translate
-   * @param retval an old image to try and reuse for the return value
+   * @param row initial vertical position
+   * @param column initial horizontal position
    *
-   * @return the translated image
+   * @return the newly created GPixelReference
    */
-  @Override
-public GMap translate(
-    final int dx,
-    final int dy,
-    GMap      retval)
+  public GPixelReference createGPixelReference(
+    final int row,
+    final int column)
   {
-    if(
-      !(retval instanceof GPixmap)
-      || (retval.columns() != columns())
-      || (retval.rows() != rows()))
-    {
-      retval = new GPixmap().init(
-          rows(),
-          columns(),
-          null);
-    }
-
-    retval.fill(this, -dx, -dy);
-
-    return retval;
-  }  
+    return new GPixelReference(this, row, column);
+  }
 }

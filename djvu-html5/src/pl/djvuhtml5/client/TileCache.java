@@ -65,6 +65,8 @@ public class TileCache {
 
 		fetcher = new Fetcher();
 		pageCache.addPageDownloadListener(fetcher);
+
+		GMap.imageContext = bufferContext;
 	}
 
 	public static int toSubsample(double zoom) {

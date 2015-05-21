@@ -45,6 +45,9 @@
 //
 package com.lizardtech.djvu;
 
+import com.google.gwt.canvas.dom.client.ImageData;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+
 /**
  * This class represents bitonal and gray scale pixel images.
  *
@@ -301,7 +304,6 @@ public class GBitmap
       }
 
       int sr  = 0;
-      int idx = 0;
 
       for(; sr < bm.rows(); sr++)
       {
@@ -331,7 +333,6 @@ public class GBitmap
         {
           dr1 = 0;
           dr++;
-          idx++;
         }
       }
     }
@@ -361,43 +362,6 @@ public final int rowOffset(final int row)
 public final int getRowSize()
   {
     return rowSize;
-  }
-
-  /**
-   * Set the value of all pixels.
-   *
-   * @param value gray scale value to assign to all pixels
-   */
-  public void fill(final short value)
-  {
-    int idx = 0;
-
-    final byte v=(byte)value;
-    for(int y = 0; y < rows(); y++)
-    {
-      idx = rowOffset(y);
-
-      for(int x = 0; x < ncolumns; x++)
-      {
-        data[idx + x] = v;
-      }
-    }
-  }
-
-  /**
-   * Insert the reference map at the specified location.
-   *
-   * @param ref map to insert
-   * @param dx horizontal position to insert at
-   * @param dy vertical position to insert at
-   */
-  @Override
-public void fill(
-    final GMap ref,    
-    final int  dx,
-    final int  dy)
-  {
-    insertMap((GBitmap)ref, dx, dy, false);
   }
 
   
@@ -563,68 +527,6 @@ public void fill(
   }
 
   /**
-  /**
-   * Initialize this map by copying a reference map
-   *
-   * @param ref map to copy
-   * @param rect area to copy
-   * @param border number of border pixels
-   *
-   * @return the initialized map
-   */
-  public GBitmap init(
-    final GBitmap ref,
-    final GRect   rect,
-    final int     border)
-  {
-    if(this == ref)
-    {
-      GBitmap tmp = new GBitmap();
-      tmp.setGrays(grays);
-      tmp.setBorder((short)border);
-      tmp.setRowSize(rowSize);
-      tmp.ncolumns = ncolumns;
-      tmp.setRows(nrows);
-      tmp.data   = data;
-      data       = null;
-      init(tmp, rect, border);
-    }
-    else
-    {
-      init(
-        rect.height(),
-        rect.width(),
-        border);
-      grays = ref.grays;
-
-      GRect rect2 = new GRect(0, 0,
-          ref.columns(),
-          ref.rows());
-      rect2.intersect(rect2, rect);
-      rect2.translate(-rect.xmin, -rect.ymin);
-
-      if(!rect2.isEmpty())
-      {
-        int dstIdx = 0;
-        int srcIdx = 0;
-
-        for(int y = rect2.ymin; y < rect2.ymax; y++)
-        {
-          dstIdx   = rowOffset(y);
-          srcIdx   = ref.rowOffset(y + rect.ymin);
-
-          for(int x = rect2.xmin; x < rect2.ymax; x++)
-          {
-            data[dstIdx + x] = ref.data[srcIdx + x];
-          }
-        }
-      }
-    }
-
-    return this;
-  }
-
-  /**
    * Set the minimum border needed
    *
    * @param minimum the minumum border needed
@@ -651,44 +553,6 @@ public void fill(
   }
 
   /**
-   * Shift the origin of the image by coping the pixel data.
-   *
-   * @param dx amount to shift the origin of the x-axis
-   * @param dy amount to shift the origin of the y-axis
-   * @param retval the image to copy the data into
-   *
-   * @return the translated image
-   */
-  @Override
-public GMap translate(
-    final int dx,
-    final int dy,
-    GMap      retval)
-  {
-    if(
-      !(retval instanceof GBitmap)
-      || (retval.columns() != columns())
-      || (retval.rows() != rows()))
-    {
-      final GBitmap r = new GBitmap().init(
-          rows(),
-          columns(),
-          0);
-
-      if((grays >= 2) && (grays <= 256))
-      {
-        r.setGrays(grays);
-      }
-
-      retval = r;
-    }
-
-    retval.fill(this, -dx, -dy);
-
-    return retval;
-  }
-
-  /**
    * Set the border width.
    *
    * @param border border width
@@ -699,16 +563,6 @@ public GMap translate(
     maxRowOffset   = rowOffset(nrows);
   }
 
-  /**
-   * Query the border width.
-   *
-   * @return the border width
-   */
-  protected final int getBorder()
-  {
-    return border;
-  }
-  
   /**
    * Convert the pixel to 24 bit color.
    */

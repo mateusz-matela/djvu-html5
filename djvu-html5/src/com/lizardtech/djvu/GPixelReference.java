@@ -57,7 +57,7 @@ public final class GPixelReference
 {
   //~ Instance fields --------------------------------------------------------
 
-  private GMap parent;
+  private GPixmap parent;
 
   /** The current byte position in the data array. */
   private int offset;
@@ -76,7 +76,7 @@ public final class GPixelReference
    * @param offset the initial pixel position to refere to
    */
   public GPixelReference(
-    final GMap parent,
+    final GPixmap parent,
     final int  offset)
   {
     this.parent   = parent;
@@ -95,7 +95,7 @@ public final class GPixelReference
    * @param column DOCUMENT ME!
    */
   public GPixelReference(
-    final GMap parent,
+    final GPixmap parent,
     final int  row,
     final int  column)
   {
@@ -249,64 +249,6 @@ public byte blueByte()
   public GPixelReference duplicate()
   {
     return new GPixelReference(parent, offset);
-  }
-
-  /**
-   * Fills an array of pixels from the specified values.
-   *
-   * @param x the x-coordinate of the upper-left corner of the region of
-   *        pixels
-   * @param y the y-coordinate of the upper-left corner of the region of
-   *        pixels
-   * @param w the width of the region of pixels
-   * @param h the height of the region of pixels
-   * @param pixels the array of pixels
-   * @param off the offset into the pixel array
-   * @param scansize the distance from one row of pixels to the next in the
-   *        array
-   */
-  public void fillRGBPixels(
-    final int   x,
-    final int   y,
-    final int   w,
-    final int   h,
-    final int[] pixels,
-    int         off,
-    final int   scansize)
-  {
-    final int yrev = parent.rows() - y;
-
-    if(! parent.isRampNeeded())
-    {
-      for(int y0 = yrev; y0-- > (yrev - h); off += scansize)
-      {
-        for(
-          int i = off, j = (parent.rowOffset(y0) + x) * ncolors, k = w;
-          k > 0;
-          k--, j += ncolors)
-        {
-          pixels[i++] =
-            0xff000000 | (0xff0000 & (parent.data[j + redOffset] << 16))
-            | (0xff00 & (parent.data[j + greenOffset] << 8))
-            | (0xff & parent.data[j + blueOffset]);
-        }
-      }
-    }
-    else
-    {
-      final GPixelReference ref=parent.createGPixelReference(0);
-      for(int y0 = yrev; y0-- > (yrev - h); off += scansize)
-      {
-        ref.setOffset(y0,x);
-        for(
-          int i = off, k = w;
-          k > 0;
-          k--, ref.incOffset())
-        {
-          pixels[i++] = parent.ramp(ref).hashCode();
-        }          
-      }
-    }
   }
 
   /**

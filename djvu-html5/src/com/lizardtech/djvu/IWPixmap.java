@@ -47,6 +47,9 @@ package com.lizardtech.djvu;
 
 import java.io.*;
 
+import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+
 
 /**
  *  This class represents structured wavelette data.
@@ -190,13 +193,6 @@ public void decode(final CachedInputStream bs)
           "(IWPixmap::decode) File has been compressed with a more recent IWCodec");
       }
 
-      int header3size = 5;
-
-      if(minor < 2)
-      {
-        header3size = 4;
-      }
-
       int w = (bs.read() << 8);
       w |= bs.read();
 
@@ -278,9 +274,9 @@ public void decode(final CachedInputStream bs)
 
     final int w      = ymap.iw;
     final int h      = ymap.ih;
-    final int pixsep = 3;
+    final int pixsep = 4;
     final int rowsep = w * pixsep;
-    byte[]    bytes  = new byte[h * rowsep];
+    Uint8Array bytes = TypedArrays.createUint8Array(h * rowsep);
 
     ymap.image(0, bytes, rowsep, pixsep, false);
 
@@ -290,9 +286,15 @@ public void decode(final CachedInputStream bs)
       crmap.image(2, bytes, rowsep, pixsep, crcb_half);
     }
 
+    byte[]    bytes2  = new byte[h * rowsep];
+    for (int i = 0; i < w * h; i++) {
+    	bytes2[i * 3] = (byte) bytes.get(i * 4);
+    	bytes2[i * 3 + 1] = (byte) bytes.get(i * 4 + 1);
+    	bytes2[i * 3 + 2] = (byte) bytes.get(i * 4 + 2);
+    }
     // Convert image to RGB
     final GPixmap         ppm   =
-      new GPixmap().init(bytes, h, w);
+      new GPixmap().init(bytes2, h, w);
     final GPixelReference pixel = ppm.createGPixelReference(0);
 
     for(int i = 0; i < h;)
@@ -341,9 +343,10 @@ public void decode(final CachedInputStream bs)
 
     final int    w      = rect.width();
     final int    h      = rect.height();
-    final int    pixsep = 3;
+    final int    pixsep = 4;
     final int    rowsep = w * pixsep;
-    final byte[] bytes  = retval.init(h, w, null).data;
+    final byte[] bytes2  = retval.init(h, w, null).data;
+    Uint8Array bytes = TypedArrays.createUint8Array(bytes2.length * 4 / 3);
 
     ymap.image(subsample, rect, 0, bytes, rowsep, pixsep, false);
 
@@ -351,6 +354,12 @@ public void decode(final CachedInputStream bs)
     {
       cbmap.image(subsample, rect, 1, bytes, rowsep, pixsep, crcb_half);
       crmap.image(subsample, rect, 2, bytes, rowsep, pixsep, crcb_half);
+    }
+
+    for (int i = 0; i < w * h; i++) {
+    	bytes2[i * 3] = (byte) bytes.get(i * 4);
+    	bytes2[i * 3 + 1] = (byte) bytes.get(i * 4 + 1);
+    	bytes2[i * 3 + 2] = (byte) bytes.get(i * 4 + 2);
     }
 
     final GPixelReference pixel = retval.createGPixelReference(0);
