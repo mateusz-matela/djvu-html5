@@ -45,7 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
@@ -60,14 +59,6 @@ public class GBitmap
 {
     
   static Object [] rampRefArray=new Object[256];
-  
-  static
-  {
-      for(int i=0;i<rampRefArray.length;)
-      {
-          rampRefArray[i++]=null;
-      }
-  }
   
   //~ Instance fields --------------------------------------------------------
 
@@ -109,7 +100,7 @@ public class GBitmap
 
   //~ Methods ----------------------------------------------------------------
 
-  public GPixel [] getRamp()
+  private GPixel [] getRamp()
   {
     GPixel [] retval=ramp;
     if(retval == null)
@@ -459,18 +450,6 @@ public final int getRowSize()
     }
 
     return this;
-  }
-
-  /**
-   * Initialize this map by copying a reference map
-   *
-   * @param ref map to copy
-   *
-   * @return the initialized map
-   */
-  public final GBitmap init(final GBitmap ref)
-  {
-    return init(ref, 0);
   }
 
   /**
