@@ -46,6 +46,7 @@
 package com.lizardtech.djvu;
 
 import com.google.gwt.canvas.dom.client.ImageData;
+import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
 
@@ -82,18 +83,18 @@ public class GPixmap
   protected final static Object [] multiplierRefArray=new Object[256];
 
 //  protected ImageData imageData;
-//  protected Uint8Array data;
-//
-//  @Override
-//	public byte[] getData() {
-//		byte[] result = new byte[data.length() * 3 / 4];
-//		for (int i = 0; i < nrows * ncolumns; i++) {
-//			result[i * 3] = (byte) data.get(i * 4);
-//			result[i * 3 + 1] = (byte) data.get(i * 4 + 1);
-//			result[i * 3 + 2] = (byte) data.get(i * 4 + 2);
-//		}
-//		return result;
-//	}
+  protected Uint8Array data;
+
+  @Override
+	public byte[] getData() {
+		byte[] result = new byte[data.length() * 3 / 4];
+		for (int i = 0; i < nrows * ncolumns; i++) {
+			result[i * 4] = (byte) data.get(i * 4);
+			result[i * 4 + 1] = (byte) data.get(i * 4 + 1);
+			result[i * 4 + 2] = (byte) data.get(i * 4 + 2);
+		}
+		return result;
+	}
   
   /**
    * Static initializers.
@@ -425,9 +426,9 @@ public class GPixmap
 
     int [] gtable=getColorCorrection(gamma);
 
-    for(int i = 0; i < data.length; i++)
+    for(int i = 0; i < data.length(); i++)
     {
-      data[i] = (byte)gtable[data[i]];
+      data.set(i, (byte) gtable[data.get(i)]);
     }
   }
 
@@ -712,7 +713,7 @@ public class GPixmap
    * @return the initialized pixmap
    */
   GPixmap init(
-    byte[] data,
+    Uint8Array data,
     int    arows,
     int    acolumns)
   {
@@ -751,8 +752,9 @@ public class GPixmap
     {
       if(data == null)
       {
-        data = new byte[npix * ncolors];
-//        needFill=true;
+        //imageData = imageContext.createImageData(ncolumns, nrows);
+//        data = (Uint8Array) imageData.getData();
+    	  data = TypedArrays.createUint8Array(npix * ncolors);
       }
 
       if(filler != null)
@@ -761,11 +763,11 @@ public class GPixmap
         final byte g = filler.greenByte();
         final byte r = filler.redByte();
 
-        for(int i = 0; i < data.length;)
+        for(int i = 0; i < data.length(); i += BYTES_PER_PIXEL)
         {
-          data[i++]   = b;
-          data[i++]   = g;
-          data[i++]   = r;
+          data.set(i + blueOffset, b);
+          data.set(i + greenOffset, g);
+          data.set(i + redOffset, r);
         }
       }
     }

@@ -286,15 +286,9 @@ public void decode(final CachedInputStream bs)
       crmap.image(2, bytes, rowsep, pixsep, crcb_half);
     }
 
-    byte[]    bytes2  = new byte[h * rowsep];
-    for (int i = 0; i < w * h; i++) {
-    	bytes2[i * GMap.BYTES_PER_PIXEL] = (byte) bytes.get(i * 4);
-    	bytes2[i * GMap.BYTES_PER_PIXEL + 1] = (byte) bytes.get(i * 4 + 1);
-    	bytes2[i * GMap.BYTES_PER_PIXEL + 2] = (byte) bytes.get(i * 4 + 2);
-    }
     // Convert image to RGB
     final GPixmap         ppm   =
-      new GPixmap().init(bytes2, h, w);
+      new GPixmap().init(bytes, h, w);
     final GPixelReference pixel = ppm.createGPixelReference(0);
 
     for(int i = 0; i < h;)
@@ -345,8 +339,7 @@ public void decode(final CachedInputStream bs)
     final int    h      = rect.height();
     final int    pixsep = 4;
     final int    rowsep = w * pixsep;
-    final byte[] bytes2  = retval.init(h, w, null).data;
-    Uint8Array bytes = TypedArrays.createUint8Array(bytes2.length * 4 / GMap.BYTES_PER_PIXEL);
+    final Uint8Array bytes  = retval.init(h, w, null).data;
 
     ymap.image(subsample, rect, 0, bytes, rowsep, pixsep, false);
 
@@ -354,12 +347,6 @@ public void decode(final CachedInputStream bs)
     {
       cbmap.image(subsample, rect, 1, bytes, rowsep, pixsep, crcb_half);
       crmap.image(subsample, rect, 2, bytes, rowsep, pixsep, crcb_half);
-    }
-
-    for (int i = 0; i < w * h; i++) {
-    	bytes2[i * GMap.BYTES_PER_PIXEL] = (byte) bytes.get(i * 4);
-    	bytes2[i * GMap.BYTES_PER_PIXEL + 1] = (byte) bytes.get(i * 4 + 1);
-    	bytes2[i * GMap.BYTES_PER_PIXEL + 2] = (byte) bytes.get(i * 4 + 2);
     }
 
     final GPixelReference pixel = retval.createGPixelReference(0);

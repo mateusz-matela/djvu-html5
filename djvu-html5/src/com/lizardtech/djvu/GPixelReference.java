@@ -173,31 +173,19 @@ public final class GPixelReference
     }
     while(count-- > 0)
     {
-      final int y                = parent.data[offset];
-      final int b                = parent.data[offset + 1];
-      final int r                = parent.data[offset + 2];
+      final int y                = (byte) parent.data.get(offset);
+      final int b                = (byte) parent.data.get(offset + 1);
+      final int r                = (byte) parent.data.get(offset + 2);
       final int t2               = r + (r >> 1);
       final int t3               = (y + 128) - (b >> 2);
       final int b0               = t3 + (b << 1);
-      parent.data[offset + blueOffset] = (byte)((b0 < 255)
-        ? ((b0 > 0)
-        ? b0
-        : 0)
-        : 255);
+      parent.data.set(offset + blueOffset, (b0 < 255) ? ((b0 > 0) ? b0 : 0) : 255);
 
       final int g0 = t3 - (t2 >> 1);
-      parent.data[offset + greenOffset] = (byte)((g0 < 255)
-        ? ((g0 > 0)
-        ? g0
-        : 0)
-        : 255);
+      parent.data.set(offset + greenOffset, (g0 < 255) ? ((g0 > 0) ? g0 : 0) : 255);
 
       final int r0 = y + 128 + t2;
-      parent.data[offset + redOffset] = (byte)((r0 < 255)
-        ? ((r0 > 0)
-        ? r0
-        : 0)
-        : 255);
+      parent.data.set(offset + redOffset, (r0 < 255) ? ((r0 > 0) ? r0 : 0) : 255);
 
       offset += ncolors;
     }
@@ -216,9 +204,9 @@ public void setBGR(
     final int green,
     final int red)
   {
-    parent.data[offset + blueOffset]  = (byte)blue;
-    parent.data[offset + greenOffset] = (byte)green;
-    parent.data[offset + redOffset]   = (byte)red;
+    parent.data.set(offset + blueOffset, (byte) blue);
+    parent.data.set(offset + greenOffset, (byte) green);
+    parent.data.set(offset + redOffset, (byte) red);
   }
 
   /**
@@ -229,7 +217,7 @@ public void setBGR(
   @Override
 public void setBlue(final byte blue)
   {
-    parent.data[offset+blueOffset] = blue;
+	  parent.data.set(offset + blueOffset, blue);
   }
 
   /**
@@ -240,7 +228,7 @@ public void setBlue(final byte blue)
   @Override
 public byte blueByte()
   {
-    return parent.data[offset+blueOffset];
+    return (byte) parent.data.get(offset+blueOffset);
   }
 
   /**
@@ -261,7 +249,7 @@ public byte blueByte()
   @Override
 public void setGreen(final byte green)
   {
-    parent.data[offset + greenOffset] = green;
+	  parent.data.set(offset + greenOffset, green);
   }
 
   /**
@@ -272,7 +260,7 @@ public void setGreen(final byte green)
   @Override
 public byte greenByte()
   {
-    return parent.data[offset + greenOffset];
+    return (byte) parent.data.get(offset + greenOffset);
   }
 
   /**
@@ -302,7 +290,7 @@ public byte greenByte()
   @Override
 public void setRed(final byte red)
   {
-    parent.data[offset + redOffset] = red;
+	  parent.data.set(offset + redOffset, red);
   }
 
   /**
@@ -313,6 +301,6 @@ public void setRed(final byte red)
   @Override
 public byte redByte()
   {
-    return parent.data[offset + redOffset];
+    return (byte) parent.data.get(offset + redOffset);
   }
 }
