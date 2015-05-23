@@ -82,18 +82,17 @@ public class GPixmap
   /** Used for attenuation */
   protected final static Object [] multiplierRefArray=new Object[256];
 
-//  protected ImageData imageData;
   protected Uint8Array data;
 
   @Override
-	public byte[] getData() {
-		byte[] result = new byte[data.length() * 3 / 4];
-		for (int i = 0; i < nrows * ncolumns; i++) {
-			result[i * 4] = (byte) data.get(i * 4);
-			result[i * 4 + 1] = (byte) data.get(i * 4 + 1);
-			result[i * 4 + 2] = (byte) data.get(i * 4 + 2);
-		}
-		return result;
+	public ImageData getData() {
+	  ImageData result = imageContext.createImageData(ncolumns, nrows);
+	  Uint8Array imageData = (Uint8Array) result.getData();
+	  imageData.set(data);
+	  for (int i = 3; i < imageData.length(); i += 4) {
+		  imageData.set(i, 0xFF);
+	  }
+	  return result;
 	}
   
   /**
@@ -128,7 +127,7 @@ public class GPixmap
    */
   public GPixmap() 
   {
-      super(BYTES_PER_PIXEL,2,1,0, false);
+      super(BYTES_PER_PIXEL,0,1,2, false);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -752,8 +751,6 @@ public class GPixmap
     {
       if(data == null)
       {
-        //imageData = imageContext.createImageData(ncolumns, nrows);
-//        data = (Uint8Array) imageData.getData();
     	  data = TypedArrays.createUint8Array(npix * ncolors);
       }
 

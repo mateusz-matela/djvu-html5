@@ -192,6 +192,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		graphics2d.translate(startX, startY);
 		graphics2d.scale(scale, scale);
 		graphics2d.translate(-startX, -startY);
+		graphics2d.scale(1, -1); // DjVu images have y-axis inverted 
 
 		int tileSize = tileCache.tileSize;
 		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
@@ -203,7 +204,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		for (int y = range.ymin; y <= range.ymax; y++)
 			for (int x = range.xmin; x <= range.xmax; x++) {
 				ImageElement imageElement = ImageElement.as(imagesArray[y - range.ymin][x - range.xmin].getElement());
-				graphics2d.drawImage(imageElement, startX + x * tileSize, startY + y * tileSize);
+				graphics2d.drawImage(imageElement, startX + x * tileSize,
+						-startY - y * tileSize - imageElement.getHeight());
 			}
 		graphics2d.restore();
 	}

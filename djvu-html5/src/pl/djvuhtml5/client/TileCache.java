@@ -12,7 +12,6 @@ import pl.djvuhtml5.client.PageCache.PageDownloadListener;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
-import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
@@ -149,14 +148,13 @@ public class TileCache {
 			});
 			tileInfo.getScreenRect(tempRect, tileSize, pageInfo);
 			double zoom = toZoom(tileInfo.subsample);
-			double pageHeight = pageInfo.height * zoom;
 			for (TileInfo ti : fetched) {
 				bufferContext.save();
 				double scale = zoom / toZoom(ti.subsample);
 				ti.getScreenRect(tempRect2, tileSize, pageInfo);
-				bufferContext.translate(-tempRect.xmin, -pageHeight + tempRect.ymax);
+				bufferContext.translate(-tempRect.xmin, -tempRect.ymin);
 				bufferContext.scale(scale, scale);
-				bufferContext.translate(tempRect2.xmin, +pageHeight / scale - tempRect2.ymax);
+				bufferContext.translate(tempRect2.xmin, tempRect2.ymin);
 				bufferContext.drawImage(ImageElement.as(getItem(ti).image.getElement()), 0, 0);
 				bufferContext.restore();
 			}
@@ -213,9 +211,7 @@ public class TileCache {
 	private class Fetcher implements RepeatingCommand, PageDownloadListener {
 		private static final int PREFETCH_AGE = 500;
 
-		private boolean isRunning = false;
-
-		private final ImageData bufferData = bufferContext.createImageData(tileSize, tileSize);
+		private boolean isRunning;
 
 		private GMap bufferGMap;
 
@@ -314,21 +310,10 @@ public class TileCache {
 			tileInfo.getScreenRect(tempRect, tileSize, page.getInfo());
 			int w = tempRect.width(), h = tempRect.height();
 			bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
-			int r = bufferGMap.getRedOffset(), g = bufferGMap.getGreenOffset(), b = bufferGMap.getBlueOffset();
-			byte[] data = bufferGMap.getData();
-			for (int y = 0; y < h; y++) {
-				for (int x = 0; x < w; x++) {
-					int offset = bufferGMap.getColorSize() * ((h - y - 1) * w + x);
-					bufferData.setRedAt(data[offset + r] & 0xFF, x, y);
-					bufferData.setGreenAt(data[offset + g] & 0xFF, x, y);
-					bufferData.setBlueAt(data[offset + b] & 0xFF, x, y);
-					bufferData.setAlphaAt(0xFF, x, y);
-				}
-			}
 			CanvasElement canvas = bufferContext.getCanvas();
 			canvas.setWidth(w);
 			canvas.setHeight(h);
-			bufferContext.putImageData(bufferData, 0, 0);
+			bufferContext.putImageData(bufferGMap.getData(), 0, 0);
 			cachedItem.image = new Image(canvas.toDataUrl());
 			cachedItem.isFetched = true;
 			cachedItem.lastUsed = System.currentTimeMillis();

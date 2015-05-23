@@ -153,9 +153,9 @@ public abstract class GMap
    *
    * @return the array of pixels
    */
-  public byte[] getData()
+  public ImageData getData()
   {
-    return data;
+    return null; // TODO
   }
 
   /**
