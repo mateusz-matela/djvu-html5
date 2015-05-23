@@ -127,7 +127,7 @@ public class GPixmap
    */
   public GPixmap() 
   {
-      super(3,2,1,0, false);
+      super(BYTES_PER_PIXEL,2,1,0, false);
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -751,7 +751,7 @@ public class GPixmap
     {
       if(data == null)
       {
-        data = new byte[npix * 3];
+        data = new byte[npix * ncolors];
 //        needFill=true;
       }
 

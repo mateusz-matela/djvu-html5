@@ -167,7 +167,7 @@ public final class GPixelReference
    */
   public void YCC_to_RGB(int count)
   {
-    if((ncolors != 3)||parent.isRampNeeded())
+    if(parent.isRampNeeded())
     {
         throw new IllegalStateException("YCC_to_RGB only legal with three colors");
     }
@@ -179,25 +179,27 @@ public final class GPixelReference
       final int t2               = r + (r >> 1);
       final int t3               = (y + 128) - (b >> 2);
       final int b0               = t3 + (b << 1);
-      parent.data[offset++] = (byte)((b0 < 255)
+      parent.data[offset + blueOffset] = (byte)((b0 < 255)
         ? ((b0 > 0)
         ? b0
         : 0)
         : 255);
 
       final int g0 = t3 - (t2 >> 1);
-      parent.data[offset++] = (byte)((g0 < 255)
+      parent.data[offset + greenOffset] = (byte)((g0 < 255)
         ? ((g0 > 0)
         ? g0
         : 0)
         : 255);
 
       final int r0 = y + 128 + t2;
-      parent.data[offset++] = (byte)((r0 < 255)
+      parent.data[offset + redOffset] = (byte)((r0 < 255)
         ? ((r0 > 0)
         ? r0
         : 0)
         : 255);
+
+      offset += ncolors;
     }
   }
 

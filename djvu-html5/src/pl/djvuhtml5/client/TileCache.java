@@ -318,7 +318,7 @@ public class TileCache {
 			byte[] data = bufferGMap.getData();
 			for (int y = 0; y < h; y++) {
 				for (int x = 0; x < w; x++) {
-					int offset = 3 * ((h - y - 1) * w + x);
+					int offset = bufferGMap.getColorSize() * ((h - y - 1) * w + x);
 					bufferData.setRedAt(data[offset + r] & 0xFF, x, y);
 					bufferData.setGreenAt(data[offset + g] & 0xFF, x, y);
 					bufferData.setBlueAt(data[offset + b] & 0xFF, x, y);
