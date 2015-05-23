@@ -47,6 +47,10 @@ package com.lizardtech.djvu;
 
 import java.io.IOException;
 
+import com.google.gwt.typedarrays.shared.Int32Array;
+import com.google.gwt.typedarrays.shared.Int8Array;
+import com.google.gwt.typedarrays.shared.TypedArrays;
+
 
 final class IWCodec
 {
@@ -76,12 +80,12 @@ final class IWCodec
   private BitContext     ctxMant;
   private BitContext     ctxRoot;
   private IWMap          map;
-  private byte[]         bucketstate;
-  private byte[]         coeffstate;
+  private Int8Array      bucketstate;
+  private Int8Array      coeffstate;
   private BitContext[][] ctxBucket;
   private BitContext[]   ctxStart;
-  private int[]          quant_hi;
-  private int[]          quant_lo;
+  private Int32Array     quant_hi;
+  private Int32Array     quant_lo;
   private int            curband;
   private int            curbit;
 
@@ -109,10 +113,10 @@ final class IWCodec
       }
     }
 
-    quant_hi      = new int[10];
-    quant_lo      = new int[16];
-    coeffstate    = new byte[256];
-    bucketstate   = new byte[16];
+    quant_hi      = TypedArrays.createInt32Array(10);
+    quant_lo      = TypedArrays.createInt32Array(16);
+    coeffstate    = TypedArrays.createInt8Array(256);
+    bucketstate   = TypedArrays.createInt8Array(16);
     curband       = 0;
     curbit        = 1;
     ctxMant       = new BitContext();
@@ -191,9 +195,9 @@ final class IWCodec
     int     nbucket)
     throws IOException
   {
-    int    thres   = quant_hi[band];
+    int    thres   = quant_hi.get(band);
     int    bbstate = 0;
-    byte[] cstate  = coeffstate;
+    Int8Array cstate  = coeffstate;
     int    cidx    = 0;
 
     for(int buckno = 0; buckno < nbucket;)
@@ -209,26 +213,17 @@ final class IWCodec
       {
         for(int i = 0; i < 16; i++)
         {
-          int cstatetmp = cstate[cidx + i] & 1;
-
+          int cstatetmp = cstate.get(cidx + i) & 1;
           if(cstatetmp == 0)
           {
-            if(pcoeff[i] != 0)
-            {
-              cstatetmp |= 2;
-            }
-            else
-            {
-              cstatetmp |= 8;
-            }
+        	cstatetmp = pcoeff[i] != 0 ? 2 : 8;
+        	cstate.set(cidx + i, cstatetmp);
           }
-
-          cstate[cidx + i] = (byte)cstatetmp;
           bstatetmp |= cstatetmp;
         }
       }
 
-      bucketstate[buckno] = (byte)bstatetmp;
+      bucketstate.set(buckno, bstatetmp);
       bbstate |= bstatetmp;
       buckno++;
       cidx += 16;
@@ -250,7 +245,7 @@ final class IWCodec
     {
       for(int buckno = 0; buckno < nbucket; buckno++)
       {
-        if((bucketstate[buckno] & 8) != 0)
+        if((bucketstate.get(buckno) & 8) != 0)
         {
           int ctx = 0;
 
@@ -292,7 +287,7 @@ final class IWCodec
 
           if(zp.decoder(ctxBucket[band][ctx]) != 0)
           {
-            bucketstate[buckno] |= 4;
+            bucketstate.set(buckno, bucketstate.get(buckno) | 4);
           }
         }
       }
@@ -305,7 +300,7 @@ final class IWCodec
 
       for(int buckno = 0; buckno < nbucket;)
       {
-        if((bucketstate[buckno] & 4) != 0)
+        if((bucketstate.get(buckno) & 4) != 0)
         {
           short[] pcoeff = blk.getBlock(fbucket + buckno);
 
@@ -315,9 +310,9 @@ final class IWCodec
 
             for(int i = 0; i < 16; i++)
             {
-              if((cstate[cidx + i] & 1) == 0)
+              if((cstate.get(cidx + i) & 1) == 0)
               {
-                cstate[cidx + i] = 8;
+                cstate.set(cidx + i, 8);
               }
             }
           }
@@ -329,7 +324,7 @@ final class IWCodec
           {
             for(int i = 0; i < 16; i++)
             {
-              if((cstate[cidx + i] & 8) != 0)
+              if((cstate.get(cidx + i) & 8) != 0)
               {
                 gotcha++;
               }
@@ -338,11 +333,11 @@ final class IWCodec
 
           for(int i = 0; i < 16; i++)
           {
-            if((cstate[cidx + i] & 8) != 0)
+            if((cstate.get(cidx + i) & 8) != 0)
             {
               if(band == 0)
               {
-                thres = quant_lo[i];
+                thres = quant_lo.get(i);
               }
 
               int ctx = 0;
@@ -361,14 +356,14 @@ final class IWCodec
 
               if(
                 !DjVuOptions.NOCTX_ACTIVE
-                && ((bucketstate[buckno] & 2) != 0))
+                && ((bucketstate.get(buckno) & 2) != 0))
               {
                 ctx |= 8;
               }
 
               if(zp.decoder(ctxStart[ctx]) != 0)
               {
-                cstate[cidx + i] |= 4;
+                cstate.set(cidx + i, cstate.get(cidx + i) | 4);
 
                 int halfthres = thres >> 1;
                 int coeff = (thres + halfthres) - (halfthres >> 2);
@@ -385,7 +380,7 @@ final class IWCodec
 
               if(!DjVuOptions.NOCTX_EXPECT)
               {
-                if((cstate[cidx + i] & 4) != 0)
+                if((cstate.get(cidx + i) & 4) != 0)
                 {
                   gotcha = 0;
                 }
@@ -410,13 +405,13 @@ final class IWCodec
 
       for(int buckno = 0; buckno < nbucket;)
       {
-        if((bucketstate[buckno] & 2) != 0)
+        if((bucketstate.get(buckno) & 2) != 0)
         {
           short[] pcoeff = blk.getBlock(fbucket + buckno);
 
           for(int i = 0; i < 16; i++)
           {
-            if((cstate[cidx + i] & 2) != 0)
+            if((cstate.get(cidx + i) & 2) != 0)
             {
               int coeff = pcoeff[i];
 
@@ -427,7 +422,7 @@ final class IWCodec
 
               if(band == 0)
               {
-                thres = quant_lo[i];
+                thres = quant_lo.get(i);
               }
 
               if(coeff <= (3 * thres))
@@ -502,37 +497,37 @@ final class IWCodec
 
     for(int j = 0; j < 4; j++)
     {
-      quant_lo[i++] = q[qidx++];
+      quant_lo.set(i++, q[qidx++]);
     }
 
     for(int j = 0; j < 4; j++)
     {
-      quant_lo[i++] = q[qidx];
+      quant_lo.set(i++, q[qidx]);
     }
 
     qidx++;
 
     for(int j = 0; j < 4; j++)
     {
-      quant_lo[i++] = q[qidx];
+      quant_lo.set(i++, q[qidx]);
     }
 
     qidx++;
 
     for(int j = 0; j < 4; j++)
     {
-      quant_lo[i++] = q[qidx];
+      quant_lo.set(i++, q[qidx]);
     }
 
     qidx++;
-    quant_hi[0] = 0;
+    quant_hi.set(0, 0);
 
     for(int j = 1; j < 10; j++)
     {
-      quant_hi[j] = q[qidx++];
+      quant_hi.set(j, q[qidx++]);
     }
 
-    while(quant_lo[0] >= 32768)
+    while(quant_lo.get(0) >= 32768)
     {
       next_quant();
     }
@@ -558,19 +553,20 @@ final class IWCodec
 
       for(int i = 0; i < 16; i++)
       {
-        int threshold = quant_lo[i];
-        coeffstate[i] = 1;
+        int threshold = quant_lo.get(i);
+        coeffstate.set(i, 1);
 
         if((threshold > 0) && (threshold < 32768))
         {
-          is_null = coeffstate[i] = 0;
+          is_null = 0;
+          coeffstate.set(i, 0);
         }
       }
 
       return is_null;
     }
 
-    int threshold = quant_hi[band];
+    int threshold = quant_hi.get(band);
 
     if((threshold <= 0) || (threshold >= 32768))
     {
@@ -579,7 +575,7 @@ final class IWCodec
 
     for(int i = 0; i < (bandbuckets[band].size << 4); i++)
     {
-      coeffstate[i] = 0;
+      coeffstate.set(i, 0);
     }
 
     return 0;
@@ -596,7 +592,9 @@ final class IWCodec
 
     for(int i = 0; i < 16; i++)
     {
-      if((quant_lo[i] = quant_lo[i] >> 1) != 0)
+      int a = quant_lo.get(i) >> 1;
+      quant_lo.set(i, a);
+      if(a != 0)
       {
         flag = 1;
       }
@@ -604,7 +602,9 @@ final class IWCodec
 
     for(int i = 0; i < 10; i++)
     {
-      if((quant_hi[i] = quant_hi[i] >> 1) != 0)
+      int a = quant_hi.get(i) >> 1;
+      quant_hi.set(i, a);
+      if(a != 0)
       {
         flag = 1;
       }
@@ -623,11 +623,6 @@ final class IWCodec
    */
   static class Bucket
   {
-    //~ Static fields/initializers -------------------------------------------
-
-    /** DOCUMENT ME! */
-    protected static int sz = 8;
-
     //~ Instance fields ------------------------------------------------------
 
     /** DOCUMENT ME! */

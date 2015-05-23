@@ -46,10 +46,9 @@
 package com.lizardtech.djvu;
 
 import com.google.gwt.canvas.dom.client.ImageData;
+import com.google.gwt.typedarrays.shared.Int32Array;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
-
-
 
 /**
  * This class represents 24 bit color image maps.
@@ -83,16 +82,11 @@ public class GPixmap
   protected final static Object [] multiplierRefArray=new Object[256];
 
   protected Uint8Array data;
+  private ImageData imageData;
 
   @Override
 	public ImageData getData() {
-	  ImageData result = imageContext.createImageData(ncolumns, nrows);
-	  Uint8Array imageData = (Uint8Array) result.getData();
-	  imageData.set(data);
-	  for (int i = 3; i < imageData.length(); i += 4) {
-		  imageData.set(i, 0xFF);
-	  }
-	  return result;
+	  return imageData;
 	}
   
   /**
@@ -751,21 +745,26 @@ public class GPixmap
     {
       if(data == null)
       {
-    	  data = TypedArrays.createUint8Array(npix * ncolors);
+    	  imageData = imageContext.createImageData(ncolumns, nrows);
+    	  Uint8Array imageArray = (Uint8Array) imageData.getData();
+    	  // image array is clamped by default, we need non-clamped
+    	  data = TypedArrays.createUint8Array(imageArray.buffer());
+    	  if (filler == null) {
+    		  for (int i = 0; i < npix; i++)
+    			  data.set(i * ncolors + 3, 0xFF);
+    	  }
       }
 
       if(filler != null)
       {
-        final byte b = filler.blueByte();
-        final byte g = filler.greenByte();
-        final byte r = filler.redByte();
-
-        for(int i = 0; i < data.length(); i += BYTES_PER_PIXEL)
-        {
-          data.set(i + blueOffset, b);
-          data.set(i + greenOffset, g);
-          data.set(i + redOffset, r);
-        }
+    	  data.set(redOffset, filler.redByte());
+    	  data.set(greenOffset, filler.greenByte());
+    	  data.set(blueOffset, filler.blueByte());
+    	  data.set(3, 0xFF);
+    	  Int32Array fillBuffer = TypedArrays.createInt32Array(data.buffer());
+    	  int fillValue = fillBuffer.get(0);
+    	  for (int i = 0; i < npix; i++)
+    		  fillBuffer.set(i, fillValue);
       }
     }
 

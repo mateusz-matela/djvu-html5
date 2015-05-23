@@ -465,7 +465,6 @@ public final class BSInputStream
    *
    * @param buffer byte array to fill with data
    * @param offset to start adding data
-   * @param sz maximum amount of data to read
    *
    * @return the number of bytes read
    *

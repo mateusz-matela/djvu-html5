@@ -12,6 +12,7 @@ import pl.djvuhtml5.client.PageCache.PageDownloadListener;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
+import com.google.gwt.canvas.dom.client.Context2d.Composite;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
@@ -79,11 +80,11 @@ public class TileCache {
 		return zoom;
 	}
 
-	public Image[][] getTileImages(int pageNum, int subsample, GRect range, Image[][] reuse) {
-		Image[][] result = reuse;
+	public ImageElement[][] getTileImages(int pageNum, int subsample, GRect range, ImageElement[][] reuse) {
+		ImageElement[][] result = reuse;
 		int w = range.width() + 1, h = range.height() + 1;
 		if (reuse == null || reuse.length != h || reuse[0].length != w) {
-			result = new Image[h][w];
+			result = new ImageElement[h][w];
 		}
 
 		if (pageNum != lastPageNum || subsample != lastSubsample || !lastRange.equals(range)) {
@@ -103,7 +104,7 @@ public class TileCache {
 		return result;
 	}
 
-	private Image getTileImage(TileInfo tileInfo) {
+	private ImageElement getTileImage(TileInfo tileInfo) {
 		CachedItem cachedItem = getItem(tileInfo);
 		if (cachedItem == null) {
 			DjVuInfo pageInfo = pageCache.getPage(tileInfo.page).getInfo();
@@ -138,7 +139,7 @@ public class TileCache {
 				}
 			}
 			if (fetched.isEmpty())
-				return new Image(canvas.toDataUrl());
+				return ImageElement.as(new Image(canvas.toDataUrl()).getElement());
 
 			Collections.sort(fetched, new Comparator<TileInfo>() {
 				@Override
@@ -155,12 +156,12 @@ public class TileCache {
 				bufferContext.translate(-tempRect.xmin, -tempRect.ymin);
 				bufferContext.scale(scale, scale);
 				bufferContext.translate(tempRect2.xmin, tempRect2.ymin);
-				bufferContext.drawImage(ImageElement.as(getItem(ti).image.getElement()), 0, 0);
+				bufferContext.drawImage(getItem(ti).image, 0, 0);
 				bufferContext.restore();
 			}
 
 			cachedItem = new CachedItem();
-			cachedItem.image = new Image(canvas.toDataUrl());
+			cachedItem.image = ImageElement.as(new Image(canvas.toDataUrl()).getElement());
 			putItem(tileInfo, cachedItem);
 		}
 		cachedItem.lastUsed = System.currentTimeMillis();
@@ -314,7 +315,10 @@ public class TileCache {
 			canvas.setWidth(w);
 			canvas.setHeight(h);
 			bufferContext.putImageData(bufferGMap.getData(), 0, 0);
-			cachedItem.image = new Image(canvas.toDataUrl());
+			bufferContext.setGlobalCompositeOperation(Composite.LIGHTER);
+			bufferContext.setFillStyle("#000000FF");
+			bufferContext.fillRect(0, 0, w, h);
+			cachedItem.image = ImageElement.as(new Image(canvas.toDataUrl()).getElement());;
 			cachedItem.isFetched = true;
 			cachedItem.lastUsed = System.currentTimeMillis();
 			return cachedItem;
@@ -420,7 +424,7 @@ public class TileCache {
 	}
 
 	private static final class CachedItem {
-		public Image image;
+		public ImageElement image;
 		public long lastUsed;
 		public boolean isFetched;
 	}

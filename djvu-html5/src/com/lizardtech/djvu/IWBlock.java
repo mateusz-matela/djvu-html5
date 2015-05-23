@@ -45,7 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import java.util.Arrays;
+import com.google.gwt.typedarrays.shared.Int16Array;
 
 
 /**
@@ -142,28 +142,6 @@ final class IWBlock
 
   //~ Methods ----------------------------------------------------------------
 
-
-  /**
-   * Create a copy by value.
-   */
-  public IWBlock(IWBlock toCopy)
-  {
-    short[][][] sss = toCopy.pdata;
-	this.pdata = Arrays.copyOf(sss, sss.length);
-    for (int i = 0; i < sss.length; i++) {
-		short[][] ss = sss[i];
-		if (ss == null)
-			continue;
-		this.pdata[i] = Arrays.copyOf(ss, ss.length);
-		for (int j = 0; j < ss.length; j++) {
-			short[] s = ss[j];
-			if (s == null)
-				continue;
-			this.pdata[i][j] = Arrays.copyOf(s, s.length);
-		}
-	}
-  }
-
   /**
    * Query a data block.
    *
@@ -204,33 +182,6 @@ final class IWBlock
   }
 
   /**
-   * Query a data value.
-   *
-   * @param n position to query
-   *
-   * @return the data value
-   */
-  short getValue(final int n)
-  {
-    final short[] d = getBlock(n >> 4);
-    return (d != null)?d[n & 0xf]:0;
-  }
-
-  /**
-   * Set a data value.
-   *
-   * @param n data location
-   * @param val new value
-   */
-  void setValue(
-    final int   n,
-    final int   val)
-  {
-    final short[] d = getInitializedBlock(n >> 4);
-    d[n & 0xf] = (short)val;
-  }
-
-  /**
    * Write a liftblock
    *
    * @param coeff an array
@@ -238,7 +189,7 @@ final class IWBlock
    * @param bmax end position
    */
   void write_liftblock(
-    short[] coeff,
+    Int16Array coeff,
     int     bmin,
     int     bmax)
   {
@@ -246,7 +197,7 @@ final class IWBlock
 
     for(int i = 0; i < 1024; i++)
     {
-      coeff[i] = 0;
+      coeff.set(i, 0);
     }
 
     for(int n1 = bmin; n1 < bmax; n1++)
@@ -261,7 +212,7 @@ final class IWBlock
       {
         for(int n2 = 0; n2 < 16;)
         {
-          coeff[zigzagloc[n]] = d[n2];
+          coeff.set(zigzagloc[n], d[n2]);
           n2++;
           n++;
         }

@@ -21,7 +21,6 @@ import com.google.gwt.event.dom.client.MouseMoveHandler;
 import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.user.client.Event;
-import com.google.gwt.user.client.ui.Image;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
@@ -55,7 +54,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	
 	private final int pageMargin;
 
-	private Image[][] imagesArray;
+	private ImageElement[][] imagesArray;
 
 	private GRect range = new GRect();
 
@@ -203,7 +202,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		imagesArray = tileCache.getTileImages(page, subsample, range , imagesArray);
 		for (int y = range.ymin; y <= range.ymax; y++)
 			for (int x = range.xmin; x <= range.xmax; x++) {
-				ImageElement imageElement = ImageElement.as(imagesArray[y - range.ymin][x - range.xmin].getElement());
+				ImageElement imageElement = imagesArray[y - range.ymin][x - range.xmin];
 				graphics2d.drawImage(imageElement, startX + x * tileSize,
 						-startY - y * tileSize - imageElement.getHeight());
 			}

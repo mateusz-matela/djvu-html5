@@ -45,6 +45,8 @@
 //
 package com.lizardtech.djvu;
 
+import com.google.gwt.typedarrays.shared.Int16Array;
+import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
 
@@ -110,7 +112,7 @@ final class IWMap
    * @param end DOCUMENT ME!
    */
   static void backward(
-    short[] p,
+    Int16Array p,
     int     pidx,
     int     w,
     int     h,
@@ -149,7 +151,7 @@ final class IWMap
    * @param s DOCUMENT ME!
    */
   static void backward_filter(
-    short[] p,
+    Int16Array p,
     int     pidx,
     int     b,
     int     e,
@@ -170,15 +172,15 @@ final class IWMap
     int aa = bb = cc = 0;
     int dd = ((n + s) >= e)
       ? 0
-      : ((int)(p[pidx + n + s]));
+      : ((int)(p.get(pidx + n + s)));
 
     for(; (n + s3) < e; n = (n + s3) - s)
     {
       aa   = bb;
       bb   = cc;
       cc   = dd;
-      dd   = p[pidx + n + s3];
-      p[pidx + n] -= (((9 * (bb + cc)) - (aa + dd)) + 16) >> 5;
+      dd   = p.get(pidx + n + s3);
+      p.set(pidx + n, p.get(pidx + n) - ((((9 * (bb + cc)) - (aa + dd)) + 16) >> 5));
     }
 
     for(; n < e; n = n + s + s)
@@ -187,18 +189,18 @@ final class IWMap
       bb   = cc;
       cc   = dd;
       dd   = 0;
-      p[pidx + n] -= (((9 * (bb + cc)) - (aa + dd)) + 16) >> 5;
+      p.set(pidx + n, p.get(pidx + n) - ((((9 * (bb + cc)) - (aa + dd)) + 16) >> 5));;
     }
 
     n    = z + s;
     aa   = 0;
-    bb   = p[(pidx + n) - s];
+    bb   = p.get((pidx + n) - s);
     cc   = ((n + s) >= e)
       ? 0
-      : ((int)(p[pidx + n + s]));
+      : ((int)(p.get(pidx + n + s)));
     dd = ((n + s3) >= e)
       ? 0
-      : ((int)(p[pidx + n + s3]));
+      : ((int)(p.get(pidx + n + s3)));
 
     if(n < e)
     {
@@ -209,7 +211,7 @@ final class IWMap
         x = (bb + cc + 1) >> 1;
       }
 
-      p[pidx + n] += x;
+      p.set(pidx + n, p.get(pidx + n) + x);
       n = n + s + s;
     }
 
@@ -218,10 +220,10 @@ final class IWMap
       aa   = bb;
       bb   = cc;
       cc   = dd;
-      dd   = p[pidx + n + s3];
+      dd   = p.get(pidx + n + s3);
 
       int x = (((9 * (bb + cc)) - (aa + dd)) + 8) >> 4;
-      p[pidx + n] += x;
+      p.set(pidx + n, p.get(pidx + n) + x);
     }
 
     if((n + s) < e)
@@ -232,7 +234,7 @@ final class IWMap
       dd   = 0;
 
       int x = (bb + cc + 1) >> 1;
-      p[pidx + n] += x;
+      p.set(pidx + n, p.get(pidx + n) + x);
       n = n + s + s;
     }
 
@@ -244,7 +246,7 @@ final class IWMap
       dd   = 0;
 
       int x = bb;
-      p[pidx + n] += x;
+      p.set(pidx + n, p.get(pidx + n) + x);
     }
   }
 
@@ -287,8 +289,8 @@ final class IWMap
     int          pixsep,
     boolean          fast)
   {
-    final short[] data16    = new short[bw * bh];
-    final short[] liftblock = new short[1024];
+    final Int16Array data16    = TypedArrays.createInt16Array(bw * bh);
+    final Int16Array liftblock = TypedArrays.createInt16Array(1024);
     int           pidx      = 0;
     IWBlock[]     block     = blocks;
     int           blockidx  = 0;
@@ -305,7 +307,8 @@ final class IWMap
 
         for(int ii = 0, p1idx = 0; ii++ < 32; p1idx += 32, ppidx += bw)
         {
-          System.arraycopy(liftblock, p1idx, data16, ppidx, 32);
+          Int16Array src = liftblock.subarray(p1idx, p1idx + 32);
+          data16.set(src, ppidx);
         }
       }
     }
@@ -319,8 +322,10 @@ final class IWMap
       {
         for(int jj = 0; jj < bw; jj += 2, pidx += 2)
         {
-          data16[pidx + bw] =
-            data16[pidx + bw + 1] = data16[pidx + 1] = data16[pidx];
+        	short s = data16.get(pidx);
+        	data16.set(pidx + bw, s);
+        	data16.set(pidx + bw + 1, s);
+        	data16.set(pidx + 1, s);
         }
       }
     }
@@ -335,7 +340,7 @@ final class IWMap
     {
       for(int j = 0, pixidx = rowidx; j < iw; pixidx += pixsep)
       {
-        int x = (data16[pidx + (j++)] + 32) >> 6;
+        int x = (data16.get(pidx + (j++)) + 32) >> 6;
 
         if(x < -128)
         {
@@ -444,12 +449,12 @@ final class IWMap
     work.ymax   = ((needed[0].ymax - 1) & ~(boxsize - 1)) + boxsize;
 
     final int     dataw = work.width();
-    final short[] data   = new short[dataw * work.height()];
+    final Int16Array data   = TypedArrays.createInt16Array(dataw * work.height());
     int           blkw   = bw >> 5;
     int           lblock =
       ((work.ymin >> nlevel) * blkw) + (work.xmin >> nlevel);
 
-    final short[] liftblock = new short[1024];
+    final Int16Array liftblock = TypedArrays.createInt16Array(1024);
 
     for(
       int by = work.ymin, ldata = 0;
@@ -486,7 +491,7 @@ final class IWMap
         {
           for(int jj = 0; jj < boxsize; jj += ppinc, tt += ttmod0)
           {
-            data[pp + jj] = liftblock[tt];
+            data.set(pp + jj, liftblock.get(tt));
           }
         }
       }
@@ -532,7 +537,7 @@ final class IWMap
         j < nrect.xmax;
         j++, pixidx += pixsep)
       {
-        int x = (data[pidx + j] + 32) >> 6;
+        int x = (data.get(pidx + j) + 32) >> 6;
 
         if(x < -128)
         {
@@ -552,11 +557,14 @@ final class IWMap
 	 * This must be a separate method to work around issue
 	 * https://code.google.com/p/google-web-toolkit/issues/detail?id=9184
 	 */
-	private void workaround(final int dataw, final short[] data, GRect comp) {
+	private void workaround(final int dataw, final Int16Array data, GRect comp) {
 		int pp = (comp.ymin * dataw);
 		for (int ii = comp.ymin; ii < comp.ymax; ii += 2) {
 			for (int jj = comp.xmin; jj < comp.xmax; jj += 2) {
-				data[pp + jj + dataw] = data[pp + jj + dataw + 1] = data[pp + jj + 1] = data[pp + jj];
+				short s = data.get(pp + jj);
+				data.set(pp + jj + dataw, s);
+				data.set(pp + jj + dataw + 1, s);
+				data.set(pp + jj + 1, s);
 			}
 			pp += (dataw + dataw);
 		}
