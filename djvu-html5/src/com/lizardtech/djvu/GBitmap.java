@@ -46,6 +46,7 @@
 package com.lizardtech.djvu;
 
 import com.google.gwt.canvas.dom.client.ImageData;
+import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
 /**
@@ -83,6 +84,8 @@ public class GBitmap
   private int maxRowOffset = 0;
   
   private GPixel [] ramp=null;
+
+  protected Uint8Array data;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -152,7 +155,7 @@ public class GBitmap
   public final boolean getBooleanAt(int offset)
   {
     return (offset < border) || (offset >= maxRowOffset)
-    || (data[offset] == 0);
+    || (data.get(offset) == 0);
   }
 
   /**
@@ -167,7 +170,7 @@ public class GBitmap
   {
     if((offset >= border) || (offset < maxRowOffset))
     {
-      data[offset] = (byte)value;
+      data.set(offset, (byte) value);
     }
   }
 
@@ -182,17 +185,7 @@ public class GBitmap
   {
     return ((offset < border) || (offset >= maxRowOffset))
     ? 0
-    : (0xff & data[offset]);
-  }
-
-  /**
-   * Query the number of bytes per row.
-   *
-   * @return the number of bytes per row
-   */
-  public int getBytesPerRow()
-  {
-    return rowSize;
+    : data.get(offset);
   }
 
   /**
@@ -318,7 +311,8 @@ public class GBitmap
           {
             if((dc >= 0) && (dc < ncolumns))
             {
-              data[pidx + dc] += bm.data[qidx + sc];
+              int i = pidx + dc;
+              data.set(i, data.get(i) + bm.data.get(qidx + sc));
             }
 
             if(++dc1 >= subsample)
@@ -375,7 +369,7 @@ public final int getRowSize()
    *
    * @return true if pixels are inserted
    */
-  public boolean insertMap(
+  private boolean insertMap(
     final GBitmap bit,    
     final int  dx,
     final int  dy,
@@ -406,32 +400,28 @@ public final int getRowSize()
 
     if((w > 0) && (h > 0))
     {
-      final byte gmax=(byte)(grays-1);
+      final int gmax=(byte)(grays-1);
       do
       {
         int offset    = rowOffset(y0++) + x0;
         int refOffset = bit.rowOffset(y1++) + x1;
-        int i         = w;
 
         if(doBlit)
         {
           // This is not really correct.  We should reduce the original level by the
           // amount of the new level.  But since we are normally dealing with non-overlapping
           // or bitonal blits it really doesn't matter.
+        	int i         = w;
           do
           {
-            final int g=data[offset]+bit.data[refOffset++];
-            data[offset++] = (g<grays)?(byte)g:gmax;
+            final int g=data.get(offset) + bit.data.get(refOffset++);
+            data.set(offset++, (byte) Math.min(g, gmax));
           }
           while(--i > 0);
         }
         else
         {
-          do
-          {
-            data[offset++] = bit.data[refOffset++];
-          }
-          while(--i > 0);            
+          data.set(bit.data.subarray(refOffset, (refOffset + w)), offset);
         }
       }
       while(--h > 0);
@@ -465,12 +455,7 @@ public final int getRowSize()
 
     if(npixels > 0)
     {
-      data = new byte[npixels];
-
-      for(int i = 0; i < npixels; i++)
-      {
-        data[i] = 0;
-      }
+      data = TypedArrays.createUint8Array(npixels);
     }
 
     return this;
@@ -510,12 +495,9 @@ public final int getRowSize()
 
       for(int i = 0; i < nrows; i++)
       {
-        for(
-          int j = ncolumns, k = rowOffset(i), kr = ref.rowOffset(i);
-          j-- > 0;)
-        {
-          data[k++] = ref.data[kr++];
-        }
+    	  Uint8Array refRow = ref.data.subarray(ref.rowOffset(i) * BYTES_PER_PIXEL,
+    			  ref.rowOffset(i) + ncolumns * BYTES_PER_PIXEL);
+    	  data.set(refRow, rowOffset(i) * BYTES_PER_PIXEL);
       }
     }
     else if(aborder > border)
