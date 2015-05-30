@@ -15,6 +15,8 @@ public class PageCache {
 
 	private final Document document;
 
+	private final BackgroundProcessor backgroundProcessor;
+
 	private final DjVuPage[] pages;
 	
 	private final boolean[] downloadStarted;
@@ -23,8 +25,9 @@ public class PageCache {
 
 	private final ArrayList<PageDownloadListener> listeners = new ArrayList<>();
 
-	public PageCache(Document document) {
+	public PageCache(Document document, BackgroundProcessor backgroundProcessor) {
 		this.document = document;
+		this.backgroundProcessor = backgroundProcessor;
 		int pageCount = document.getDjVmDir().get_pages_num();
 		this.pages = new DjVuPage[pageCount];
 		this.downloadStarted = new boolean[pageCount];

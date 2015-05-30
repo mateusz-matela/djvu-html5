@@ -42,9 +42,11 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	 */
 	private int centerX, centerY;
 
-	final TileCache tileCache;
+	private final TileCache tileCache;
 
 	private final PageCache pageCache;
+
+	private final BackgroundProcessor backgroundProcessor;
 
 	private final Canvas canvas;
 
@@ -59,8 +61,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	private GRect range = new GRect();
 
 	public SinglePageLayout(Canvas canvas, Toolbar toolbar, Document document) {
-		this.pageCache = new PageCache(document);
-		this.tileCache = new TileCache(pageCache);
+		backgroundProcessor = new BackgroundProcessor();
+		this.pageCache = new PageCache(document, backgroundProcessor);
+		this.tileCache = new TileCache(pageCache, backgroundProcessor);
 		pageCache.addPageDownloadListener(this);
 		tileCache.addTileCacheListener(this);
 		this.canvas = canvas;
