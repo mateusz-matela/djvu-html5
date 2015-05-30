@@ -12,7 +12,7 @@ import pl.djvuhtml5.client.TileCache.TileInfo;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
-import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
@@ -54,7 +54,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	
 	private final int pageMargin;
 
-	private ImageElement[][] imagesArray;
+	private CanvasElement[][] imagesArray;
 
 	private GRect range = new GRect();
 
@@ -202,9 +202,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		imagesArray = tileCache.getTileImages(page, subsample, range , imagesArray);
 		for (int y = range.ymin; y <= range.ymax; y++)
 			for (int x = range.xmin; x <= range.xmax; x++) {
-				ImageElement imageElement = imagesArray[y - range.ymin][x - range.xmin];
-				graphics2d.drawImage(imageElement, startX + x * tileSize,
-						-startY - y * tileSize - imageElement.getHeight());
+				CanvasElement canvasElement = imagesArray[y - range.ymin][x - range.xmin];
+				graphics2d.drawImage(canvasElement, startX + x * tileSize,
+						-startY - y * tileSize - canvasElement.getHeight());
 			}
 		graphics2d.restore();
 	}
