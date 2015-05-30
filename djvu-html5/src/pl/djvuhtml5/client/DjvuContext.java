@@ -33,11 +33,11 @@ public class DjvuContext {
 	}
 
 	public static int getTileSize() {
-		return getInt("tileSize", 256);
+		return getInt("tileSize", 512);
 	}
 
 	public static int getTileCacheSize() {
-		return getInt("tileCacheSize", 512);
+		return getInt("tileCacheSize", 256);
 	}
 
 	public static String getBackground() {

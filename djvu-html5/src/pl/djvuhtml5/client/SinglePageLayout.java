@@ -51,7 +51,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	private final Toolbar toolbar;
 
 	private String background;
-	
+
 	private final int pageMargin;
 
 	private CanvasElement[][] imagesArray;
@@ -207,13 +207,15 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 						-startY - y * tileSize - canvasElement.getHeight());
 			}
 		graphics2d.restore();
+		// missing tile graphics may exceed the page boundary
+		graphics2d.fillRect(startX + pw, 0, w, h);
+		graphics2d.fillRect(0, startX  + ph, w, h);
 	}
 
 	@Override
 	public void pageAvailable(int pageNum) {
 		if (pageNum == page) {
 			setPage(pageNum);
-			redraw();
 		}
 	}
 

@@ -16,6 +16,11 @@ import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.CanvasElement;
+import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.user.client.Event;
+import com.google.gwt.user.client.EventListener;
+import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.RootPanel;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GMap;
@@ -40,6 +45,8 @@ public class TileCache {
 
 	private ArrayList<TileCacheListener> listeners = new ArrayList<>();
 
+	private final CanvasElement missingTileImage;
+
 	private final GRect tempRect = new GRect();
 	private final TileInfo tempTI = new TileInfo();
 
@@ -55,6 +62,31 @@ public class TileCache {
 		pageCache.addPageDownloadListener(fetcher);
 
 		GMap.imageContext = Canvas.createIfSupported().getContext2d();
+
+		missingTileImage = prepareMissingTileImage();
+	}
+
+	private CanvasElement prepareMissingTileImage() {
+		CanvasElement canvas = new CachedItem(tileSize, tileSize).image;
+		Context2d context2d = canvas.getContext2d();
+		context2d.setFillStyle("white");
+		context2d.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+		Image image = new Image();
+		final ImageElement imageElement = image.getElement().cast();
+		imageElement.getStyle().setProperty("visibility", "hidden");
+		Event.setEventListener(imageElement, new EventListener() {
+			
+			@Override
+			public void onBrowserEvent(Event event) {
+				if (Event.ONLOAD == event.getTypeInt()) {
+					missingTileImage.getContext2d().drawImage(imageElement, 0, 0);
+					RootPanel.get().getElement().removeChild(imageElement);
+				}
+			}
+		});
+		RootPanel.get().getElement().appendChild(imageElement);
+		image.setUrl("img/blank.jpg");
+		return canvas;
 	}
 
 	public static int toSubsample(double zoom) {
@@ -96,23 +128,6 @@ public class TileCache {
 		CachedItem cachedItem = getItem(tileInfo);
 		if (cachedItem == null) {
 			DjVuInfo pageInfo = pageCache.getPage(tileInfo.page).getInfo();
-			tileInfo.getScreenRect(tempRect, tileSize, pageInfo);
-			int sw = tempRect.width(), sh = tempRect.height();
-			cachedItem = new CachedItem(sw, sh);
-			putItem(tileInfo, cachedItem);
-
-			Context2d context = cachedItem.image.getContext2d();
-			context.setFillStyle("white");
-			context.fillRect(0, 0, sw, sh);
-			context.setFillStyle("#999");
-			final int count = tileSize / 16;
-			for (int x = 0; x < count; x++)
-				for (int y = 0; y < count; y++)
-					if ((x + y) % 2 == 1) {
-						int x1 = tileSize * x / count, x2 = tileSize * (x + 1) / count;
-						int y1 = tileSize * y / count, y2 = tileSize * (y + 1) / count;
-						context.fillRect(x1, y1, x2 - x1, y2 - y1);
-					}
 
 			// fill with rescaled other tiles
 			ArrayList<TileInfo> fetched = new ArrayList<>();
@@ -129,7 +144,7 @@ public class TileCache {
 				}
 			}
 			if (fetched.isEmpty())
-				return cachedItem.image;
+				return missingTileImage;
 
 			Collections.sort(fetched, new Comparator<TileInfo>() {
 				@Override
@@ -137,6 +152,11 @@ public class TileCache {
 					return ti2.subsample - ti1.subsample;
 				}
 			});
+			tileInfo.getScreenRect(tempRect, tileSize, pageInfo);
+			cachedItem = new CachedItem(tempRect.width(), tempRect.height());
+			putItem(tileInfo, cachedItem);
+			Context2d context = cachedItem.image.getContext2d();
+
 			tileInfo.getScreenRect(tempRect, tileSize, pageInfo);
 			double zoom = toZoom(tileInfo.subsample);
 			for (TileInfo ti : fetched) {
@@ -210,11 +230,28 @@ public class TileCache {
 
 		@Override
 		public boolean execute() {
+			// prepare full view for the lowest quality
+			tempTI.subsample = MAX_SUBSAMPLE;
+			for (int i = 0; i < pageCache.getPageCount(); i++) {
+				DjVuPage page = pageCache.getPage(i);
+				if (page == null)
+					continue;
+				tempTI.page = i;
+				DjVuInfo info = page.getInfo();
+				int w = (info.width + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
+				int h = (info.height + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
+				for (int x = 0; x * tileSize < w; x++) {
+					for (int y = 0; y * tileSize < h; y++) {
+						if (prepareItem(tempTI.setXY(x, y), page, false))
+							return true;
+					}
+				}
+			}
+
 			if (lastRange.isEmpty() || lastSubsample == MAX_SUBSAMPLE) {
 				isRunning = false;
 				return false;
 			}
-
 			for (int pageNum : Arrays.asList(lastPageNum, lastPageNum + 1, lastPageNum - 1)) {
 				if (pageNum < 0 || pageNum >= pageCache.getPageCount())
 					continue;
@@ -225,24 +262,9 @@ public class TileCache {
 				tempTI.subsample = lastSubsample;
 				for (int y = lastRange.ymin; y <= lastRange.ymax; y++) {
 					for (int x = lastRange.xmin; x <= lastRange.xmax; x++) {
-						CachedItem cachedItem = cache.get(tempTI.setXY(x, y));
-						if (cachedItem != null && cachedItem.isFetched)
-							continue;
-						CachedItem item = prepareItem(tempTI, cachedItem, page);
-						if (pageNum == lastPageNum) {
-							final TileInfo tileInfo = new TileInfo(tempTI);
-							Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-								
-								@Override
-								public void execute() {
-									for (TileCacheListener listener : listeners)
-										listener.tileAvailable(tileInfo);
-								}
-							});
-						} else {
-							item.lastUsed -= PREFETCH_AGE;
-						}
-						return true;
+						boolean isPrefetch = pageNum != lastPageNum;
+						if (prepareItem(tempTI.setXY(x, y), page, isPrefetch))
+							return true;
 					}
 				}
 
@@ -253,33 +275,25 @@ public class TileCache {
 				for (int d = 1; d <= dx; d++) {
 					int x = lastRange.xmax + d;
 					for (int y = lastRange.ymin; y <= lastRange.ymax + Math.min(d, dy); y++) {
-						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
-							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && prepareItem(tempTI.setXY(x, y), page, true))
 							return true;
-						}
 					}
 					x = lastRange.ymin - d;
 					for (int y = lastRange.ymin - Math.min(d, dy); y <= lastRange.ymax; y++) {
-						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
-							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && prepareItem(tempTI.setXY(x, y), page, true))
 							return true;
-						}
 					}
 				}
 				for (int d = 1; d <= dy; d++) {
 					int y = lastRange.ymax + d;
 					for (int x = lastRange.xmin; x <= lastRange.xmax + Math.min(d, dx); x++) {
-						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
-							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && prepareItem(tempTI.setXY(x, y), page, true))
 							return true;
-						}
 					}
 					y = lastRange.ymin - d;
 					for (int x = lastRange.xmin - Math.min(d, dx); x <= lastRange.xmax; x++) {
-						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && !cache.containsKey(tempTI.setXY(x, y))) {
-							prepareItem(tempTI, null, page).lastUsed -= PREFETCH_AGE;
+						if (x >= 0 && x <= maxX && y >= 0 && y <= maxY && prepareItem(tempTI.setXY(x, y), page, true))
 							return true;
-						}
 					}
 				}
 			}
@@ -288,36 +302,41 @@ public class TileCache {
 			return false;
 		}
 
-		private CachedItem prepareItem(TileInfo tileInfo, CachedItem cachedItem, DjVuPage page) {
+		/**
+		 * @return {@code false} iff the item has already been prepared and this method did nothing 
+		 */
+		private boolean prepareItem(final TileInfo tileInfo, DjVuPage page, boolean isPrefetch) {
 			tileInfo.getScreenRect(tempRect, tileSize, page.getInfo());
+			CachedItem cachedItem = getItem(tileInfo);
 			if (cachedItem == null) {
 				cachedItem = new CachedItem(tempRect.width(), tempRect.height());
 				putItem(tileInfo, cachedItem);
 			}
+			if (cachedItem.isFetched)
+				return false;
+
 			bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
+
 			cachedItem.image.getContext2d().putImageData(bufferGMap.getData(), 0, 0);
 			cachedItem.isFetched = true;
-			cachedItem.lastUsed = System.currentTimeMillis();
-			return cachedItem;
+			cachedItem.lastUsed = System.currentTimeMillis() - (isPrefetch ? PREFETCH_AGE : 0);
+			if (!isPrefetch) {
+				Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+					TileInfo ti = new TileInfo(tileInfo);
+
+					@Override
+					public void execute() {
+						for (TileCacheListener listener : listeners)
+							listener.tileAvailable(ti);
+					}
+				});
+			}
+			return true;
 		}
 
 		@Override
 		public void pageAvailable(int pageNum) {
-			// prepare full view for the lowest quality
-			DjVuPage page = pageCache.getPage(pageNum);
-			DjVuInfo info = page.getInfo();
-			int w = (info.width + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
-			int h = (info.height + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
-			TileInfo tileInfo = new TileInfo();
-			tileInfo.page = pageNum;
-			tileInfo.subsample = MAX_SUBSAMPLE;
-			for (int x = 0; x * tileSize < w; x++) {
-				for (int y = 0; y * tileSize < h; y++) {
-					prepareItem(tileInfo.setXY(x, y), null, page);
-				}
-			}
-
-			fetch();
+			// fetch();
 		}
 	};
 
