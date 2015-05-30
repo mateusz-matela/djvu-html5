@@ -416,6 +416,7 @@ public class TileCache implements BackgroundProcessor.Operation {
 			rect.xmax = Math.min((x + 1) * tileSize, pw);
 			rect.ymin = Math.max(ph - (y + 1) * tileSize, 0);
 			rect.ymax = ph - y * tileSize;
+			assert rect.xmin <= rect.xmax && rect.ymin <= rect.ymax;
 		}
 
 		private TileInfo setXY(int x, int y) {

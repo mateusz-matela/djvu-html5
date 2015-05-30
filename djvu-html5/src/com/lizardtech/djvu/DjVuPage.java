@@ -160,9 +160,6 @@ public class DjVuPage
   /** Number incremented each time the image pixels are updated. */
   protected Number progressiveCount = new Integer(0);
 
-  /** The creation time of this instance.  Used for logging purposes. */
-  long startTime = System.currentTimeMillis();
-
   /** Sets the data pool for this page. */
   private CachedInputStream pool=null;
 
@@ -1508,7 +1505,6 @@ public class DjVuPage
   {
     try
     {
-      startTime = System.currentTimeMillis();
       final CachedInputStream pool = this.pool;
       this.pool = null;
 

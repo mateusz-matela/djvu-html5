@@ -28,10 +28,6 @@ public class DjvuContext {
 		return getString("file", null);
 	}
 
-	public static int getParallelDownloads() {
-		return getInt("parallelDownloads", 3);
-	}
-
 	public static int getTileSize() {
 		return getInt("tileSize", 512);
 	}

@@ -79,7 +79,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 	public void setPage(int pageNum) {
 		page = pageNum;
-		DjVuPage newPage = pageCache.getPage(pageNum);
+		DjVuPage newPage = pageCache.fetchPage(pageNum);
 		if (newPage != null) {
 			pageInfo = newPage.getInfo();
 			toolbar.setZoomOptions(findZoomOptions());
@@ -162,6 +162,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	}
 
 	private void checkBounds() {
+		if (pageInfo == null)
+			return;
 		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
 		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
 		if (pw < w) {

@@ -160,6 +160,7 @@ public class Document
         }
         page = new DocumentDjVuPage(url);
         page.decode(data);
+        //TODO page.decodeStart(data);
       }
 
     return page;
