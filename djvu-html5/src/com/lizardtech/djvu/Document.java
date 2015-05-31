@@ -159,8 +159,7 @@ public class Document
           url=Utils.url(url,id);
         }
         page = new DocumentDjVuPage(url);
-        page.decode(data);
-        //TODO page.decodeStart(data);
+        page.decodeStart(data);
       }
 
     return page;
@@ -221,8 +220,6 @@ public class Document
     final DjVmDir      djvmDir = getDjVmDir();
     if(pool == null)
     {
-      final Vector       files_list = djvmDir.get_files_list();
-
       final String       initURL = djvmDir.getInitURL();
       final DjVmDir.File f       = getDjVmDir().id_to_file(id);
 
@@ -253,7 +250,7 @@ public class Document
 
     if(!djvmDir.is_bundled() && pool.isReady())
     {
-      final Enumeration iff_in = pool.getIFFChunks();
+      final Enumeration<CachedInputStream> iff_in = pool.getIFFChunks();
       if((iff_in == null)||!iff_in.hasMoreElements())
       {
         throw new IOException("EOF");
@@ -492,12 +489,12 @@ public class Document
     djvmDir.setInitURL(null);
 
     final CachedInputStream pool = new CachedInputStream().init(url,null);
-    final Enumeration iff = pool.getIFFChunks();
+    final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
     if((iff == null)||!iff.hasMoreElements())
     {
       throw new IOException("Invalid DjVu File Format");
     }
-    final CachedInputStream formStream=(CachedInputStream)iff.nextElement();
+    final CachedInputStream formStream=iff.nextElement();
     if(!"FORM:DJVM".equals(formStream.getName()))
     {
       if(! pool.isDjVuFile())
@@ -523,12 +520,12 @@ public class Document
     }
     else
     {
-      final Enumeration formIff=formStream.getIFFChunks();
+      final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
       if((formIff == null)||!formIff.hasMoreElements())
       {
         throw new IOException("EOF");
       }
-      CachedInputStream chunk=(CachedInputStream)formIff.nextElement();
+      CachedInputStream chunk=formIff.nextElement();
       if(!"DIRM".equals(chunk.getName()))
       {
         throw new IOException("No DIRM chunk");
@@ -546,7 +543,7 @@ public class Document
         {
           while(formIff.hasMoreElements())
           {
-            chunk=(CachedInputStream)formIff.nextElement();
+            chunk=formIff.nextElement();
             if("NAVM".equals(chunk.getName()))
             {
               bookmark.decode(

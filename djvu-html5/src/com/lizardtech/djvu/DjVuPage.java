@@ -46,6 +46,7 @@
 package com.lizardtech.djvu;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Vector;
@@ -160,9 +161,6 @@ public class DjVuPage
   /** Number incremented each time the image pixels are updated. */
   protected Number progressiveCount = new Integer(0);
 
-  /** Sets the data pool for this page. */
-  private CachedInputStream pool=null;
-
   /**
    * All the codec are stored in a hash table to make adding new codecs
    * easier.
@@ -175,17 +173,10 @@ public class DjVuPage
    */
   private Object fgPixmapReference = null;
 
-  /** In an exception is thrown in the decoding thread, we save it here. */
-  private Throwable caughtException = null;
+  private ArrayList<Enumeration<CachedInputStream>> chunksToDecode = new ArrayList<>();
 
   /** The URL for this page. */
   protected String url = null;
-
-  /** True if decode has been called. */
-  private boolean decodeCalled = false;
-
-  /** True until the document has been decoded. */
-  private boolean lockWait = true;
 
   //~ Methods ----------------------------------------------------------------
 
@@ -369,16 +360,6 @@ public class DjVuPage
   public boolean isColor()
   {
     return (is_legal_compound() || !is_legal_bilevel());
-  }
-
-  /**
-   * Query if the thread is alive and processing.
-   *
-   * @return true if the thread is running and still processing.
-   */
-  public final boolean isDecoding()
-  {
-    return lockWait && decodeCalled;
   }
 
   /**
@@ -615,44 +596,6 @@ public class DjVuPage
     final int outh)
   {
     return new GPixmapScaler(inw, inh, outw, outh);
-  }
-
-  /**
-   * Decode the specified CachedInputStream.
-   * 
-   * @param pool CachedInputStream to decode.
-   * 
-   * @throws IOException if an error occures.
-   * @throws IllegalStateException DOCUMENT ME!
-   */
-  public void decode(final CachedInputStream pool)
-    throws IOException
-  {
-    synchronized(progressiveLock)
-    {
-      if(getProgressiveCount() != 0)
-      {
-        throw new IllegalStateException(
-          DjVuPage.class.getName() + " decode already called.");
-      }
-
-      progressiveCount   = new Integer(1);
-      decodeCalled       = true;
-    }
-
-    this.pool = pool;
-
-   
-      decode();
-
-      if(caughtException instanceof IOException)
-      {
-        throw (IOException)caughtException;
-      }
-      else if(caughtException instanceof RuntimeException)
-      {
-        throw (RuntimeException)caughtException;
-      }
   }
 
   /**
@@ -1193,15 +1136,6 @@ public class DjVuPage
         }
         else if(chkid.equals("INCL"))
         {
-//          ByteArrayOutputStream bout   = new ByteArrayOutputStream();
-//          byte[]                buffer = new byte[1024];
-//
-//          for(int i; (i = iff.read(buffer)) > 0;)
-//          {
-//            bout.write(buffer, 0, i);
-//          }
-//
-//         decodeInclude(createCachedInputStream(new String(bout.toByteArray())));
          decodeInclude(createCachedInputStream(iff.readFullyUTF()));
         }
         else if(chkid.equals("FGbz"))
@@ -1372,7 +1306,7 @@ public class DjVuPage
    * @throws IOException if an error occurs
    * @throws IllegalStateException if an error occurs
    */
-  protected void decodeInclude(CachedInputStream pool)
+  protected void decodeInclude(CachedInputStream pool) //TODO add chunks to chunksToDecode
     throws IOException
   {
     final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
@@ -1494,107 +1428,104 @@ public class DjVuPage
     }
   }
 
-  /**
-   * Decode the document from the already opened datapool.  Normally this
-   * method is called the queue.
-   *
-   * @throws IOException if an error occurs
-   * @throws IllegalStateException if an error occurs
-   */
-  private void decode()
-  {
-    try
-    {
-      final CachedInputStream pool = this.pool;
-      this.pool = null;
+	public void decodeStart(CachedInputStream pool) throws IOException {
+		synchronized (progressiveLock) {
+			if (getProgressiveCount() != 0) {
+				throw new IllegalStateException(DjVuPage.class.getName() + " decode already called.");
+			}
+			progressiveCount = new Integer(1);
+		}
 
-      final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
+		final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
 
-        if((iff == null)||!iff.hasMoreElements())
-        {
-          throw new IOException("EOF");
-        }
-        CachedInputStream formStream=iff.nextElement();
-        if("FORM:DJVU".equals(formStream.getName()))
-        {
-          mimetype = "image/djvu";
-          decodeChunks(formStream.getIFFChunks(), false);
-          if(sjbzChunk != null)
-          {
-            parseSjbz(new CachedInputStream(sjbzChunk));
-            clean("Sjbz");
-          }
-          final IWPixmap bgIWPixmap = getBgIWPixmap();
-          if(bgIWPixmap != null)
-          {
-            bgIWPixmap.close_codec();
-          }
-          final DjVuInfo info = getInfo();
-          if(info == null)
-          {
-            throw new IllegalStateException(
-              "DjVu Decoder: Corrupted data (Missing INFO chunk)");
-          }
-        }
-        else if("FORM:PM44".equals(formStream.getName())
-          || "FORM:BM44".equals(formStream.getName()))
-        {
-          mimetype = "image/iw44";
-          IWPixmap img44 = null;
-          final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
-          while((formIff != null)&&formIff.hasMoreElements())
-          {
-            CachedInputStream chunk=formIff.nextElement();
-            if("PM44".equals(chunk.getName()) || "BM44".equals(chunk.getName()))
-            {
-              if(img44 == null)
-              {
-                img44 = new IWPixmap();
-                img44.decode(chunk);
-                final DjVuInfo info = new DjVuInfo();
-                info.width    = img44.getWidth();
-                info.height   = img44.getHeight();
-                info.dpi      = 100;
-                setCodec(infoLock, info);
-                setCodec(bgIWPixmapLock, img44);
-              }
-              else
-              {
-                img44.decode(chunk);
-              }
-            }
-            else if("ANTa".equals(chunk.getName())||"ANTz".equals(chunk.getName()))
-            {
-              synchronized(annoLock)
-              {
-                Codec anno = getCodec(annoLock);
+		if ((iff == null) || !iff.hasMoreElements()) {
+			throw new IOException("EOF");
+		}
+		CachedInputStream formStream = iff.nextElement();
+		Enumeration<CachedInputStream> iffChunks = formStream.getIFFChunks();
+		chunksToDecode.add(iffChunks);
 
-                if(anno == null)
-                {
-                  anno = new DjVuAnno();
-                }
-                addCodecChunk(annoLock, anno, chunk);
-              }
-            }
-          }
+		if ("FORM:DJVU".equals(formStream.getName())) {
+			mimetype = "image/djvu";
+			if (!hasCodec(infoLock)) {
 
-          if(!hasCodec(infoLock))
-          {
-            throw new IllegalStateException(
-              "DjVu Decoder: Corrupted data (Missing IW44 data chunks)");
-          }
-        }
-        else
-        {
-          throw new IllegalStateException(
-            "DejaVu decoder: a DJVU or IW44 image was expected");
-        }
-    }
-    catch(final Throwable exp)
-    {
-      caughtException = exp;
-      Utils.printStackTrace(exp);
-    }
-    lockWait = false;
-  }
+				final CachedInputStream chunk = iffChunks.nextElement();
+				if (!"INFO".equals(chunk.getName())) {
+					throw new IOException("DjVuDecoder:: Corrupted file (Does not start with INFO chunk)");
+				}
+
+				addCodecChunk(infoLock, new DjVuInfo(), chunk);
+				clean(chunk.getName());
+			}
+		} else if ("FORM:PM44".equals(formStream.getName()) || "FORM:BM44".equals(formStream.getName())) {
+			mimetype = "image/iw44";
+		} else {
+			throw new IllegalStateException("DejaVu decoder: a DJVU or IW44 image was expected");
+		}
+	}
+
+	/**
+	 * @return {@code true} if this was the last step
+	 */
+	public boolean decodeStep() throws IOException {
+		ArrayList<Enumeration<CachedInputStream>> ctd = chunksToDecode;
+		while (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).hasMoreElements())
+			ctd.remove(ctd.size() - 1);
+		if (ctd.isEmpty()) {
+			decodeFinish();
+			return true;
+		}
+		CachedInputStream chunk = ctd.get(ctd.size() - 1).nextElement();
+		if (mimetype.equals("image/djvu")) {
+			boolean isInclude = ctd.size() > 1;
+			decodeChunk(chunk, isInclude);
+		} else if (mimetype.equals("image/iw44")) {
+			if ("PM44".equals(chunk.getName()) || "BM44".equals(chunk.getName())) {
+				IWPixmap img44 = (IWPixmap) getCodec(bgIWPixmapLock);
+				if (img44 == null) {
+					img44 = new IWPixmap();
+					img44.decode(chunk);
+					final DjVuInfo info = new DjVuInfo();
+					info.width = img44.getWidth();
+					info.height = img44.getHeight();
+					info.dpi = 100;
+					setCodec(infoLock, info);
+					setCodec(bgIWPixmapLock, img44);
+				} else {
+					img44.decode(chunk);
+				}
+			} else if ("ANTa".equals(chunk.getName()) || "ANTz".equals(chunk.getName())) {
+				synchronized (annoLock) {
+					Codec anno = getCodec(annoLock);
+
+					if (anno == null) {
+						anno = new DjVuAnno();
+					}
+					addCodecChunk(annoLock, anno, chunk);
+				}
+			}
+		}
+		return false;
+	}
+
+	private void decodeFinish() throws IOException {
+		if (mimetype.equals("image/djvu")) {
+			if (sjbzChunk != null) {
+				parseSjbz(new CachedInputStream(sjbzChunk));
+				clean("Sjbz");
+			}
+			final IWPixmap bgIWPixmap = getBgIWPixmap();
+			if (bgIWPixmap != null) {
+				bgIWPixmap.close_codec();
+			}
+			final DjVuInfo info = getInfo();
+			if (info == null) {
+				throw new IllegalStateException("DjVu Decoder: Corrupted data (Missing INFO chunk)");
+			}
+		} else if (mimetype.equals("image/iw44")) {
+			if (!hasCodec(infoLock)) {
+				throw new IllegalStateException("DjVu Decoder: Corrupted data (Missing IW44 data chunks)");
+			}
+		}
+	}
 }

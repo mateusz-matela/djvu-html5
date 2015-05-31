@@ -67,7 +67,7 @@ public class CachedInputStream
     private int offset=0;
 
     // The end position of this stream in the data pool.
-    private int endOffset=0;
+    int endOffset=0;
     
     // We can assign a name to this Stream
     private String name=null;

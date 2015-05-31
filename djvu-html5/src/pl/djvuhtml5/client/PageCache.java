@@ -87,27 +87,27 @@ public class PageCache implements BackgroundProcessor.Operation {
 			if (pages[pageIndex] != null)
 				continue;
 			DjVuPage page = uncodedPages[pageIndex];
-			if (page == null) {
-				try {
+			try {
+				if (page == null) {
 					GWT.log("Decoding page " + pageIndex);
 					page = uncodedPages[pageIndex] = document.getPage(pageIndex);
-				} catch (IOException e) {
-					Logger.getGlobal().log(Level.SEVERE, "Could not initiate decoding of page " + pageIndex, e);
-					return false;
 				}
-			}
-//			if (page.decodeStep()) {
-				pages[pageIndex] = page;
-				Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-					
-					@Override
-					public void execute() {
-						for (PageDownloadListener listener : listeners) {
-							listener.pageAvailable(pageIndex);
+				if (page.decodeStep()) {
+					pages[pageIndex] = page;
+					Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+						
+						@Override
+						public void execute() {
+							for (PageDownloadListener listener : listeners) {
+								listener.pageAvailable(pageIndex);
+							}
 						}
-					}
-				});
-//			}
+					});
+				}
+			} catch (IOException e) {
+				Logger.getGlobal().log(Level.SEVERE, "Error while decoding page " + pageIndex, e);
+				return false;
+			}
 			return true;
 		}
 		if (!currentOnly)
