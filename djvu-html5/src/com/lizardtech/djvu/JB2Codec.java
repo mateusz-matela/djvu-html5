@@ -558,15 +558,14 @@ public abstract class JB2Codec
    */
   protected int code_record_A(
     int            rectype,
-    final JB2Dict  jim,
-    final JB2Shape xjshp)
+    final JB2Dict  jim)
     throws IOException
   {
     GBitmap bm      = null;
     int     shapeno = -1;
     rectype = code_record_type(rectype);
 
-    JB2Shape jshp = xjshp;
+    JB2Shape jshp = null;
 
     switch(rectype)
     {
@@ -661,11 +660,6 @@ public abstract class JB2Codec
         case NEW_MARK_LIBRARY_ONLY :
         case MATCHED_REFINE_LIBRARY_ONLY :
         {
-          if(xjshp != null)
-          {
-            jshp = new JB2Shape(jshp);
-          }
-
           shapeno = jim.add_shape(jshp);
           add_library(shapeno, jshp);
 
@@ -692,15 +686,13 @@ public abstract class JB2Codec
    */
   protected int code_record_B(
     int            rectype,
-    final JB2Image jim,
-    final JB2Shape xjshp,
-    final JB2Blit  xjblt)
+    final JB2Image jim)
     throws IOException
   {
     GBitmap  bm      = null;
     int      shapeno = -1;
-    JB2Shape jshp    = xjshp;
-    JB2Blit  jblt    = xjblt;
+    JB2Shape jshp    = null;
+    JB2Blit  jblt    = null;
     rectype = code_record_type(rectype);
 
     switch(rectype)
@@ -962,10 +954,6 @@ public abstract class JB2Codec
         case MATCHED_REFINE_IMAGE_ONLY :
         case NON_MARK_DATA :
         {
-          if(xjshp != null)
-          {
-            jshp = new JB2Shape(jshp);
-          }
 
           shapeno = jim.add_shape(jshp);
           shape2lib(shapeno, MINUS_ONE_OBJECT);
@@ -978,12 +966,6 @@ public abstract class JB2Codec
           if(needAddBlit)
           {
             jblt.shapeno(shapeno);
-
-            if(xjblt != null)
-            {
-              jblt = new JB2Blit(xjblt);
-            }
-
             jim.add_blit(jblt);
           }
 
@@ -991,13 +973,7 @@ public abstract class JB2Codec
         }
         case MATCHED_COPY :
         {
-          if(xjblt != null)
-          {
-            jblt = new JB2Blit(xjblt);
-          }
-
           jim.add_blit(jblt);
-
           break;
         }
       }

@@ -369,8 +369,7 @@ public class JB2Image
    *
    * @throws IOException DOCUMENT ME!
    */
-  @Override
-public void decode(
+  public JB2Decode decodeStart(
     final CachedInputStream gbs,
     final JB2Dict     zdict)
     throws IOException
@@ -378,8 +377,8 @@ public void decode(
     init();
 
     final JB2Decode codec = new JB2Decode();
-    codec.init(gbs, zdict);
-    codec.code(this);
+    codec.init(gbs, zdict, this);
+    return codec;
   }
 
   /**

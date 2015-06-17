@@ -176,33 +176,22 @@ public boolean isImageData()
    *
    * @throws IOException DOCUMENT ME!
    */
-  @Override
-public final void decode(final CachedInputStream pool)
+public final JB2Decode decodeStart(final CachedInputStream pool)
     throws IOException
   {
-    decode(new CachedInputStream(pool),
-      null);
+	  init();
+
+	    final JB2Decode codec = new JB2Decode();
+	    codec.init(new CachedInputStream(pool), null, this);
+	    return codec;
   }
 
-  /**
-   * DOCUMENT ME!
-   *
-   * @param gbs DOCUMENT ME!
-   * @param zdict DOCUMENT ME!
-   *
-   * @throws IOException DOCUMENT ME!
-   */
-  public void decode(
-    final CachedInputStream gbs,
-    JB2Dict           zdict)
-    throws IOException
-  {
-    init();
-
-    final JB2Decode codec = new JB2Decode();
-    codec.init(gbs, zdict);
-    codec.code(this);
-  }
+	@Override
+	public void decode(CachedInputStream pool) throws IOException {
+		JB2Decode codec = decodeStart(pool);
+		while (!codec.decodeStep())
+			;
+	}
 
   /**
    * DOCUMENT ME!

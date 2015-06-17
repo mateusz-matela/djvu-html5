@@ -63,6 +63,9 @@ public class JB2Decode
   private JB2Dict            zdict = null;
   private ZPCodec            zp    = null;
 
+  private JB2Dict jim;
+  private int recordType;
+
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -75,55 +78,22 @@ public class JB2Decode
 
   //~ Methods ----------------------------------------------------------------
 
-  /**
-   * DOCUMENT ME!
-   *
-   * @param jim DOCUMENT ME!
-   *
-   * @throws IOException DOCUMENT ME!
-   * @throws IllegalStateException DOCUMENT ME!
-   */
-  public void code(final JB2Image jim)
-    throws IOException
-  {
-    int rectype = START_OF_DATA;
-
-    do
-    {
-      rectype = code_record_B(rectype, jim, null, null);
-    }
-    while(rectype != END_OF_DATA);
-
-    if(!gotstartrecordp)
-    {
-      throw new IllegalStateException("JB2Image no start");
-    }
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param jim DOCUMENT ME!
-   *
-   * @throws IOException DOCUMENT ME!
-   * @throws IllegalStateException DOCUMENT ME!
-   */
-  public void code(final JB2Dict jim)
-    throws IOException
-  {
-    int rectype = START_OF_DATA;
-
-    do
-    {
-      rectype = code_record_A(rectype, jim, null);
-    }
-    while(rectype != END_OF_DATA);
-
-    if(!gotstartrecordp)
-    {
-      throw new IllegalStateException("JB2Image no start");
-    }
-  }
+	/**
+	 * @return {@code true} if this was the last step
+	 */
+	public boolean decodeStep() throws IOException {
+		if (jim instanceof JB2Image)
+			recordType = code_record_B(recordType, (JB2Image) jim);
+		else
+			recordType = code_record_A(recordType, jim);
+		if (recordType == END_OF_DATA) {
+			if (!gotstartrecordp) {
+				throw new IllegalStateException("JB2Image no start");
+			}
+			return true;
+		}
+		return false;
+	}
 
   /**
    * DOCUMENT ME!
@@ -135,11 +105,13 @@ public class JB2Decode
    */
   public void init(
     final CachedInputStream gbs,
-    JB2Dict           zdict)
+    JB2Dict           zdict,  JB2Dict jim)
     throws IOException
   {
     this.zdict   = zdict;
     zp           = new ZPCodec(gbs);
+    this.jim = jim;
+    recordType = START_OF_DATA;
   }
 
   /**

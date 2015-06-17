@@ -175,6 +175,8 @@ public class DjVuPage
 
   private ArrayList<Enumeration<CachedInputStream>> chunksToDecode = new ArrayList<>();
 
+  private JB2Decode jb2ToDecode;
+
   /** The URL for this page. */
   protected String url = null;
 
@@ -1349,7 +1351,7 @@ public class DjVuPage
       fgJb2.reproduce_old_bug = true;
     }
 
-    fgJb2.decode(
+    jb2ToDecode = fgJb2.decodeStart(
       input,
       getFgJb2Dict());
 
@@ -1417,7 +1419,11 @@ public class DjVuPage
   {
     if(codec != null)
     {
-      codec.decode(pool);
+    	if (jb2ToDecode == null && codec instanceof JB2Dict) {
+    		jb2ToDecode = (JB2Decode) codec;
+    	} else {
+    		codec.decode(pool);
+    	}
 
       final Codec old = setCodec(nameLock, codec);
 
@@ -1468,6 +1474,12 @@ public class DjVuPage
 	 * @return {@code true} if this was the last step
 	 */
 	public boolean decodeStep() throws IOException {
+		if (jb2ToDecode != null) {
+			boolean finished = jb2ToDecode.decodeStep();
+			if (finished)
+				jb2ToDecode = null;
+			return false;
+		}
 		ArrayList<Enumeration<CachedInputStream>> ctd = chunksToDecode;
 		while (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).hasMoreElements())
 			ctd.remove(ctd.size() - 1);
