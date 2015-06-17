@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.gwt.core.client.Scheduler;
-import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.core.shared.GWT;
 import com.lizardtech.djvu.CachedInputStream;
 import com.lizardtech.djvu.DjVuPage;
@@ -74,7 +72,7 @@ public class PageCache implements BackgroundProcessor.Operation {
 		switch (priority) {
 		case 0:
 			return decodePage(true);
-		case 3:
+		case 4:
 			return decodePage(false);
 		default:
 			return false;
@@ -94,15 +92,9 @@ public class PageCache implements BackgroundProcessor.Operation {
 				}
 				if (page.decodeStep()) {
 					pages[pageIndex] = page;
-					Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-						
-						@Override
-						public void execute() {
-							for (PageDownloadListener listener : listeners) {
-								listener.pageAvailable(pageIndex);
-							}
-						}
-					});
+					for (PageDownloadListener listener : listeners) {
+						listener.pageAvailable(pageIndex);
+					}
 				}
 			} catch (IOException e) {
 				Logger.getGlobal().log(Level.SEVERE, "Error while decoding page " + pageIndex, e);

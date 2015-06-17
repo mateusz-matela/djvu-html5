@@ -10,8 +10,6 @@ import java.util.Map.Entry;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
-import com.google.gwt.core.client.Scheduler;
-import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.user.client.Event;
@@ -198,22 +196,17 @@ public class TileCache implements BackgroundProcessor.Operation {
 		if (cache.size() < tileCacheSize)
 			return;
 
-		Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+		ArrayList<Entry<TileInfo, CachedItem>> cacheEntries = new ArrayList<>(cache.entrySet());
+		Collections.sort(cacheEntries, new Comparator<Entry<TileInfo, CachedItem>>() {
 			@Override
-			public void execute() {
-				ArrayList<Entry<TileInfo, CachedItem>> cacheEntries = new ArrayList<>(cache.entrySet());
-				Collections.sort(cacheEntries, new Comparator<Entry<TileInfo, CachedItem>>() {
-					@Override
-					public int compare(Entry<TileInfo, CachedItem> e1, Entry<TileInfo, CachedItem> e2) {
-						long d = e1.getValue().lastUsed - e2.getValue().lastUsed;
-						return d > 0 ? 1 : d < 0 ? -1 : 0;
-					}
-				});
-				for (int i = 0; i < tileCacheSize / 4; i++) {
-					cache.remove(cacheEntries.get(i).getKey());
-				}
+			public int compare(Entry<TileInfo, CachedItem> e1, Entry<TileInfo, CachedItem> e2) {
+				long d = e1.getValue().lastUsed - e2.getValue().lastUsed;
+				return d > 0 ? 1 : d < 0 ? -1 : 0;
 			}
 		});
+		for (int i = 0; i < tileCacheSize / 4; i++) {
+			cache.remove(cacheEntries.get(i).getKey());
+		}
 	}
 
 	@Override
@@ -221,15 +214,15 @@ public class TileCache implements BackgroundProcessor.Operation {
 		if (lastPageNum < 0)
 			return false;
 		switch (priority) {
-		case 0:
-			return prefetchPreviews(lastPageNum);
 		case 1:
-			return prefetchCurrentView(lastPageNum);
+			return prefetchPreviews(lastPageNum);
 		case 2:
+			return prefetchCurrentView(lastPageNum);
+		case 3:
 			return prefetchPreviews(-1);
-		case 4:
-			return prefetchAdjacent(lastPageNum);
 		case 5:
+			return prefetchAdjacent(lastPageNum);
+		case 6:
 			return prefetchCurrentView(lastPageNum + 1) || prefetchCurrentView(lastPageNum - 1)
 					|| prefetchAdjacent(lastPageNum + 1) || prefetchAdjacent(lastPageNum - 1);
 		default:
@@ -337,15 +330,10 @@ public class TileCache implements BackgroundProcessor.Operation {
 		cachedItem.isFetched = true;
 		cachedItem.lastUsed = System.currentTimeMillis() - (isPrefetch ? PREFETCH_AGE : 0);
 		if (!isPrefetch) {
-			Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-				TileInfo ti = new TileInfo(tileInfo);
-	
-				@Override
-				public void execute() {
-					for (TileCacheListener listener : listeners)
-						listener.tileAvailable(ti);
-				}
-			});
+			TileInfo ti = new TileInfo(tileInfo);
+			for (TileCacheListener listener : listeners)
+				listener.tileAvailable(ti);
+			backgroundProcessor.pause();
 		}
 		return true;
 	}
