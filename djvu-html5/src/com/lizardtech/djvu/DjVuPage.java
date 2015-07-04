@@ -917,7 +917,7 @@ public class DjVuPage
 
         if(fgJb2.get_blit_count() != fgPalette.colordata.length)
         {
-          pm.attenuate(bm, 0, 0);
+          pm.attenuate(bm);
 
           return false;
         }

@@ -61,9 +61,6 @@ public class GPixmap
 {
   //~ Static fields/initializers ---------------------------------------------
 
-  /** Used to represent division as multiplication. */
-  protected final static int[] invmap = new int[256];
-
   /** Indentity color correction table. */
   protected final static int[] ctableI = new int[256];
 
@@ -75,11 +72,8 @@ public class GPixmap
    */
   protected static double lgamma = -1D;
 
-  /** Used to quickly clip out of bounds values. */
-  protected final static byte[] clip = new byte[512];
-
   /** Used for attenuation */
-  protected final static Object [] multiplierRefArray=new Object[256];
+  protected final static int[][] multiplierRefArray=new int[256][];
 
   protected Uint8Array data;
   private ImageData imageData;
@@ -89,23 +83,9 @@ public class GPixmap
    */
   static
   {
-    for(int i = 0; i < clip.length; i++)
-    {
-      clip[i] = (byte)((i < 256)
-        ? i
-        : 255);
-    }
-    for(int i = 1; i < invmap.length; i++)
-    {
-      invmap[i] = 0x10000 / i;
-    }
     for(int i = 0; i < ctableI.length; i++)
     {
       ctableI[i] = i;
-    }
-    for(int i = 1; i < multiplierRefArray.length;)
-    {
-      multiplierRefArray[i++] = null;
     }
   }
 
@@ -134,7 +114,7 @@ public ImageData getData() {
    * 
    * @return the new color correction table
    */
-  public static synchronized int [] getColorCorrection(
+  private static synchronized int [] getColorCorrection(
     double  gamma)
   {
     if((gamma < 0.10000000000000001D) || (gamma > 10D))
@@ -150,7 +130,6 @@ public ImageData getData() {
     {
       if(gamma != lgamma)
       {
-        ctable=new int[256];
         for(int i = 0; i < 256; i++)
         {
           double x = i / 255D;
@@ -183,7 +162,7 @@ public ImageData getData() {
    */
   protected static int [] getMultiplier(final int maxgray)
   {
-    int [] retval=(int[])multiplierRefArray[maxgray];
+    int[] retval = multiplierRefArray[maxgray];
     if(retval == null)
     {
       retval = new int[maxgray];
@@ -192,7 +171,7 @@ public ImageData getData() {
       {
         retval[i] = 0x10000 - ((i << 16) / maxgray);
       }
-      multiplierRefArray[maxgray]=null;
+      multiplierRefArray[maxgray]= retval;
     }
     return retval;
   }
@@ -201,39 +180,14 @@ public ImageData getData() {
    * Attenuate the specified bitmap.
    * 
    * @param bm Bitmap to attenuate
-   * @param xpos horizontal position
-   * @param ypos vertical position
    */
   public void attenuate(
-    final GBitmap bm,
-    int           xpos,
-    int           ypos)
+    final GBitmap bm)
   {
     // Check
     // Compute number of rows and columns
-    int xrows = ypos + bm.rows();
-
-    if(xrows > rows())
-    {
-      xrows = rows();
-    }
-
-    if(ypos > 0)
-    {
-      xrows -= ypos;
-    }
-
-    int xcolumns = xpos + bm.columns();
-
-    if(xcolumns > columns())
-    {
-      xcolumns = columns();
-    }
-
-    if(xpos > 0)
-    {
-      xcolumns -= xpos;
-    }
+    int xrows = Math.min(bm.rows(), rows());
+    int xcolumns = Math.min(bm.columns(), columns());
 
     if((xrows <= 0) || (xcolumns <= 0))
     {
@@ -245,16 +199,8 @@ public ImageData getData() {
     final int[] multiplier = getMultiplier(maxgray);
 
     // Compute starting point
-    int src = bm.rowOffset((ypos < 0)
-        ? (-ypos)
-        : 0) - ((xpos < 0)
-      ? xpos
-      : 0);
-    int dst = rowOffset((ypos > 0)
-        ? ypos
-        : 0) + ((xpos > 0)
-      ? xpos
-      : 0);
+    int src = bm.rowOffset(0);
+    int dst = rowOffset(0);
 
     final GPixelReference dstPixel = createGPixelReference(0);
 
@@ -313,25 +259,13 @@ public ImageData getData() {
     }
 
     // Compute number of rows and columns
-    int xrows = ypos + bm.rows();
-
-    if(xrows > rows())
-    {
-      xrows = rows();
-    }
-
+    int xrows = Math.min(ypos + bm.rows(), rows());
     if(ypos > 0)
     {
       xrows -= ypos;
     }
 
-    int xcolumns = xpos + bm.columns();
-
-    if(xcolumns > columns())
-    {
-      xcolumns = columns();
-    }
-
+    int xcolumns = Math.min(xpos + bm.columns(), columns());
     if(xpos > 0)
     {
       xcolumns -= xpos;
@@ -344,12 +278,7 @@ public ImageData getData() {
 
     // Precompute multiplier map
     final int   maxgray    = bm.getGrays() - 1;
-    final int[] multiplier = new int[maxgray];
-
-    for(int i = 0; i < maxgray; i++)
-    {
-      multiplier[i] = 0x10000 - ((i << 16) / maxgray);
-    }
+    final int[] multiplier = getMultiplier(maxgray);
 
     // Cache target color
     int gr = color.getRed();
@@ -392,9 +321,9 @@ public ImageData getData() {
             final int level0 = multiplier[srcpix];
             final int level1 = 0x10000 - level0;
             dstPixel.setBGR(
-              clip[((dstPixel.getBlue() * level0) + (gb * level1)) >> 16],
-              clip[((dstPixel.getGreen() * level0) + (gg * level1)) >> 16],
-              clip[((dstPixel.getRed() * level0) + (gr * level1)) >> 16]);
+              Math.min((dstPixel.getBlue() * level0 + gb * level1) >> 16, 255),
+              Math.min((dstPixel.getGreen() * level0 + gg * level1) >> 16, 255),
+              Math.min((dstPixel.getRed() * level0 + gr * level1) >> 16, 255));
           }
         }
       }
@@ -813,39 +742,13 @@ public ImageData getData() {
     }
 
     // Compute number of rows
-    int xrows = rows();
-
-    if(mask.rows() < xrows)
-    {
-      xrows = mask.rows();
-    }
-
-    if(rect.height() < xrows)
-    {
-      xrows = rect.height();
-    }
+    int xrows = Math.min(Math.min(rows(), mask.rows()), rect.height());
 
     // Compute number of columns
-    int xcolumns = columns();
-
-    if(mask.columns() < xcolumns)
-    {
-      xcolumns = mask.columns();
-    }
-
-    if(rect.width() < xcolumns)
-    {
-      xcolumns = rect.width();
-    }
+    int xcolumns = Math.min(Math.min(columns(), mask.columns()), rect.width());
 
     // Precompute multiplier map
     int   maxgray    = mask.getGrays() - 1;
-    int[] multiplier = new int[maxgray];
-
-    for(int i = 1; i < maxgray; i++)
-    {
-      multiplier[i] = (0x10000 * i) / maxgray;
-    }
 
     // Prepare color correction table
     int [] gtable=getColorCorrection(gamma);
@@ -901,7 +804,7 @@ public ImageData getData() {
           }
           else
           {
-            int level = multiplier[srcpix];
+            int level = (0x10000 * srcpix) / maxgray;
             dst.setBGR(
               ((dst.getBlue() * (0x10000 - level))
               + (level * gtable[fgx.getBlue()])) >> 16,
