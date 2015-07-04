@@ -92,29 +92,6 @@ public class JB2Dict
 public boolean isImageData()
   { 
       return false;
-  }  
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public JB2Dict(JB2Dict toCopy)
-  {
-	  
-      if(toCopy.get_inherited_dict() != null)
-      {
-        set_inherited_dict(new JB2Dict(toCopy.get_inherited_dict()),
-          true);
-      }
-
-      if(toCopy.shapes != null)
-      {
-        for(Enumeration<JB2Shape> e = this.shapes.elements(); e.hasMoreElements();)
-        {
-          this.shapes.addElement(new JB2Shape(e.nextElement()));
-        }
-      }
   }
 
   /**

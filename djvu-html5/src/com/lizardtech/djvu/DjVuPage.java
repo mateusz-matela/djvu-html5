@@ -173,7 +173,7 @@ public class DjVuPage
    */
   private Object fgPixmapReference = null;
 
-  private ArrayList<Enumeration<CachedInputStream>> chunksToDecode = new ArrayList<>();
+  private ArrayList<IFFEnumeration> chunksToDecode = new ArrayList<>();
 
   private JB2Decode jb2ToDecode;
 
@@ -1259,48 +1259,6 @@ public class DjVuPage
   }
 
   /**
-   * Called to decode chunks.
-   *
-   * @param iff an Enumeration of CachedInputStream's to decode
-   * @param isInclude true if this is an include file stream
-   *
-   * @throws IOException if an error occurs
-   */
-  protected void decodeChunks(
-    final Enumeration<CachedInputStream> iff,
-    final boolean     isInclude)
-    throws IOException
-  {
-    if((iff == null)||!iff.hasMoreElements())
-    {
-      return;
-    }
-
-    if(!hasCodec(infoLock))
-    {
-
-      final CachedInputStream chunk=iff.nextElement();
-      if(!"INFO".equals(chunk.getName()))
-      {
-        throw new IOException(
-          "DjVuDecoder:: Corrupted file (Does not start with INFO chunk)");
-      }
-
-      addCodecChunk(
-        infoLock,
-        new DjVuInfo(),
-        chunk);
-      clean(chunk.getName());
-    }
-    while(iff.hasMoreElements())
-    {
-      decodeChunk(
-        iff.nextElement(),
-        isInclude);
-    }
-  }
-
-  /**
    * Called to decode an include chunk.
    *
    * @param pool chunk to be read
@@ -1308,19 +1266,19 @@ public class DjVuPage
    * @throws IOException if an error occurs
    * @throws IllegalStateException if an error occurs
    */
-  protected void decodeInclude(CachedInputStream pool) //TODO add chunks to chunksToDecode
+  protected void decodeInclude(CachedInputStream pool)
     throws IOException
   {
-    final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
+    final IFFEnumeration iff = pool.getIFFChunks();
       if((iff == null)||!iff.hasMoreElements())
       {
         throw new IOException("EOF");
       }
       final CachedInputStream formStream=iff.nextElement();
-      final Enumeration<CachedInputStream> formIff=formStream.getIFFChunks();
+      final IFFEnumeration formIff=formStream.getIFFChunks();
       if((formIff != null)&&"FORM:DJVI".equals(formStream.getName()))
       {
-        decodeChunks(formIff, true);
+        chunksToDecode.add(formIff);
       }
       else
       {
@@ -1419,7 +1377,7 @@ public class DjVuPage
   {
     if(codec != null)
     {
-    	if (jb2ToDecode == null && codec instanceof JB2Dict) {
+    	if (jb2ToDecode == null && codec instanceof JB2Decode) {
     		jb2ToDecode = (JB2Decode) codec;
     	} else {
     		codec.decode(pool);
@@ -1448,7 +1406,7 @@ public class DjVuPage
 			throw new IOException("EOF");
 		}
 		CachedInputStream formStream = iff.nextElement();
-		Enumeration<CachedInputStream> iffChunks = formStream.getIFFChunks();
+		IFFEnumeration iffChunks = formStream.getIFFChunks();
 		chunksToDecode.add(iffChunks);
 
 		if ("FORM:DJVU".equals(formStream.getName())) {
@@ -1480,7 +1438,11 @@ public class DjVuPage
 				jb2ToDecode = null;
 			return false;
 		}
-		ArrayList<Enumeration<CachedInputStream>> ctd = chunksToDecode;
+		ArrayList<IFFEnumeration> ctd = chunksToDecode;
+		if (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).isReady()) {
+			// wait for download
+			return false;
+		}
 		while (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).hasMoreElements())
 			ctd.remove(ctd.size() - 1);
 		if (ctd.isEmpty()) {

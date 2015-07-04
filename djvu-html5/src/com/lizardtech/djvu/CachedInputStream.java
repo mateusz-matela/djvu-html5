@@ -46,7 +46,6 @@
 package com.lizardtech.djvu;
 
 import java.io.IOException;
-import java.util.*;
 
   /**
  * This class is an InputStream which spans some of the accessable data in a
@@ -348,7 +347,7 @@ public class CachedInputStream
    *
    * @return an Enumeration of CachedInputStream or null.
    */
-  public Enumeration<CachedInputStream> getIFFChunks()
+  public IFFEnumeration getIFFChunks()
   {
     IFFEnumeration retval=null;
     if ((name == null)||(name.length() != 4))

@@ -254,4 +254,8 @@ public CachedInputStream nextElement()
     }
     return false;
   }
+
+	public boolean isReady() {
+		return input.isReady();
+	}
 }

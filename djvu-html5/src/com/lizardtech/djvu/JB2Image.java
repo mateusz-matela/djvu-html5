@@ -84,21 +84,6 @@ public class JB2Image
    *
    * @return DOCUMENT ME!
    */
-  public JB2Image(JB2Image toCopy)
-  {
-	  super(toCopy);
-	  this.reproduce_old_bug = toCopy.reproduce_old_bug;
-	  this.height = toCopy.height;
-	  this.width = toCopy.width;
-	  for (JB2Blit item : blits)
-		  this.blits.add(item);
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
   public final GBitmap get_bitmap()
   {
     return get_bitmap(1);

@@ -49,7 +49,6 @@ import java.util.*;
 
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.canvas.dom.client.ImageData;
-import com.google.gwt.typedarrays.shared.Uint8Array;
 
 
 /**
@@ -91,9 +90,6 @@ public abstract class GMap
   /** False if we can skip the ramp call. */
   protected final boolean needRamp;
   
-  /** The raw pixel data. */
-  protected byte [] data=null;
-  
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -131,32 +127,11 @@ public abstract class GMap
   }
 
   /**
-   * Create a copy of this image.
-   */
-  public GMap(GMap toCopy)
-  {
-    //this(toCopy.ncolors, toCopy.redOffset, toCopy.greenOffset, toCopy.blueOffset, toCopy.needRamp);
-    this.ncolors = toCopy.ncolors;
-    this.redOffset = toCopy.redOffset;
-    this.greenOffset = toCopy.greenOffset;
-    this.blueOffset = toCopy.blueOffset;
-    this.needRamp = toCopy.needRamp;
-    this.properties.putAll(toCopy.properties);
-    this.ncolumns = toCopy.ncolumns;
-    this.nrows = toCopy.nrows;
-    if (toCopy.data != null)
-    	this.data = Arrays.copyOf(toCopy.data, toCopy.data.length);
-  }
-
-  /**
    * Query the raw data buffer.
    *
    * @return the array of pixels
    */
-  public ImageData getData()
-  {
-    return null; // TODO
-  }
+  public abstract ImageData getData();
 
   /**
    * Query the start offset of a row.

@@ -45,6 +45,7 @@
 //
 package com.lizardtech.djvu;
 
+import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
@@ -77,6 +78,7 @@ public class GBitmap
   private GPixel [] ramp=null;
 
   protected Uint8Array data;
+  private ImageData imageData;
 
   //~ Constructors -----------------------------------------------------------
 
@@ -85,20 +87,17 @@ public class GBitmap
    */
   public GBitmap()
   {
-      super(1,0,0,0,true);
-  }
-
-  public GBitmap(GBitmap toCopy)
-  {
-	  super(toCopy);
-	  this.grays = toCopy.grays;
-	  this.border = toCopy.border;
-	  this.rowSize = toCopy.rowSize;
-	  this.maxRowOffset = toCopy.maxRowOffset;
-	  this.ramp = toCopy.ramp;
+      super(BYTES_PER_PIXEL,3,3,3,true);
   }
 
   //~ Methods ----------------------------------------------------------------
+
+	@Override
+	public ImageData getData() {
+		GPixmap m = new GPixmap().init(nrows, ncolumns, GPixel.WHITE);
+		m.blit(this, 0, 0, GPixel.BLACK);
+		return m.getData();
+	}
 
   private GPixel [] getRamp()
   {
@@ -442,11 +441,14 @@ public final int getRowSize()
     border     = aborder;
     setRowSize(ncolumns + border);
 
-    int npixels = rowOffset(nrows);
+    int npixels = rowOffset(nrows) * ncolors;
 
     if(npixels > 0)
     {
-      data = TypedArrays.createUint8Array(npixels);
+		imageData = imageContext.createImageData(rowSize, nrows);
+		Uint8Array imageArray = (Uint8Array) imageData.getData();
+		// image array is clamped by default, we need non-clamped
+		data = TypedArrays.createUint8Array(imageArray.buffer());
     }
 
     return this;

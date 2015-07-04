@@ -84,11 +84,6 @@ public class GPixmap
   protected Uint8Array data;
   private ImageData imageData;
 
-  @Override
-	public ImageData getData() {
-	  return imageData;
-	}
-  
   /**
    * Static initializers.
    */
@@ -126,7 +121,13 @@ public class GPixmap
 
   //~ Methods ----------------------------------------------------------------
 
-  /**
+  @Override
+public ImageData getData() {
+	  
+  return imageData;
+}
+
+/**
    * Fill the array with color correction constants.
    * 
    * @param gamma color correction subsample

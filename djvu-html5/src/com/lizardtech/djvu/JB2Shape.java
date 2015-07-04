@@ -101,19 +101,6 @@ class JB2Shape
   /**
    * DOCUMENT ME!
    *
-   * @return DOCUMENT ME!
-   */
-  public JB2Shape(JB2Shape toCopy)
-  {
-	  if (toCopy.bits != null)
-		  this.bits = new GBitmap(toCopy.bits);
-	  this.parent = toCopy.parent;
-	  this.userdata = toCopy.userdata;
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
    * @param parent DOCUMENT ME!
    *
    * @return DOCUMENT ME!
