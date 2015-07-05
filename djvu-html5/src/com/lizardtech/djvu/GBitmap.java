@@ -59,9 +59,9 @@ public class GBitmap
   extends GMap
 {
     
-  static Object [] rampRefArray=new Object[256];
-  
   //~ Instance fields --------------------------------------------------------
+
+	private static final int PIXEL_OFFSET = 3; // alpha offset in image data
 
   /** Color depth */
   protected int grays = 0;
@@ -75,8 +75,6 @@ public class GBitmap
   /** end of the buffer  */
   private int maxRowOffset = 0;
   
-  private GPixel [] ramp=null;
-
   protected Uint8Array data;
   private ImageData imageData;
 
@@ -87,54 +85,31 @@ public class GBitmap
    */
   public GBitmap()
   {
-      super(BYTES_PER_PIXEL,3,3,3,true);
+      super(BYTES_PER_PIXEL, PIXEL_OFFSET, PIXEL_OFFSET, PIXEL_OFFSET, true);
   }
 
   //~ Methods ----------------------------------------------------------------
 
 	@Override
 	public ImageData getData() {
-		GPixmap m = new GPixmap().init(nrows, ncolumns, GPixel.WHITE);
-		m.blit(this, 0, 0, GPixel.BLACK);
-		return m.getData();
+//		int maxgray = getGrays() - 1;
+		ImageData id = imageContext.createImageData(ncolumns, nrows);
+		for (int x = 0; x < ncolumns; x++) {
+			for (int y = 0; y < nrows; y++) {
+				//int value = 255 - 255 * getByteAt(rowOffset(y) + x) / getGrays();
+				short value = data.get((rowOffset(y) + x) * ncolors + PIXEL_OFFSET);
+				id.setAlphaAt(value, x, y);
+//				id.setRedAt(value, x, y);
+//				id.setGreenAt(value, x, y);
+//				id.setBlueAt(value, x, y);
+			}
+		}
+		return id;
+//		GPixmap m = new GPixmap().init(nrows, ncolumns, GPixel.WHITE);
+//		m.blit(this, 0, 0, GPixel.BLACK);
+//		return m.getData();
 	}
 
-  private GPixel [] getRamp()
-  {
-    GPixel [] retval=ramp;
-    if(retval == null)
-    {
-      final int grays=this.grays;
-      retval=(GPixel[])rampRefArray[grays];
-      if(retval == null)
-      {
-        retval = new GPixel[256];
-        retval[0]=GPixel.WHITE;
-        int color  = 0xff0000;
-        final int gmax=(grays > 1)?(grays-1):1;
-        int i=1;
-        if(gmax > 1)
-        {
-          final int delta = color / gmax;
-          do
-          {
-            color-=delta;
-            final byte c=(byte)(color>>16);
-            retval[i++]=new GPixel(c,c,c);
-          }
-          while(i < gmax);
-        }
-        while(i<retval.length)
-        {
-          retval[i++]=GPixel.BLACK;            
-        }
-        rampRefArray[grays]=null;
-      }
-      ramp=retval;
-    }
-    return retval;
-  }
-  
   /**
    * Query a pixel as boolean
    *
@@ -145,7 +120,7 @@ public class GBitmap
   public final boolean getBooleanAt(int offset)
   {
     return (offset < border) || (offset >= maxRowOffset)
-    || (data.get(offset) == 0);
+    || (getByteAt(offset) == 0);
   }
 
   /**
@@ -160,7 +135,7 @@ public class GBitmap
   {
     if((offset >= border) || (offset < maxRowOffset))
     {
-      data.set(offset, (byte) value);
+      data.set(offset * ncolors + PIXEL_OFFSET, 255 * value / (grays - 1));
     }
   }
 
@@ -173,9 +148,8 @@ public class GBitmap
    */
   public final int getByteAt(final int offset)
   {
-    return ((offset < border) || (offset >= maxRowOffset))
-    ? 0
-    : data.get(offset);
+	int value = data.get(offset * ncolors + PIXEL_OFFSET);
+    return ((value * (grays - 1) + (grays - 2))) / 255;
   }
 
   /**
@@ -204,7 +178,6 @@ public class GBitmap
     }
 
     grays = ngrays;
-    ramp=null;
   }
 
   /**
@@ -302,7 +275,7 @@ public class GBitmap
             if((dc >= 0) && (dc < ncolumns))
             {
               int i = pidx + dc;
-              data.set(i, data.get(i) + bm.data.get(qidx + sc));
+              setByteAt(i, getByteAt(i) + bm.getByteAt(qidx + sc));
             }
 
             if(++dc1 >= subsample)
@@ -404,14 +377,14 @@ public final int getRowSize()
         	int i         = w;
           do
           {
-            final int g=data.get(offset) + bit.data.get(refOffset++);
-            data.set(offset++, (byte) Math.min(g, gmax));
+            final int g=getByteAt(offset) + bit.getByteAt(refOffset++);
+            setByteAt(offset++, (byte) Math.min(g, gmax));
           }
           while(--i > 0);
         }
         else
         {
-          data.set(bit.data.subarray(refOffset, (refOffset + w)), offset);
+          data.set(bit.data.subarray(refOffset * ncolors, (refOffset + w) * ncolors), offset * ncolors);
         }
       }
       while(--h > 0);
@@ -445,7 +418,7 @@ public final int getRowSize()
 
     if(npixels > 0)
     {
-		imageData = imageContext.createImageData(rowSize, nrows);
+		imageData = imageContext.createImageData(rowSize, nrows + 1);
 		Uint8Array imageArray = (Uint8Array) imageData.getData();
 		// image array is clamped by default, we need non-clamped
 		data = TypedArrays.createUint8Array(imageArray.buffer());
@@ -462,7 +435,7 @@ public final int getRowSize()
    *
    * @return the initialized map
    */
-  public GBitmap init(
+  private GBitmap init(
     final GBitmap ref,
     final int     aborder)
   {
@@ -476,9 +449,9 @@ public final int getRowSize()
 
       for(int i = 0; i < nrows; i++)
       {
-    	  Uint8Array refRow = ref.data.subarray(ref.rowOffset(i) * BYTES_PER_PIXEL,
-    			  ref.rowOffset(i) + ncolumns * BYTES_PER_PIXEL);
-    	  data.set(refRow, rowOffset(i) * BYTES_PER_PIXEL);
+    	  Uint8Array refRow = ref.data.subarray(ref.rowOffset(i) * ncolors,
+    			  ref.rowOffset(i) + ncolumns * ncolors);
+    	  data.set(refRow, rowOffset(i) * ncolors);
       }
     }
     else if(aborder > border)
@@ -526,15 +499,6 @@ public final int getRowSize()
     maxRowOffset   = rowOffset(nrows);
   }
 
-  /**
-   * Convert the pixel to 24 bit color.
-   */
-  @Override
-public GPixel ramp(final GPixelReference ref)
-  {
-    return getRamp()[ref.getBlue()];
-  }
-  
   /**
    * Query if we are allowed to skip the ramp call.
    *

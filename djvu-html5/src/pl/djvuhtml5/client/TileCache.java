@@ -44,6 +44,8 @@ public class TileCache implements BackgroundProcessor.Operation {
 
 	private final CanvasElement missingTileImage;
 
+	private CanvasElement bufferCanvas;
+
 	private GMap bufferGMap;
 
 	private final GRect tempRect = new GRect();
@@ -63,6 +65,8 @@ public class TileCache implements BackgroundProcessor.Operation {
 		backgroundProcessor.addOperation(this);
 
 		missingTileImage = prepareMissingTileImage();
+
+		bufferCanvas = new CachedItem(tileSize, tileSize).image;
 	}
 
 	private CanvasElement prepareMissingTileImage() {
@@ -326,7 +330,11 @@ public class TileCache implements BackgroundProcessor.Operation {
 	
 		bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
 	
-		cachedItem.image.getContext2d().putImageData(bufferGMap.getData(), 0, 0);
+		bufferCanvas.getContext2d().putImageData(bufferGMap.getData(), 0, 0);
+		Context2d c = cachedItem.image.getContext2d();
+		c.setFillStyle("white");
+		c.fillRect(0, 0, tileSize, tileSize);
+		c.drawImage(bufferCanvas, 0, 0);
 		cachedItem.isFetched = true;
 		cachedItem.lastUsed = System.currentTimeMillis() - (isPrefetch ? PREFETCH_AGE : 0);
 		if (!isPrefetch) {
