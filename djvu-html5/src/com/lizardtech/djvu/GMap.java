@@ -47,9 +47,11 @@ package com.lizardtech.djvu;
 
 import java.util.*;
 
+import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.canvas.dom.client.ImageData;
-
+import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.google.gwt.typedarrays.shared.Uint8Array;
 
 /**
  * This is an abstract class for representing pixel maps.
@@ -61,10 +63,14 @@ public abstract class GMap
 {
   //~ Instance fields --------------------------------------------------------
 
-	public static int BYTES_PER_PIXEL = 4;
+	protected static int BYTES_PER_PIXEL = 4;
+	protected static int BUFFER_COUNT = 2;
 
-  /** The raw pixel data. */
-	  public static Context2d imageContext;
+	protected static Canvas[] bufferCanvas = new Canvas[BUFFER_COUNT];
+	protected static GMap[] currentBufferContent = new GMap[BUFFER_COUNT];
+
+	protected Uint8Array data;
+	protected ImageData imageData;
 
 /** properties associated with this image map */
   public final HashMap<String, Object> properties = new HashMap<>();
@@ -102,6 +108,12 @@ public abstract class GMap
     this.redOffset=redOffset;
     this.greenOffset=greenOffset;
     this.blueOffset=blueOffset;
+
+    if (bufferCanvas[0] == null) {
+    	for (int i = 0 ; i < BUFFER_COUNT; i++) {
+	    	bufferCanvas[i] = Canvas.createIfSupported();
+    	}
+    }
   }
   
   //~ Methods ----------------------------------------------------------------
@@ -127,11 +139,33 @@ public abstract class GMap
   }
 
   /**
-   * Query the raw data buffer.
-   *
-   * @return the array of pixels
+   * Puts this bitmap's data on on given canvas context, at position {@code (0,0)}.
    */
-  public abstract ImageData getData();
+  public abstract void putData(Context2d target);
+
+  protected Canvas takeBuffer(int number) {
+	  Canvas canvas = bufferCanvas[number];
+	  if (canvas.getCoordinateSpaceWidth() < ncolumns) {
+		  canvas.setWidth(ncolumns + "px");
+		  canvas.setCoordinateSpaceWidth(ncolumns);
+	  }
+	  if (canvas.getCoordinateSpaceHeight() < nrows) {
+		  canvas.setHeight(nrows + "px");
+		  canvas.setCoordinateSpaceHeight(nrows);
+	  }
+	  if (currentBufferContent[number] != this) {
+		  putData(canvas.getContext2d());
+		  currentBufferContent[number] = this;
+	  }
+	  return canvas;
+  }
+
+  protected void setImageData(ImageData imageData) {
+	  this.imageData = imageData;
+	  Uint8Array imageArray = (Uint8Array) imageData.getData();
+	  // image array is clamped by default, we need non-clamped
+	  data = TypedArrays.createUint8Array(imageArray.buffer());
+  }
 
   /**
    * Query the start offset of a row.

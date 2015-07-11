@@ -60,8 +60,6 @@ public class TileCache implements BackgroundProcessor.Operation {
 		this.tileCacheSize = DjvuContext.getTileCacheSize();
 		this.tileSize = DjvuContext.getTileSize();
 
-		GMap.imageContext = Canvas.createIfSupported().getContext2d();
-
 		backgroundProcessor.addOperation(this);
 
 		missingTileImage = prepareMissingTileImage();
@@ -329,8 +327,8 @@ public class TileCache implements BackgroundProcessor.Operation {
 			return false;
 	
 		bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
-	
-		bufferCanvas.getContext2d().putImageData(bufferGMap.getData(), 0, 0);
+
+		bufferGMap.putData(bufferCanvas.getContext2d());
 		Context2d c = cachedItem.image.getContext2d();
 		c.setFillStyle("white");
 		c.fillRect(0, 0, tileSize, tileSize);

@@ -45,8 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import com.google.gwt.canvas.dom.client.ImageData;
-import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
 /**
@@ -75,9 +74,6 @@ public class GBitmap
   /** end of the buffer  */
   private int maxRowOffset = 0;
   
-  protected Uint8Array data;
-  private ImageData imageData;
-
   //~ Constructors -----------------------------------------------------------
 
   /**
@@ -91,24 +87,11 @@ public class GBitmap
   //~ Methods ----------------------------------------------------------------
 
 	@Override
-	public ImageData getData() {
-//		int maxgray = getGrays() - 1;
-		ImageData id = imageContext.createImageData(ncolumns, nrows);
-		for (int x = 0; x < ncolumns; x++) {
-			for (int y = 0; y < nrows; y++) {
-				//int value = 255 - 255 * getByteAt(rowOffset(y) + x) / getGrays();
-				short value = data.get((rowOffset(y) + x) * ncolors + PIXEL_OFFSET);
-				id.setAlphaAt(value, x, y);
-//				id.setRedAt(value, x, y);
-//				id.setGreenAt(value, x, y);
-//				id.setBlueAt(value, x, y);
-			}
-		}
-		return id;
-//		GPixmap m = new GPixmap().init(nrows, ncolumns, GPixel.WHITE);
-//		m.blit(this, 0, 0, GPixel.BLACK);
-//		return m.getData();
+	public void putData(Context2d target) {
+		target.putImageData(imageData, -border, 0);
 	}
+
+	
 
   /**
    * Query a pixel as boolean
@@ -418,10 +401,7 @@ public final int getRowSize()
 
     if(npixels > 0)
     {
-		imageData = imageContext.createImageData(rowSize, nrows + 1);
-		Uint8Array imageArray = (Uint8Array) imageData.getData();
-		// image array is clamped by default, we need non-clamped
-		data = TypedArrays.createUint8Array(imageArray.buffer());
+		setImageData(bufferCanvas[0].getContext2d().createImageData(rowSize, nrows + 1));
     }
 
     return this;

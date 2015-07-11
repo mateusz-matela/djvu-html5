@@ -45,7 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import com.google.gwt.canvas.dom.client.ImageData;
+import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.typedarrays.shared.Int32Array;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
@@ -75,9 +75,6 @@ public class GPixmap
   /** Used for attenuation */
   protected final static int[][] multiplierRefArray=new int[256][];
 
-  protected Uint8Array data;
-  private ImageData imageData;
-
   /**
    * Static initializers.
    */
@@ -102,10 +99,9 @@ public class GPixmap
   //~ Methods ----------------------------------------------------------------
 
   @Override
-public ImageData getData() {
-	  
-  return imageData;
-}
+  public void putData(Context2d target) {
+	  target.putImageData(imageData, 0, 0);
+  }
 
 /**
    * Fill the array with color correction constants.
@@ -675,10 +671,7 @@ public ImageData getData() {
     {
       if(data == null)
       {
-    	  imageData = imageContext.createImageData(ncolumns, nrows);
-    	  Uint8Array imageArray = (Uint8Array) imageData.getData();
-    	  // image array is clamped by default, we need non-clamped
-    	  data = TypedArrays.createUint8Array(imageArray.buffer());
+    	  setImageData(bufferCanvas[0].getContext2d().createImageData(ncolumns, nrows));
     	  if (filler == null) {
     		  for (int i = 0; i < npix; i++)
     			  data.set(i * ncolors + 3, 0xFF);
