@@ -214,7 +214,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		graphics2d.restore();
 		// missing tile graphics may exceed the page boundary
 		graphics2d.fillRect(startX + pw, 0, w, h);
-		graphics2d.fillRect(0, startX  + ph, w, h);
+		graphics2d.fillRect(0, startY + ph, w, h);
 	}
 
 	@Override
