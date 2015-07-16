@@ -175,6 +175,8 @@ public class DjVuPage
 
   private ArrayList<IFFEnumeration> chunksToDecode = new ArrayList<>();
 
+  private CachedInputStream waitingForInlude;
+
   private JB2Decode jb2ToDecode;
 
   /** The URL for this page. */
@@ -1138,7 +1140,7 @@ public class DjVuPage
         }
         else if(chkid.equals("INCL"))
         {
-         decodeInclude(createCachedInputStream(iff.readFullyUTF()));
+         waitingForInlude = createCachedInputStream(iff.readFullyUTF());
         }
         else if(chkid.equals("FGbz"))
         {
@@ -1266,9 +1268,11 @@ public class DjVuPage
    * @throws IOException if an error occurs
    * @throws IllegalStateException if an error occurs
    */
-  protected void decodeInclude(CachedInputStream pool)
+  protected boolean decodeInclude(CachedInputStream pool)
     throws IOException
   {
+    if (!pool.isReady())
+      return false;
     final IFFEnumeration iff = pool.getIFFChunks();
       if((iff == null)||!iff.hasMoreElements())
       {
@@ -1279,6 +1283,7 @@ public class DjVuPage
       if((formIff != null)&&"FORM:DJVI".equals(formStream.getName()))
       {
         chunksToDecode.add(formIff);
+        return true;
       }
       else
       {
@@ -1438,11 +1443,12 @@ public class DjVuPage
 				jb2ToDecode = null;
 			return false;
 		}
-		ArrayList<IFFEnumeration> ctd = chunksToDecode;
-		if (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).isReady()) {
-			// wait for download
-			return false;
+		if (waitingForInlude != null) {
+			if (!decodeInclude(waitingForInlude))
+				return false; //waiting for download
+			waitingForInlude = null;
 		}
+		ArrayList<IFFEnumeration> ctd = chunksToDecode;
 		while (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).hasMoreElements())
 			ctd.remove(ctd.size() - 1);
 		if (ctd.isEmpty()) {

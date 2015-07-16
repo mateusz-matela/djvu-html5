@@ -73,7 +73,7 @@ public class Palette
   public int[] colordata = null;
 
   /** DOCUMENT ME! */
-  private final HashMap pmap = new HashMap();
+  private final HashMap<Integer, Integer> pmap = new HashMap<>();
 
   // Quantization data
   private GPixel[] palette = null;
@@ -119,21 +119,6 @@ public boolean isImageData()
   }
 
   /**
-   * Returns colors from the color index sequence.  Pixel #out# is
-   * overwritten with the color corresponding to the #nth# element of the
-   * color sequence \Ref{colordata}.
-   *
-   * @param nth DOCUMENT ME!
-   * @param out DOCUMENT ME!
-   */
-  public final void get_color(
-    int          nth,
-    final GPixel out)
-  {
-    index_to_color(colordata[nth], out);
-  }
-
-  /**
    * Returns the number of colors in the palette.
    *
    * @return DOCUMENT ME!
@@ -141,24 +126,6 @@ public boolean isImageData()
   public final int size()
   {
     return getPalette().length;
-  }
-
-  /**
-   * Returns the best palette index for representing color #bgr#.
-   *
-   * @param p DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public int color_to_index(final GPixel p)
-  {
-    final Number  key =
-      new Integer((p.getBlue() << 16) | (p.getGreen() << 8) | (p.getRed()));
-    final Integer retval = (Integer)pmap.get(key);
-
-    return (retval != null)
-    ? (retval.intValue())
-    : color_to_index_slow(p);
   }
 
   /**
@@ -252,71 +219,5 @@ public void decode(final CachedInputStream pool)
         colordata[d] = s;
       }
     }
-  }
-
-  /**
-   * Reads palette colors.  This function initializes the palette colors by
-   * reading #palettesize# RGB triples from bytestream #bs#.
-   *
-   * @param input DOCUMENT ME!
-   * @param palettesize DOCUMENT ME!
-   *
-   * @throws IOException DOCUMENT ME!
-   */
-  public void decode_rgb_entries(
-    final InputStream input,
-    final int         palettesize)
-    throws IOException
-  {
-    final GPixel[] palette = new GPixel[palettesize];
-
-    for(int c = 0; c < palettesize; c++)
-    {
-      final byte r = (byte)input.read();
-      final byte g = (byte)input.read();
-      final byte b = (byte)input.read();
-      palette[c] = new GPixel(b, g, r);
-    }
-
-    setPalette(palette);
-  }
-
-  // Helpers
-  private int color_to_index_slow(final GPixel p)
-  {
-    final GPixel[] palette = getPalette();
-    final int      ncolors = palette.length;
-
-    // Should be able to do better
-    int found     = 0;
-    int founddist = 3 * 256 * 256;
-
-    for(int i = 0; i < ncolors; i++)
-    {
-      final GPixel q    = palette[i];
-      final int    bd   = 0xff & (p.blueByte() - q.blueByte());
-      final int    gd   = 0xff & (p.greenByte() - q.greenByte());
-      final int    rd   = 0xff & (p.redByte() - q.redByte());
-      final int    dist = (bd * bd) + (gd * gd) + (rd * rd);
-
-      if(dist < founddist)
-      {
-        found       = i;
-        founddist   = dist;
-      }
-    }
-
-    // Store in pmap
-    if(pmap.size() < 0x8000)
-    {
-      final Number key =
-        new Integer((p.getBlue() << 16) | (p.getGreen() << 8) | p.getRed());
-      pmap.put(
-        key,
-        new Integer(found));
-    }
-
-    // Return
-    return found;
   }
 }

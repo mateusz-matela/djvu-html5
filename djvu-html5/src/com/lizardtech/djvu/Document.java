@@ -48,6 +48,7 @@ package com.lizardtech.djvu;
 import java.io.*;
 import java.util.*;
 
+import com.google.gwt.core.shared.GWT;
 import com.lizardtech.djvu.DjVmDir.File;
 import com.lizardtech.djvu.outline.Bookmark;
 
@@ -207,7 +208,7 @@ public class Document
    *
    * @throws IOException if an error occurs
    */
-  public CachedInputStream get_data(final String id, InputStateListener listener)
+  public CachedInputStream get_data(final String id, final InputStateListener listener)
     throws IOException
   {
     if(id == null)
@@ -231,8 +232,22 @@ public class Document
         }
 
         final String fileurl = Utils.url(initURL, id);
-        pool = new CachedInputStream().init(fileurl,listener);
-        insert_file(pool, DjVmDir.File.INCLUDE, id, id);
+        final CachedInputStream pool2 = pool = new CachedInputStream();
+        pool.init(fileurl,new InputStateListener() {
+			
+			@Override
+			public void inputReady() {
+				try {
+					insert_file(pool2, DjVmDir.File.INCLUDE, id, id);
+				} catch (IOException e) {
+					GWT.log("Could not init page", e);
+				}
+				if (listener != null)
+					listener.inputReady();
+			}
+		});
+        if (pool.isReady())
+          insert_file(pool, DjVmDir.File.INCLUDE, id, id);
       }
       else if(this.pool != null)
       {
@@ -278,75 +293,6 @@ public class Document
   /**
    * Add a file to the index.
    *
-   * @param input data to add
-   * @param file_type type of file to add
-   * @param name saved name 
-   * @param id load name
-   *
-   * @throws IOException if an error occurs
-   */
-  public void insert_file(
-    final InputStream input,
-    final int         file_type,
-    final String      name,
-    final String      id)
-    throws IOException
-  {
-    insert_file(input, file_type, name, id, "");
-  }
-
-  /**
-   * Add a file to the index.
-   *
-   * @param input data to add
-   * @param file_type type of file to add
-   * @param name saved name 
-   * @param id load name
-   * @param title file title
-   *
-   * @throws IOException if an error occurs
-   */
-  public void insert_file(
-    final InputStream input,
-    final int         file_type,
-    final String      name,
-    final String      id,
-    final String      title)
-    throws IOException
-  {
-    insert_file(input, file_type, name, id, title, -1);
-  }
-
-  /**
-   * Add a file to the index.
-   *
-   * @param input data to add
-   * @param file_type type of file to add
-   * @param name saved name 
-   * @param id load name
-   * @param title file title
-   * @param pos position to insert
-   *
-   * @throws IOException if an error occurs
-   */
-  public void insert_file(
-    final InputStream input,
-    final int         file_type,
-    final String      name,
-    final String      id,
-    final String      title,
-    int               pos)
-    throws IOException
-  {
-    final DjVmDir.File file =
-      getDjVmDir().createFile(name, id, title, file_type);
-    final CachedInputStream pool = new CachedInputStream().init(input);
-    insert_file(file, pool, pos);
-  }
-
-  /**
-   * Add a file to the index.
-   *
    * @param pool data to add
    * @param file_type type of file to add
    * @param name saved name 
@@ -355,105 +301,25 @@ public class Document
    * @throws IOException if an error occurs
    */
   public void insert_file(
-    final CachedInputStream pool,
+    CachedInputStream pool,
     final int      file_type,
     final String   name,
     final String   id)
     throws IOException
   {
-    insert_file(pool, file_type, name, id, "");
-  }
-
-  /**
-   * Add a file to the index.
-   *
-   * @param pool data to add
-   * @param file_type type of file to add
-   * @param name saved name 
-   * @param id load name
-   * @param title file title
-   *
-   * @throws IOException if an error occurs
-   */
-  public void insert_file(
-    final CachedInputStream pool,
-    final int      file_type,
-    final String   name,
-    final String   id,
-    final String   title)
-    throws IOException
-  {
-    insert_file(pool, file_type, name, id, title, -1);
-  }
-
-  /**
-   * Add a file to the index.
-   *
-   * @param pool data to add
-   * @param file_type type of file to add
-   * @param name saved name 
-   * @param id load name
-   * @param title file title
-   * @param pos position to insert
-   *
-   * @throws IOException if an error occurs
-   */
-  public void insert_file(
-    final CachedInputStream pool,
-    final int      file_type,
-    final String   name,
-    final String   id,
-    final String   title,
-    int            pos)
-    throws IOException
-  {
     final DjVmDir.File file =
-      getDjVmDir().createFile(name, id, title, file_type);
-    insert_file(file, pool, pos);
-  }
-
-  /**
-   * Insert a file.
-   *
-   * @param f File to add
-   * @param data_pool data to add
-   *
-   * @throws IOException DOCUMENT ME!
-   */
-  public void insert_file(
-    final DjVmDir.File f,
-    CachedInputStream data_pool)
-    throws IOException
-  {
-    insert_file(f, data_pool, -1);
-  }
-
-  /**
-   * Insert a file.
-   *
-   * @param f File to add
-   * @param data_pool data to add
-   * @param pos position to insert
-   *
-   * @throws IOException DOCUMENT ME!
-   */
-  public void insert_file(
-    final DjVmDir.File f,
-    CachedInputStream data_pool,
-    int                pos)
-    throws IOException
-  {
-    if(f == null)
+      getDjVmDir().createFile(name, id, "", file_type);
+    if(file == null)
     {
       throw new IOException("No zero file.");
     }
 
-    if(cachedInputStreamMap.containsKey(f.get_load_name()))
+    if(cachedInputStreamMap.containsKey(file.get_load_name()))
     {
       throw new IOException("No duplicates allowed.");
     }
 
-    CachedInputStream input = new CachedInputStream(data_pool);
+    CachedInputStream input = new CachedInputStream(pool);
     final int                  b0 = input.read();
     final int                  b1 = input.read();
     final int                  b2 = input.read();
@@ -466,13 +332,13 @@ public class Document
       || (b3 != octets[3]))
     {
 //      data_pool = data_pool.duplicate(4);
-      data_pool = input.createCachedInputStream(Integer.MAX_VALUE);
+      pool = input.createCachedInputStream(Integer.MAX_VALUE);
     }
 
     cachedInputStreamMap.put(
-      f.get_load_name(),
-      data_pool);
-    getDjVmDir().insert_file(f, pos);
+      file.get_load_name(),
+      pool);
+    getDjVmDir().insert_file(file, -1);
   }
 
   /**
