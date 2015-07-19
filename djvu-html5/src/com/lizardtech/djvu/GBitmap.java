@@ -321,28 +321,12 @@ public final int getRowSize()
     final int  dy,
     final boolean doBlit)
   {
-    final int x0 = (dx > 0)
-      ? dx
-      : 0;
-    int       y0 = (dy > 0)
-      ? dy
-      : 0;
-    final int x1 = (dx < 0)
-      ? (-dx)
-      : 0;
-    int y1 = (dy < 0)
-      ? (-dy)
-      : 0;
-    final int w0 = columns() - x0;
-    final int w1 = bit.columns() - x1;
-    final int w  = (w0 < w1)
-      ? w0
-      : w1;
-    final int h0 = rows() - y0;
-    final int h1 = bit.rows() - y1;
-    int       h  = (h0 < h1)
-      ? h0
-      : h1;
+    final int x0 = Math.max(dx, 0);
+    int       y0 = Math.max(dy, 0);
+    final int x1 = Math.max(-dx, 0);
+    int y1 = Math.max(-dy, 0);
+    final int w  = Math.min(columns() - x0,  bit.columns() - x1);
+    int       h  = Math.min(rows() - y0, bit.rows() - y1);
 
     if((w > 0) && (h > 0))
     {

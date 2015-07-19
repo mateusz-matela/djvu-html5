@@ -49,7 +49,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Vector;
+import java.util.List;
 
 import com.lizardtech.djvu.anno.DjVuAnno;
 import com.lizardtech.djvu.text.DjVuText;
@@ -353,7 +353,7 @@ public class DjVuPage
     final int     align,
     final GBitmap retval)
   {
-    return get_bitmap(rect, subsample, align, null);
+    return get_bitmap(rect, subsample, align);
   }
 
   /**
@@ -732,8 +732,7 @@ public class DjVuPage
   public GBitmap get_bitmap(
     final GRect  rect,
     final int    subsample,
-    final int    align,
-    final Vector<Number> components)
+    final int    align)
   {
     if(rect.isEmpty())
     {
@@ -756,7 +755,7 @@ public class DjVuPage
         && (fgJb2.width == width)
         && (fgJb2.height == height))
       {
-        return fgJb2.get_bitmap(rect, subsample, align, 0, components);
+        return fgJb2.get_bitmap(rect, subsample, align, 0);
       }
     }
 
@@ -914,20 +913,20 @@ public class DjVuPage
 
       if(fgPalette != null)
       {
-        Vector<Number>  components = new Vector<>();
-        GBitmap bm = get_bitmap(rect, subsample, 1, components);
-
-        if(fgJb2.get_blit_count() != fgPalette.colordata.length)
+        final int blitCount = fgJb2.get_blit_count();
+        if(blitCount != fgPalette.colordata.length)
         {
+          GBitmap bm = get_bitmap(rect, subsample, 1);
           pm.attenuate(bm);
 
           return false;
         }
 
+        final int colorsCount = fgPalette.size();
         GPixmap colors =
           new GPixmap().init(
             1,
-            fgPalette.size(),
+            colorsCount,
             null);
         final GPixelReference color = colors.createGPixelReference(0);
 
@@ -938,91 +937,59 @@ public class DjVuPage
 
         colors.applyGammaCorrection(gamma_correction);
 
-        Vector<Number> compset = new Vector<>();
-
-        while(components.size() > 0)
-        {
-          int       lastx      = 0;
-          final int colorindex =
-            fgPalette.colordata[components.elementAt(0).intValue()];
-          GRect     comprect = new GRect();
-          compset.setSize(0);
-
-          for(int pos = 0; pos < components.size();)
-          {
-            final int     blitno =
-              components.elementAt(pos).intValue();
-            final JB2Blit pblit = fgJb2.get_blit(blitno);
-
-            if(pblit.left < lastx)
-            {
-              break;
-            }
-
-            lastx = pblit.left;
-
-            if(fgPalette.colordata[blitno] == colorindex)
-            {
-              final JB2Shape pshape = fgJb2.get_shape(pblit.shapeno);
-              final GRect    xrect =
-                new GRect(
-                  pblit.left,
-                  pblit.bottom,
-                  pshape.getGBitmap().columns(),
-                  pshape.getGBitmap().rows());
-              comprect.recthull(comprect, xrect);
-              compset.addElement(components.elementAt(pos));
-              components.removeElementAt(pos);
-            }
-            else
-            {
-              pos++;
-            }
-          }
-
-          comprect.xmin /= subsample;
-          comprect.ymin /= subsample;
-          comprect.xmax   = ((comprect.xmax + subsample) - 1) / subsample;
-          comprect.ymax   = ((comprect.ymax + subsample) - 1) / subsample;
-          comprect.intersect(comprect, rect);
-
-          if(comprect.isEmpty())
-          {
-            continue;
-          }
-
-          //        bm   = getBitmap(comprect, subsample, 1);
-          bm = new GBitmap();
-          bm.init(
-            comprect.height(),
-            comprect.width(),
-            0);
-          bm.setGrays(1 + (subsample * subsample));
-
-          final int rxmin = comprect.xmin * subsample;
-          final int rymin = comprect.ymin * subsample;
-
-          for(int pos = 0; pos < compset.size(); ++pos)
-          {
-            final int      blitno =
-              compset.elementAt(pos).intValue();
-            final JB2Blit  pblit  = fgJb2.get_blit(blitno);
-            final JB2Shape pshape = fgJb2.get_shape(pblit.shapeno);
-            bm.blit(
-              pshape.getGBitmap(),
-              pblit.left - rxmin,
-              pblit.bottom - rymin,
-              subsample);
-          }
-
-          color.setOffset(colorindex);
-          pm.blit(
-            bm,
-            comprect.xmin - rect.xmin,
-            comprect.ymin - rect.ymin,
-            color);
+        List<List<JB2Blit>> blitsByColor = new ArrayList<>(colorsCount);
+        for (int i = 0; i < colorsCount; i++) {
+            List<JB2Blit> blits = new ArrayList<>();
+            blitsByColor.add(blits);
+        }
+        for (int pos = 0; pos < blitCount; pos++) {
+            final JB2Blit pblit = fgJb2.get_blit(pos);
+            if (!fgJb2.intersects(pblit, rect, subsample, 0))
+              continue;
+            List<JB2Blit> blits = blitsByColor.get(fgPalette.colordata[pos]);
+            blits.add(pblit);
         }
 
+
+        int lastx = 0;
+        GRect comprect = new GRect();
+        ArrayList<JB2Blit> compset = new ArrayList<>();
+        for (int colorIndex = 0; colorIndex < colorsCount; colorIndex++) {
+            List<JB2Blit> blits = blitsByColor.get(colorIndex);
+            if (blits == null)
+                continue;
+            color.setOffset(colorIndex);
+            comprect.clear();
+            compset.clear();
+            for (int i = 0; i < blits.size(); i++) {
+                JB2Blit pblit = blits.get(i);
+                if (lastx < pblit.left) {
+                    pm.blit(
+                        blit(compset, comprect, rect, subsample),
+                        comprect.xmin - rect.xmin,
+                        comprect.ymin - rect.ymin,
+                        color);
+                    comprect.clear();
+                    compset.clear();
+                }
+                lastx = pblit.left;
+
+                final JB2Shape pshape = fgJb2.get_shape(pblit.shapeno);
+                final GRect    xrect =
+                  new GRect(
+                    pblit.left,
+                    pblit.bottom,
+                    pshape.getGBitmap().columns(),
+                    pshape.getGBitmap().rows());
+                comprect.recthull(comprect, xrect);
+                compset.add(pblit);
+            }
+            pm.blit(
+                blit(compset, comprect, rect, subsample),
+                comprect.xmin - rect.xmin,
+                comprect.ymin - rect.ymin,
+                color);
+        }
         return true;
       }
 
@@ -1064,6 +1031,40 @@ public class DjVuPage
     }
 
     return false;
+  }
+
+  private GBitmap blit(ArrayList<JB2Blit> compset, GRect comprect, GRect rect, int subsample) {
+      if (compset.isEmpty() || comprect.isEmpty())
+          return null;
+      comprect.xmin /= subsample;
+      comprect.ymin /= subsample;
+      comprect.xmax   = ((comprect.xmax + subsample) - 1) / subsample;
+      comprect.ymax   = ((comprect.ymax + subsample) - 1) / subsample;
+      comprect.intersect(comprect, rect);
+      if(comprect.isEmpty())
+          return null;
+
+      GBitmap bm = new GBitmap();
+      bm.init(
+        comprect.height(),
+        comprect.width(),
+        0);
+      bm.setGrays(1 + (subsample * subsample));
+
+      final int rxmin = comprect.xmin * subsample;
+      final int rymin = comprect.ymin * subsample;
+
+      final JB2Image fgJb2 = getFgJb2();
+      for(JB2Blit pblit : compset)
+      {
+        final JB2Shape pshape = fgJb2.get_shape(pblit.shapeno);
+        bm.blit(
+          pshape.getGBitmap(),
+          pblit.left - rxmin,
+          pblit.bottom - rymin,
+          subsample);
+      }
+      return bm;
   }
 
   /**

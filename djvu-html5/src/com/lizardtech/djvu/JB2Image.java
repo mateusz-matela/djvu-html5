@@ -82,166 +82,6 @@ public class JB2Image
   /**
    * DOCUMENT ME!
    *
-   * @return DOCUMENT ME!
-   */
-  public final GBitmap get_bitmap()
-  {
-    return get_bitmap(1);
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param subsample DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public final GBitmap get_bitmap(final int subsample)
-  {
-    return get_bitmap(subsample, 1);
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param subsample DOCUMENT ME!
-   * @param align DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   *
-   * @throws IllegalStateException DOCUMENT ME!
-   */
-  public final GBitmap get_bitmap(
-    final int subsample,
-    final int align)
-  {
-    if((width == 0) || (height == 0))
-    {
-      throw new IllegalStateException("JB2Image can not create bitmap");
-    }
-
-    final int     swidth  = ((width + subsample) - 1) / subsample;
-    final int     sheight = ((height + subsample) - 1) / subsample;
-    final int     border  = (((swidth + align) - 1) & ~(align - 1)) - swidth;
-    final GBitmap bm      = new GBitmap();
-    bm.init(sheight, swidth, border);
-    bm.setGrays(1 + (subsample * subsample));
-
-    for(int blitno = 0; blitno < get_blit_count(); blitno++)
-    {
-      final JB2Blit  pblit  = get_blit(blitno);
-      final JB2Shape pshape = get_shape(pblit.shapeno());
-
-      if(pshape.getGBitmap() != null)
-      {
-        bm.blit(
-          pshape.getGBitmap(),
-          pblit.left(),
-          pblit.bottom(),
-          subsample);
-      }
-    }
-
-    return bm;
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param rect DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public final GBitmap get_bitmap(final GRect rect)
-  {
-    return get_bitmap(rect, 1);
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param rect DOCUMENT ME!
-   * @param subsample DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public final GBitmap get_bitmap(
-    final GRect rect,
-    final int   subsample)
-  {
-    return get_bitmap(rect, subsample, 1);
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param rect DOCUMENT ME!
-   * @param subsample DOCUMENT ME!
-   * @param align DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   */
-  public final GBitmap get_bitmap(
-    final GRect rect,
-    final int   subsample,
-    final int   align)
-  {
-    return get_bitmap(rect, subsample, align, 0);
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param rect DOCUMENT ME!
-   * @param subsample DOCUMENT ME!
-   * @param align DOCUMENT ME!
-   * @param dispy DOCUMENT ME!
-   *
-   * @return DOCUMENT ME!
-   *
-   * @throws IllegalStateException DOCUMENT ME!
-   */
-  public final GBitmap get_bitmap(
-    final GRect rect,
-    final int   subsample,
-    final int   align,
-    final int   dispy)
-  {
-    if((width == 0) || (height == 0))
-    {
-      throw new IllegalStateException("JB2Image can not create bitmap");
-    }
-
-    final int     rxmin   = rect.xmin * subsample;
-    final int     rymin   = rect.ymin * subsample;
-    final int     swidth  = rect.width();
-    final int     sheight = rect.height();
-    final int     border  = (((swidth + align) - 1) & ~(align - 1)) - swidth;
-    final GBitmap bm      = new GBitmap();
-    bm.init(sheight, swidth, border);
-    bm.setGrays(1 + (subsample * subsample));
-
-    for(int blitno = 0; blitno < get_blit_count();)
-    {
-      final JB2Blit  pblit  = get_blit(blitno++);
-      final JB2Shape pshape = get_shape(pblit.shapeno());
-
-      if(pshape.getGBitmap() != null)
-      {
-        bm.blit(
-          pshape.getGBitmap(),
-          pblit.left() - rxmin,
-          (dispy + pblit.bottom()) - rymin,
-          subsample);
-      }
-    }
-
-    return bm;
-  }
-
-  /**
-   * DOCUMENT ME!
-   *
    * @param rect DOCUMENT ME!
    * @param subsample DOCUMENT ME!
    * @param align DOCUMENT ME!
@@ -256,14 +96,8 @@ public class JB2Image
     final GRect  rect,
     final int    subsample,
     final int    align,
-    final int    dispy,
-    final Vector<Number> components)
+    final int    dispy)
   {
-    if(components == null)
-    {
-      return get_bitmap(rect, subsample, align, dispy);
-    }
-
     if((width == 0) || (height == 0))
     {
       throw new IllegalStateException("JB2Image can not create bitmap");
@@ -285,20 +119,40 @@ public class JB2Image
 
       if(pshape.getGBitmap() != null)
       {
-        if(
-          bm.blit(
+        bm.blit(
             pshape.getGBitmap(),
             pblit.left() - rxmin,
             (dispy + pblit.bottom()) - rymin,
-            subsample))
-        {
-          components.addElement(new Integer(blitno - 1));
-        }
+            subsample);
       }
     }
 
     return bm;
   }
+
+    public boolean intersects(JB2Blit pblit, GRect rect, int subsample, int dispy) {
+        GBitmap bm = get_shape(pblit.shapeno).getGBitmap();
+        if (bm == null)
+            return false;
+        final int rxmin = rect.xmin * subsample;
+        final int rymin = rect.ymin * subsample;
+        final int xh = pblit.left() - rxmin;
+        final int yh = (dispy + pblit.bottom()) - rymin;
+        if (subsample == 1) {
+          final int x0 = Math.max(xh, 0);
+          final int y0 = Math.max(yh, 0);
+          final int x1 = Math.max(-xh, 0);
+          final int y1 = Math.max(-yh, 0);
+          final int w  = Math.min(rect.width() - x0,  bm.columns() - x1);
+          final int h  = Math.min(rect.height() - y0, bm.rows() - y1);
+          return (w > 0) && (h > 0);
+        }
+
+        return !(xh >= (rect.width() * subsample))
+            || (yh >= (rect.height() * subsample))
+            || ((xh + bm.columns()) < 0)
+            || ((yh + bm.rows()) < 0);
+    }
 
   /**
    * DOCUMENT ME!

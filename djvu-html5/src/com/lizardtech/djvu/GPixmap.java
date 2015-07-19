@@ -249,7 +249,7 @@ public class GPixmap
     final GPixel  color)
   {
     // Check
-    if(color == null)
+    if(color == null || bm == null)
     {
       return;
     }
