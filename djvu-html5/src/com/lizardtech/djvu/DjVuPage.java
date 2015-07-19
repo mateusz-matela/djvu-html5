@@ -338,25 +338,6 @@ public class DjVuPage
   }
 
   /**
-   * Get the foreground bitmap.
-   *
-   * @param rect area of interest
-   * @param subsample rate to subsample
-   * @param align number of alignment pixels
-   * @param retval an old image to fill rather than creating a new image
-   *
-   * @return the bitmap of interest
-   */
-  public final GBitmap getBitmap(
-    final GRect   rect,
-    final int     subsample,
-    final int     align,
-    final GBitmap retval)
-  {
-    return get_bitmap(rect, subsample, align);
-  }
-
-  /**
    * Query if this is a compound or photo DjVu page.
    *
    * @return true if color.
@@ -429,11 +410,7 @@ public class DjVuPage
         : null)
       : (GMap)getBitmap(
         segment,
-        subsample,
-        1,
-        (retval instanceof GBitmap)
-        ? (GBitmap)retval
-        : null);
+        subsample);
 
     if(retval != null)
     {
@@ -724,15 +701,12 @@ public class DjVuPage
    *
    * @param rect area of interest
    * @param subsample subsample rate
-   * @param align border alignment
-   * @param components a list of components
    *
    * @return the newly created image
    */
-  public GBitmap get_bitmap(
+  public GBitmap getBitmap(
     final GRect  rect,
-    final int    subsample,
-    final int    align)
+    final int    subsample)
   {
     if(rect.isEmpty())
     {
@@ -755,7 +729,7 @@ public class DjVuPage
         && (fgJb2.width == width)
         && (fgJb2.height == height))
       {
-        return fgJb2.get_bitmap(rect, subsample, align, 0);
+        return fgJb2.get_bitmap(rect, subsample);
       }
     }
 
@@ -916,7 +890,7 @@ public class DjVuPage
         final int blitCount = fgJb2.get_blit_count();
         if(blitCount != fgPalette.colordata.length)
         {
-          GBitmap bm = get_bitmap(rect, subsample, 1);
+          GBitmap bm = getBitmap(rect, subsample);
           pm.attenuate(bm);
 
           return false;
@@ -944,7 +918,7 @@ public class DjVuPage
         }
         for (int pos = 0; pos < blitCount; pos++) {
             final JB2Blit pblit = fgJb2.get_blit(pos);
-            if (!fgJb2.intersects(pblit, rect, subsample, 0))
+            if (!fgJb2.intersects(pblit, rect, subsample))
               continue;
             List<JB2Blit> blits = blitsByColor.get(fgPalette.colordata[pos]);
             blits.add(pblit);
@@ -998,7 +972,7 @@ public class DjVuPage
 
       if(fgIWPixmap != null)
       {
-        GBitmap bm = getBitmap(rect, subsample, 1, null);
+        GBitmap bm = getBitmap(rect, subsample);
 
         if((bm != null) && (pm != null))
         {

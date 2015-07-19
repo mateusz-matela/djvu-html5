@@ -94,9 +94,7 @@ public class JB2Image
    */
   public final GBitmap get_bitmap(
     final GRect  rect,
-    final int    subsample,
-    final int    align,
-    final int    dispy)
+    final int    subsample)
   {
     if((width == 0) || (height == 0))
     {
@@ -107,9 +105,8 @@ public class JB2Image
     final int     rymin   = rect.ymin * subsample;
     final int     swidth  = rect.width();
     final int     sheight = rect.height();
-    final int     border  = (((swidth + align) - 1) & ~(align - 1)) - swidth;
     final GBitmap bm      = new GBitmap();
-    bm.init(sheight, swidth, border);
+    bm.init(sheight, swidth, 0);
     bm.setGrays(1 + (subsample * subsample));
 
     for(int blitno = 0; blitno < get_blit_count();)
@@ -122,7 +119,7 @@ public class JB2Image
         bm.blit(
             pshape.getGBitmap(),
             pblit.left() - rxmin,
-            (dispy + pblit.bottom()) - rymin,
+            pblit.bottom() - rymin,
             subsample);
       }
     }
@@ -130,14 +127,14 @@ public class JB2Image
     return bm;
   }
 
-    public boolean intersects(JB2Blit pblit, GRect rect, int subsample, int dispy) {
+    public boolean intersects(JB2Blit pblit, GRect rect, int subsample) {
         GBitmap bm = get_shape(pblit.shapeno).getGBitmap();
         if (bm == null)
             return false;
         final int rxmin = rect.xmin * subsample;
         final int rymin = rect.ymin * subsample;
         final int xh = pblit.left() - rxmin;
-        final int yh = (dispy + pblit.bottom()) - rymin;
+        final int yh = pblit.bottom() - rymin;
         if (subsample == 1) {
           final int x0 = Math.max(xh, 0);
           final int y0 = Math.max(yh, 0);
