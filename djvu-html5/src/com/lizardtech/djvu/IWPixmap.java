@@ -363,7 +363,7 @@ public void decode(final CachedInputStream bs)
       {
         for(int x = w; x-- > 0; pixel.incOffset())
         {
-          pixel.setGray(127 - pixel.blueByte());
+          pixel.setGray(127 - bytes.get(pixel.getOffset()));
         }
       }
     }

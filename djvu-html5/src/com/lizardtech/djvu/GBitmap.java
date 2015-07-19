@@ -131,7 +131,7 @@ public class GBitmap
    */
   public final int getByteAt(final int offset)
   {
-	int value = data.get(offset * ncolors + PIXEL_OFFSET);
+	int value = offset >= 0 ? data.get(offset * ncolors + PIXEL_OFFSET) : 0;
     return ((value * (grays - 1) + (grays - 2))) / 255;
   }
 
@@ -401,7 +401,7 @@ public final int getRowSize()
 
     if(npixels > 0)
     {
-		setImageData(bufferCanvas[0].getContext2d().createImageData(rowSize, nrows + 1));
+		setImageData(bufferCanvas[0].getContext2d().createImageData(rowSize, nrows + 3));
     }
 
     return this;

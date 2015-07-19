@@ -159,6 +159,10 @@ public final class GPixelReference
     this.offset = (parent.rowOffset(row) + column) * ncolors;
   }
 
+  public int getOffset() {
+	return offset;
+  }
+
   /**
    * Convert the following number of pixels from YCC to RGB. The offset will
    * be advanced to the end.
