@@ -6,27 +6,37 @@ import static pl.djvuhtml5.client.TileCache.toZoom;
 
 import java.util.ArrayList;
 
-import pl.djvuhtml5.client.PageCache.PageDownloadListener;
-import pl.djvuhtml5.client.TileCache.TileCacheListener;
-import pl.djvuhtml5.client.TileCache.TileInfo;
-
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.NativeEvent;
+import com.google.gwt.event.dom.client.KeyCodes;
+import com.google.gwt.event.dom.client.KeyDownEvent;
+import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseMoveHandler;
 import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.dom.client.MouseUpHandler;
+import com.google.gwt.event.dom.client.MouseWheelEvent;
+import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.user.client.Event;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
 import com.lizardtech.djvu.GRect;
 
+import pl.djvuhtml5.client.PageCache.PageDownloadListener;
+import pl.djvuhtml5.client.TileCache.TileCacheListener;
+import pl.djvuhtml5.client.TileCache.TileInfo;
+
 public class SinglePageLayout implements PageDownloadListener, TileCacheListener {
+
+	interface ChangeListener {
+		void pageChanged(int currentPage);
+		void zoomChanged(int currentZoom);
+	}
 
 	private double zoom = 0;
 
@@ -51,6 +61,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	private final Canvas canvas;
 
 	private final Toolbar toolbar;
+
+	private ChangeListener changeListener;
 
 	private String background;
 
@@ -84,8 +96,12 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			pageInfo = newPage.getInfo();
 			toolbar.setZoomOptions(findZoomOptions());
 			checkBounds();
-			redraw();
+		} else {
+			pageInfo = null;
 		}
+		redraw();
+		if (changeListener != null)
+			changeListener.pageChanged(pageNum);
 	}
 
 	public int getPage() {
@@ -126,6 +142,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		this.zoom = zoom;
 		checkBounds();
 		redraw();
+		if (changeListener != null)
+			changeListener.zoomChanged(getZoom());
 	}
 
 	private ArrayList<Integer> findZoomOptions() {
@@ -181,6 +199,10 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		}
 	}
 
+	public void setChangeListener(ChangeListener changeListener) {
+		this.changeListener = changeListener;
+	}
+
 	public void redraw() {
 		Context2d graphics2d = canvas.getContext2d();
 		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
@@ -230,7 +252,13 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			redraw();
 	}
 
-	private class PanController implements MouseDownHandler, MouseUpHandler, MouseMoveHandler {
+	private class PanController
+			implements MouseDownHandler, MouseUpHandler, MouseMoveHandler, MouseWheelHandler, KeyDownHandler {
+
+		private static final int KEY_PLUS = 187;
+		private static final int KEY_MINUS = 189;
+
+		private static final int PAN_STEP = 100;
 
 		private boolean isDown = false;
 		private int x, y;
@@ -239,10 +267,14 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			canvas.addMouseDownHandler(this);
 			canvas.addMouseUpHandler(this);
 			canvas.addMouseMoveHandler(this);
+			canvas.addMouseWheelHandler(this);
+			canvas.addKeyDownHandler(this);
+			canvas.setFocus(true);
 		}
 
 		@Override
 		public void onMouseDown(MouseDownEvent event) {
+			canvas.setFocus(true);
 			int button = event.getNativeButton();
 			if (button == NativeEvent.BUTTON_LEFT || button == NativeEvent.BUTTON_MIDDLE) {
 				isDown = true;
@@ -262,14 +294,103 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		@Override
 		public void onMouseMove(MouseMoveEvent event) {
 			if (isDown) {
-				centerX -= event.getX() - x;
-				centerY -= event.getY() - y;
+				pan(x - event.getX(), y - event.getY());
 				x = event.getX();
 				y = event.getY();
-				checkBounds();
-				redraw();
 			}
 		}
 
+		@Override
+		public void onKeyDown(KeyDownEvent event) {
+			int key = event.getNativeKeyCode();
+			if (event.isControlKeyDown()) {
+				if (key == KEY_PLUS) {
+					// TODO zoom
+					event.preventDefault();
+				} else if (key == KEY_MINUS) {
+					// TODO zoom
+					event.preventDefault();
+				}
+			} else {
+				boolean handled = true;
+				switch (key) {
+				case KeyCodes.KEY_UP:
+					if (!pan(0, -PAN_STEP))
+						changePage(page - 1, 0, 1);
+					break;
+				case KeyCodes.KEY_DOWN:
+					if (!pan(0, PAN_STEP))
+						changePage(page + 1, 0, -1);
+					break;
+				case KeyCodes.KEY_LEFT:
+					if (!pan(-PAN_STEP, 0))
+						changePage(page - 1, 1, 0);
+					break;
+				case KeyCodes.KEY_RIGHT:
+					if (!pan(PAN_STEP, 0))
+						changePage(page + 1, -1, 0);
+					break;
+				case KeyCodes.KEY_PAGEUP:
+					if (!pan(0, -canvas.getCoordinateSpaceHeight() + PAN_STEP))
+						changePage(page - 1, 0, 1);
+					break;
+				case KeyCodes.KEY_PAGEDOWN:
+				case KeyCodes.KEY_SPACE:
+					if (!pan(0, canvas.getCoordinateSpaceHeight() - PAN_STEP))
+						changePage(page + 1, 0, -1);
+					break;
+				case KeyCodes.KEY_HOME:
+					changePage(0, -1, -1);
+					break;
+				case KeyCodes.KEY_END:
+					changePage(pageCache.getPageCount() - 1, 1, 1);
+					break;
+				default:
+					handled = false;
+				}
+				if (handled)
+					event.preventDefault();
+			}
+		}
+
+		@Override
+		public void onMouseWheel(MouseWheelEvent event) {
+			int delta = event.getDeltaY();
+			if (event.isControlKeyDown()) {
+				// TODO zoom
+				
+			} else {
+				if (!pan(0, delta * PAN_STEP / 2))
+					changePage(page + Integer.signum(delta), 0, -delta);
+			}
+			event.preventDefault();
+		}
+
+		private boolean pan(int x, int y) {
+			int oldX = centerX;
+			int oldY = centerY;
+			centerX += x;
+			centerY += y;
+			checkBounds();
+			if (centerX != oldX || centerY != oldY) {
+				redraw();
+				return true;
+			}
+			return false;
+		}
+
+		private void changePage(int targetPage, int horizontalPosition, int verticalPosition) {
+			if (targetPage >= 0 && targetPage < pageCache.getPageCount()) {
+				if (horizontalPosition < 0)
+					centerX = 0;
+				else if (horizontalPosition > 0)
+					centerX = Integer.MAX_VALUE;
+				if (verticalPosition < 0)
+					centerY = 0;
+				else if (verticalPosition > 0)
+					centerY = Integer.MAX_VALUE;
+				setPage(targetPage);
+			}
+		}
 	}
 }

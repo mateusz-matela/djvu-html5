@@ -56,7 +56,7 @@ public class Djvu_html5 implements EntryPoint {
 
 			@Override
 			public void inputReady() {
-				parseDocument();
+				initDocumentDisplay();
 			}
 		});
 	}
@@ -67,6 +67,7 @@ public class Djvu_html5 implements EntryPoint {
 			// TODO
 			throw new RuntimeException("Canvas not supported!");
 		}
+		canvas.setTabIndex(0);
 		drawingContext = canvas.getContext2d();
 
 		final SimplePanel panel = new SimplePanel(canvas);
@@ -101,11 +102,11 @@ public class Djvu_html5 implements EntryPoint {
 			pageLayout.canvasResized();
 	}
 
-	private void parseDocument() {
+	private void initDocumentDisplay() {
 		try {
 			document = new Document();
-
 			document.read(url);
+
 			pageLayout = new SinglePageLayout(canvas, toolbar, document);
 			toolbar.setPageLayout(pageLayout);
 		} catch (IOException e) {

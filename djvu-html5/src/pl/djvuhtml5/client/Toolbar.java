@@ -28,6 +28,8 @@ import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.TextBox;
 import com.google.gwt.user.client.ui.Widget;
 
+import pl.djvuhtml5.client.SinglePageLayout.ChangeListener;
+
 public class Toolbar extends FlowPanel {
 
 	private SinglePageLayout pageLayout;
@@ -91,6 +93,18 @@ public class Toolbar extends FlowPanel {
 
 	public void setPageLayout(SinglePageLayout pageLayout) {
 		this.pageLayout = pageLayout;
+		pageLayout.setChangeListener(new ChangeListener() {
+			
+			@Override
+			public void zoomChanged(int currentZoom) {
+				zoomCombo.textBox.setText(currentZoom + "%");
+			}
+			
+			@Override
+			public void pageChanged(int currentPage) {
+				pageCombo.textBox.setText((currentPage + 1) + "");
+			}
+		});
 	}
 
 	public void setZoomOptions(List<Integer> newZoomOptions) {
@@ -192,7 +206,6 @@ public class Toolbar extends FlowPanel {
 		int page = pageCombo.selection.getSelectedIndex();
 		if (pageLayout != null)
 			pageLayout.setPage(page);
-		pageCombo.textBox.setText((page + 1) + "");
 		pageCombo.selection.setFocus(false);
 	}
 
@@ -210,7 +223,6 @@ public class Toolbar extends FlowPanel {
 		page = Math.max(page, 0);
 		pageCombo.selection.setSelectedIndex(page);
 		pageLayout.setPage(page);
-		pageTextBox.setText((page + 1) + "");
 		pageTextBox.setFocus(false);
 	}
 
