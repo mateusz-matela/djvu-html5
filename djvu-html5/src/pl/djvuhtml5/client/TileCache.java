@@ -318,6 +318,8 @@ public class TileCache implements BackgroundProcessor.Operation {
 	 */
 	private boolean prepareItem(final TileInfo tileInfo, DjVuPage page, boolean isPrefetch) {
 		tileInfo.getScreenRect(tempRect, tileSize, page.getInfo());
+		if (tempRect.isEmpty())
+			return false;
 		CachedItem cachedItem = getItem(tileInfo);
 		if (cachedItem == null) {
 			cachedItem = new CachedItem(tempRect.width(), tempRect.height());
@@ -406,10 +408,10 @@ public class TileCache implements BackgroundProcessor.Operation {
 		}
 
 		private void getRect(GRect rect, int tileSize, int pw, int ph) {
-			rect.xmin = x * tileSize;
+			rect.xmin = Math.min(x * tileSize, pw);
 			rect.xmax = Math.min((x + 1) * tileSize, pw);
 			rect.ymin = Math.max(ph - (y + 1) * tileSize, 0);
-			rect.ymax = ph - y * tileSize;
+			rect.ymax = Math.max(ph - y * tileSize, 0);
 			assert rect.xmin <= rect.xmax && rect.ymin <= rect.ymax;
 		}
 
