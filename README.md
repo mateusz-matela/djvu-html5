@@ -1,18 +1,35 @@
 # djvu-html5
 DjVu file viewer working as pure HTML5. Browse DjVu files without any additional tools or plugins!
 
-Based on DjVu viewer implementation for Java by LizardTech, Inc.
+Based on the DjVu viewer implementation for Java by LizardTech, Inc.
 http://sourceforge.net/projects/javadjvu/
-Adapted and optimized for GWT framework (http://www.gwtproject.org/) by Mateusz Matela.
-Released under the GNU General Public License version 2, see LICENSE file for details.
+
+Adapted and optimized for [GWT framework](http://www.gwtproject.org/) by Mateusz Matela.
+
+Released under the GNU General Public License version 2, see the [LICENSE](LICENSE) file for details.
 
 ## Getting started
 
-TBA
+[Download](https://github.com/mateusz-matela/djvu-html5/releases) and unpack the latest version. Open the `Djvu_html5.html` file in a web browser to see the viewer with a sample document opened. This html file can be used directly or as an example of how to invoke the viewer: reference the required stylesheet and javascript and add a `<div id="djvuContainer">` element that the viewer can attach to.
+
+The location of the DjVu document that should be opened can be defined in three ways:
+
+* An attribute for the `div` element:`file="document.djvu"`
+* A parameter in the URL: `?file=document.djvu`
+* A property in a DJVU_CONTEXT object created in JavaScript before the page loading finishes:
+```javascript
+	var DJVU_CONTEXT = {
+		file: "document.djvu"
+	};
+```
+Other settings that can be defined in the `DJVU_CONTEXT` object are listed [here](https://github.com/mateusz-matela/djvu-html5/wiki/Advanced-configuration).
+
+**Note: the HTML file, the referenced JavaScript file and the DjVu document must all be located on the same host, otherwise the viewer will not work.**
 
 ## Getting involved
 
-The project is prepared with Eclipse and Google plugin. If you want another tool stack, you're on your own (feel free to other solutions once you figure them out).
+The project is prepared with Eclipse and Google Plugin. If you want another tool stack, you're on your own (help with improving this welcome).
+
 1. Dwonload Eclipse from https://www.eclipse.org/downloads/, recommended package is IDE for Jave EE Developers.
 2. Dwonload GWT SDK 2.7.0 from http://www.gwtproject.org/download.html
 3. In Eclipse, go to `Help` -> `Install New Software...`, enter update site https://dl.google.com/eclipse/plugin/4.4 and select Google Plugin for Eclipse (version for 4.4 works with Eclipse 4.5). Install and restart.
