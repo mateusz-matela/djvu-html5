@@ -343,7 +343,7 @@ public class Toolbar extends FlowPanel {
 		public void onMouseMove(MouseMoveEvent event) {
 			toolBar.removeStyleName("toolbarHidden");
 			timer.cancel();
-			//TODO timer.schedule(TOOLBAR_HIDE_DELAY);
+			timer.schedule(TOOLBAR_HIDE_DELAY);
 		}
 
 		@Override
@@ -355,6 +355,5 @@ public class Toolbar extends FlowPanel {
 		public void onMouseOut(MouseOutEvent event) {
 			isMouseOverToolbar = false;
 		}
-		
 	}
 }
