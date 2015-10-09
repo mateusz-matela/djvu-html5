@@ -1,6 +1,7 @@
 # How to add DjVu-HTML5 Viewer as a plugin in dLibra 5?
 
 It's very simple. Follow the instructions below, replacing `dlibra-webapp` with the location of your dLibra Web application.
+
 1. [Download](https://github.com/mateusz-matela/djvu-html5/releases) and unpack the latest version.
 2. Copy the `extras/dlibra/djvu_html5` folder into a new folder `dlibra-webapp/WEB-INF/formats`.
 3. Copy the `djvu_html5` and `img` directories into a new folder `dlibra-webapp/formats/djvu_html5`.
