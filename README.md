@@ -10,7 +10,7 @@ Released under the GNU General Public License version 2, see the [LICENSE](LICEN
 
 ## Getting started
 
-[Download](https://github.com/mateusz-matela/djvu-html5/releases) and unpack the latest version. Open the `Djvu_html5.html` file in a web browser to see the viewer with a sample document opened. This html file can be used directly or as an example of how to invoke the viewer: reference the required stylesheet and javascript and add a `<div id="djvuContainer">` element that the viewer can attach to.
+[Download](https://github.com/mateusz-matela/djvu-html5/releases) and unpack the latest version. Open the `Djvu_html5.html` file in a web browser to see the viewer with a sample document opened (this works best in Firefox, Chrome needs to be started with parameter `--allow-file-access-from-files` for this to work). This html file can be used directly or as an example of how to invoke the viewer: reference the required stylesheet and javascript and add a `<div id="djvuContainer">` element that the viewer can attach to.
 
 The location of the DjVu document that should be opened can be defined in three ways:
 
@@ -25,6 +25,10 @@ The location of the DjVu document that should be opened can be defined in three 
 Other settings that can be defined in the `DJVU_CONTEXT` object are listed [here](https://github.com/mateusz-matela/djvu-html5/wiki/Advanced-configuration).
 
 **Note: the HTML file, the referenced JavaScript file and the DjVu document must all be located on the same host, otherwise the viewer will not work.**
+
+## Integration with dLibra Digital Libraries Framework
+
+[See instructions](extras/dlibra/README.md)
 
 ## Getting involved
 
