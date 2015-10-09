@@ -1,0 +1,30 @@
+<h4> 
+	${message.getProperty("message.title")} 
+</h4>
+<div>
+	<script type="text/javascript">
+	function supports_canvas() {
+		return !!document.createElement('canvas').getContext;
+	}
+	$().ready(function(){
+		if (supports_canvas())
+			$("#testMessageBodySuccess${warn_handler_id}").show();
+		else
+			$("#testMessageBodyFailure${warn_handler_id}").show();
+	});
+	</script>
+	<noscript>
+		<p id="testMessageBodyFailure${warn_handler_id}" class="testFailureMessage">
+			<img src="${homepageUrl}/style/common/img/icons/warning_sm.png" class="errorIcon" />
+			${message.getProperty("test.error.title")}
+		</p>
+	</noscript>
+	<p id="testMessageBodySuccess${warn_handler_id}" class="testSuccessMessage" style="display:none;">
+		<img src="${homepageUrl}/style/common/img/icons/fine_sm.png" class="errorIcon"/>
+		${message.getProperty("test.success.title")}
+	</p>
+	<p id="testMessageBodyFailure${warn_handler_id}" class="testFailureMessage" style="display:none;">
+		<img src="${homepageUrl}/style/common/img/icons/warning_sm.png" class="errorIcon" />
+		${message.getProperty("test.error.title")}
+	</p>
+</div>

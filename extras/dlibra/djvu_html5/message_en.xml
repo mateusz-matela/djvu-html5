@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<entry key="displayed.name">DjVU - HTML5</entry>
+<entry key="message.title">DjVU - HTML5</entry>
+<entry key="test.success.title">HTML5 support detected.</entry>
+<entry key="test.error.title">HTML5 (Canvas API) is not supported!</entry>
+</properties>

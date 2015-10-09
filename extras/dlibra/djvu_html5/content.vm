@@ -1,0 +1,18 @@
+
+<link type="text/css" rel="stylesheet" href="${pathToHandler}/Djvu_html5.css">
+
+<script type="text/javascript" language="javascript"
+	src="${pathToHandler}/djvu_html5/djvu_html5.nocache.js"></script>
+
+<noscript>
+	<div
+		style="width: 22em; position: absolute; left: 50%; margin-left: -11em; color: red; background-color: white; border: 1px solid red; padding: 4px; font-family: sans-serif">
+		Your web browser must have JavaScript enabled in order for this
+		application to display correctly.</div>
+</noscript>
+<div id="djvuContainer" file="${completeContentUrl}"></div>
+<script type="text/javascript">
+var DJVU_CONTEXT = {
+	parallelDownloads: 1,
+};
+</script>
