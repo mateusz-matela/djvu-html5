@@ -175,7 +175,7 @@ public boolean isImageData()
 
           if(file.is_page())
           {
-            bookmark.setDisplayName(file.get_title());
+            bookmark.setDisplayName(file.get_load_name());
             bookmark.setObject(new Integer(pageno++));
             addElement(bookmark);
           }

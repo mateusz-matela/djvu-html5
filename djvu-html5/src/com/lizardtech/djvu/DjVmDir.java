@@ -144,19 +144,15 @@ public boolean isImageData()
    * Create a new instance of DjVmDir.File
    *
    * @param load_name the name used for loading
-   * @param save_name the name used for saving
-   * @param title the title
    * @param file_type the type of record
    *
    * @return the new instance of DjVmDir.File
    */
   public File createFile(
     final String load_name,
-    final String save_name,
-    final String title,
     final int    file_type)
   {
-    return new File(load_name, save_name, title, file_type);
+    return new File(load_name, file_type);
   }
 
   /**
@@ -308,20 +304,14 @@ public synchronized void decode(final CachedInputStream pool)
 
           if((file.flags & File.HAS_NAME) != 0)
           {
-            file.name = stringList.elementAt(stringNo++);
-          }
-          else
-          {
-            file.name = file.id;
+            // ignore the value
+            stringNo++;
           }
 
           if((file.flags & File.HAS_TITLE) != 0)
           {
-            file.title = stringList.elementAt(stringNo++);
-          }
-          else
-          {
-            file.title = file.id;
+            // ignore the value
+            stringNo++;
           }
         }
       }
@@ -683,12 +673,6 @@ public synchronized void decode(final CachedInputStream pool)
     /** The id, or load name of this file. */
     private String id = null;
 
-    /** The name, or save name of this file. */
-    private String name = null;
-
-    /** The title of this page. */
-    private String title = null;
-
     /** flags */
     private byte flags = 0;
 
@@ -706,22 +690,15 @@ public synchronized void decode(final CachedInputStream pool)
      * Creates a new File object.
      *
      * @param load_name the load name (id) of this file
-     * @param save_name the save name (name) of this file
-     * @param title the title of this file
      * @param file_type the type of file
      */
     public File(
       final String load_name,
-      final String save_name,
-      final String title,
       final int    file_type)
     {
       set_load_name(load_name);
-      set_save_name(save_name);
-      set_title(title);
       flags = (byte)(file_type & TYPE_MASK);
     }
-
     //~ Methods --------------------------------------------------------------
 
     /**
@@ -732,8 +709,6 @@ public synchronized void decode(final CachedInputStream pool)
       this.offset = toCopy.offset;
       this.size = toCopy.size;
       this.id = toCopy.id;
-      this.name = toCopy.name;
-      this.title = toCopy.title;
       this.flags = toCopy.flags;
       this.page_num = toCopy.page_num;
     }
@@ -746,30 +721,6 @@ public synchronized void decode(final CachedInputStream pool)
     public final String get_load_name()
     {
       return id;
-    }
-
-    /**
-     * Query the save name (name) of this file.
-     *
-     * @return the save name
-     */
-    public final String get_save_name()
-    {
-      return ((name != null) && (name.length() > 0))
-      ? name
-      : id;
-    }
-
-    /**
-     * Query the title of this file.
-     *
-     * @return the title
-     */
-    public final String get_title()
-    {
-      return ((title != null) && (title.length() > 0))
-      ? title
-      : id;
     }
 
     /**
@@ -870,29 +821,6 @@ public synchronized void decode(final CachedInputStream pool)
       this.id = (k != -1)
         ? id.substring(k)
         : id;
-    }
-
-    /**
-     * Set the title of this page.
-     *
-     * @param title the page title
-     */
-    public void set_title(final String title)
-    {
-      this.title = title;
-    }
-
-    /**
-     * Set the save name (name) of this file.
-     *
-     * @param name save name to use
-     */
-    protected void set_save_name(final String name)
-    {
-      int k = name.lastIndexOf('/');
-      this.name = (k != -1)
-        ? name.substring(k)
-        : name;
     }
   }
 }

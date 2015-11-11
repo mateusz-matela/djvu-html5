@@ -227,7 +227,7 @@ public class Document
 			@Override
 			public void inputReady() {
 				try {
-					insert_file(pool2, DjVmDir.File.INCLUDE, id, id);
+					insert_file(pool2, DjVmDir.File.INCLUDE, id);
 				} catch (IOException e) {
 					GWT.log("Could not init page", e);
 				}
@@ -236,7 +236,7 @@ public class Document
 			}
 		});
         if (pool.isReady())
-          insert_file(pool, DjVmDir.File.INCLUDE, id, id);
+          insert_file(pool, DjVmDir.File.INCLUDE, id);
       }
       else if(this.pool != null)
       {
@@ -284,7 +284,6 @@ public class Document
    *
    * @param pool data to add
    * @param file_type type of file to add
-   * @param name saved name 
    * @param id load name
    *
    * @throws IOException if an error occurs
@@ -292,12 +291,11 @@ public class Document
   public void insert_file(
     CachedInputStream pool,
     final int      file_type,
-    final String   name,
     final String   id)
     throws IOException
   {
     final DjVmDir.File file =
-      getDjVmDir().createFile(name, id, "", file_type);
+      getDjVmDir().createFile(id, file_type);
     if(file == null)
     {
       throw new IOException("No zero file.");
@@ -371,7 +369,7 @@ public class Document
         name = name.substring(s);
       }
 
-      insert_file(pool, DjVmDir.File.PAGE, name, name);
+      insert_file(pool, DjVmDir.File.PAGE, name);
     }
     else
     {
@@ -436,7 +434,7 @@ public class Document
     final CachedInputStream formStream = iff.nextElement();
     if(! "FORM:DJVM".equals(formStream.getName()))
     {
-      insert_file(data_pool, DjVmDir.File.PAGE, "noname.djvu", "noname.djvu");
+      insert_file(data_pool, DjVmDir.File.PAGE, "noname.djvu");
       return;
     }
 
