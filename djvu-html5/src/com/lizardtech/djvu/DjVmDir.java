@@ -45,8 +45,9 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Vector;
 
 
 /**
@@ -67,8 +68,6 @@ public final class DjVmDir
 
   private String initURL = null;
   private final HashMap<String, File> id2file = new HashMap<>();
-  private final HashMap<String, File> name2file = new HashMap<>();
-  private final HashMap<String, File> title2file = new HashMap<>();
   private final Vector<File> files_list = new Vector<>();
   private final Vector<File> page2file = new Vector<>();
 
@@ -110,50 +109,6 @@ public boolean isImageData()
   public String getInitURL()
   {
     return initURL;
-  }
-
-  /**
-   * Convert a relative url to a page number. The first page number is page
-   * 0.
-   *
-   * @param url The URL to convert
-   *
-   * @return the page number if found, otherwise -1
-   */
-  public int getPageno(final String url)
-  {
-    int retval = -1;
-
-    if((url != null) && (url.length() > 0))
-    {
-      if(url.charAt(0) == '#')
-      {
-        final String name = url.substring(1);
-
-        try
-        {
-          File file = id_to_file(name);
-
-          if(file == null)
-          {
-            file = name_to_file(name);
-
-            if(file == null)
-            {
-              file = title_to_file(name);
-            }
-          }
-
-          retval =
-            (file != null)
-            ? file.get_page_num()
-            : (Integer.parseInt(name) - 1);
-        }
-        catch(final Throwable ignored) {}
-      }
-    }
-
-    return retval;
   }
 
   /**
@@ -218,9 +173,7 @@ public synchronized void decode(final CachedInputStream pool)
     final CachedInputStream str = new CachedInputStream(pool);
     files_list.setSize(0);
     page2file.setSize(0);
-    name2file.clear();
     id2file.clear();
-    title2file.clear();
 
     int     ver     = str.read();
     boolean bundled = (ver & 0x80) != 0;
@@ -364,7 +317,7 @@ public synchronized void decode(final CachedInputStream pool)
 
           if((file.flags & File.HAS_TITLE) != 0)
           {
-            file.name = stringList.elementAt(stringNo++);
+            file.title = stringList.elementAt(stringNo++);
           }
           else
           {
@@ -404,19 +357,6 @@ public synchronized void decode(final CachedInputStream pool)
         }
       }
 
-      // Generate name2file map
-      for(int i = 0; i < files_list.size(); i++)
-      {
-        final File file = files_list.elementAt(i);
-
-        if(name2file.containsKey(file.name))
-        {
-          throw new IOException("DjVmDir.dupl_name " + file.name);
-        }
-
-        name2file.put(file.name, file);
-      }
-
       // Generate id2file map
       for(int i = 0; i < files_list.size(); i++)
       {
@@ -428,22 +368,6 @@ public synchronized void decode(final CachedInputStream pool)
         }
 
         id2file.put(file.id, file);
-      }
-
-      // Generate title2file map
-      for(int i = 0; i < files_list.size(); i++)
-      {
-        final File file = files_list.elementAt(i);
-
-        if((file.title != null) && (file.title.length() > 0))
-        {
-          if(title2file.containsKey(file.title))
-          {
-            throw new IOException("DjVmDir.dupl_title " + file.title);
-          }
-
-          title2file.put(file.title, file);
-        }
       }
   }
 
@@ -460,9 +384,7 @@ public synchronized void decode(final CachedInputStream pool)
 
       if(id.equals(f.id))
       {
-        name2file.remove(f.name);
         id2file.remove(f.id);
-        title2file.remove(f.title);
 
         if(f.is_page())
         {
@@ -633,24 +555,6 @@ public synchronized void decode(final CachedInputStream pool)
       throw new IOException("DjVmDir.dupl_id2 " + file.id);
     }
 
-    if(name2file.containsKey(file.name))
-    {
-      throw new IOException("DjVmDir.dupl_name2 " + file.name);
-    }
-
-    name2file.put(file.name, file);
-    id2file.put(file.id, file);
-
-    if(file.title.length() > 0)
-    {
-      if(title2file.containsKey(file.title))
-      {
-        throw new IOException("DjVmDir.dupl_title2 " + file.title);
-      }
-
-      title2file.put(file.title, file);
-    }
-
     // Make sure that there is no more than one file with shared annotations
     if(file.is_shared_anno())
     {
@@ -723,18 +627,6 @@ public synchronized void decode(final CachedInputStream pool)
   }
 
   /**
-   * Query the File mapped to name.
-   *
-   * @param name the name to look for
-   *
-   * @return the File or null
-   */
-  public synchronized File name_to_file(final String name)
-  {
-    return name2file.get(name);
-  }
-
-  /**
    * Query the File mapped to the specified page number.
    *
    * @param page_num the page number to look for
@@ -746,91 +638,6 @@ public synchronized void decode(final CachedInputStream pool)
     return (page_num < page2file.size())
     ? page2file.elementAt(page_num)
     : null;
-  }
-
-  /**
-   * Set the filename corresponding to an id.
-   *
-   * @param id the id to map
-   * @param name the name to map
-   *
-   * @throws IOException if an error occurs
-   */
-  public synchronized void set_file_name(
-    final String id,
-    final String name)
-    throws IOException
-  {
-    // First see, if the name is unique
-    for(int i = 0; i < files_list.size(); i++)
-    {
-      File file = files_list.elementAt(i);
-
-      if(!id.equals(file.id) && name.equals(file.name))
-      {
-        throw new IOException("DjVmDir.name_in_use " + name);
-      }
-    }
-
-    File file = id2file.get(id);
-
-    // Check if ID is valid
-    if(file == null)
-    {
-      throw new IOException("DjVmDir.no_info " + id);
-    }
-
-    name2file.remove(file.name);
-    file.name = name;
-    name2file.put(name, file);
-  }
-
-  /**
-   * Set the title corresponding to an id.
-   *
-   * @param id the id to map
-   * @param title the title to map to
-   *
-   * @throws IOException if an error occurs
-   */
-  public synchronized void set_file_title(
-    final String id,
-    final String title)
-    throws IOException
-  {
-    for(int i = 0; i < files_list.size(); i++)
-    {
-      File file = files_list.elementAt(i);
-
-      if(!id.equals(file.id) && title.equals(file.title))
-      {
-        throw new IOException("DjVmDir.title_in_use " + title);
-      }
-    }
-
-    // Check if ID is valid
-    File file = id2file.get(id);
-
-    if(file == null)
-    {
-      throw new IOException("DjVmDir.no_info " + id);
-    }
-
-    title2file.remove(file.title);
-    file.title = title;
-    title2file.put(title, file);
-  }
-
-  /**
-   * Find the DjVmDir.File with the specified title.
-   *
-   * @param title the title to search for
-   *
-   * @return the DjVmDir.File
-   */
-  public synchronized File title_to_file(final String title)
-  {
-    return title2file.get(title);
   }
 
   //~ Inner Classes ----------------------------------------------------------

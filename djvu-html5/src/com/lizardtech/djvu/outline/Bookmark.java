@@ -45,10 +45,14 @@
 //
 package com.lizardtech.djvu.outline;
 
-import com.lizardtech.djvu.*;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Vector;
 
-import java.io.*;
-import java.util.*;
+import com.lizardtech.djvu.CachedInputStream;
+import com.lizardtech.djvu.Codec;
+import com.lizardtech.djvu.DjVmDir;
+import com.lizardtech.djvu.DjVuOptions;
 
 
 /**
@@ -212,42 +216,6 @@ public boolean isImageData()
   public Object getObject()
   {
     return object;
-  }
-
-  /**
-   * Query the page number linked to this bookmark.
-   *
-   * @return the page number linked to this bookmark
-   */
-  public int getPageno()
-  {
-    final Object object = getObject();
-
-    if(object instanceof Number)
-    {
-      return ((Number)object).intValue();
-    }
-
-    if(!(object instanceof String))
-    {
-      return -1;
-    }
-
-    final DjVmDir djvmDir = getDjVmDir();
-
-    if(djvmDir == null)
-    {
-      return -1;
-    }
-
-    final int retval = djvmDir.getPageno((String)object);
-
-    if(retval >= 0)
-    {
-      setObject(new Integer(retval));
-    }
-
-    return retval;
   }
 
   /**

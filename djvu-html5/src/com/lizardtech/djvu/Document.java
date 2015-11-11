@@ -45,8 +45,10 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Vector;
 
 import com.google.gwt.core.shared.GWT;
 import com.lizardtech.djvu.DjVmDir.File;
@@ -164,19 +166,6 @@ public class Document
       }
 
     return page;
-  }
-
-  /**
-   * Convert a relative url to a page number. The first page number is page
-   * 0.
-   *
-   * @param url the relative url
-   *
-   * @return the page number
-   */
-  public int getPageno(final String url)
-  {
-    return getDjVmDir().getPageno(url);
   }
 
   /**
