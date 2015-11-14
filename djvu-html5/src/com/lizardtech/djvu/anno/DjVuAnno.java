@@ -45,9 +45,15 @@
 //
 package com.lizardtech.djvu.anno;
 
-import com.lizardtech.djvu.*;
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Vector;
+
+import com.lizardtech.djvu.BSInputStream;
+import com.lizardtech.djvu.CachedInputStream;
+import com.lizardtech.djvu.Codec;
+import com.lizardtech.djvu.GRect;
+import com.lizardtech.djvu.NumContext;
+import com.lizardtech.djvu.Utils;
 
 
 /**
@@ -290,49 +296,18 @@ public boolean isImageData()
    *
    * @param raw a buffer with the raw annotations
    */
-  public void setRaw(final StringBuffer raw)
+  public void setRaw(String raw)
   {
-    final String oldRaw = this.raw;
-    int          i = (raw != null)
-      ? raw.length()
-      : 0;
-
-    while(i > 0)
-    {
-      if(!Character.isSpace(raw.charAt(--i)))
-      {
-        ++i;
-
-        break;
-      }
-    }
-
-    if(i == 0)
+    raw = raw.trim();
+    if(raw.isEmpty())
     {
       this.raw = null;
     }
-    else
+    else if (!raw.equals(this.raw))
     {
-      raw.setLength(i);
-      this.raw = raw.toString();
-    }
-
-    if((oldRaw != this.raw) && ((oldRaw == null) || !oldRaw.equals(this.raw)))
-    {
+      this.raw = raw;
       decode(new LispParser(this.raw));
     }
-  }
-
-  /**
-   * Set the raw annotation string.
-   *
-   * @param raw The raw annotation.
-   */
-  public void setRaw(final String raw)
-  {
-    setRaw((raw != null)
-      ? (new StringBuffer(raw))
-      : null);
   }
 
   /**
@@ -1142,7 +1117,7 @@ public void decode(CachedInputStream input)
           StringBuffer str = new StringBuffer();
           char         ch = 0;
 
-          for(int esc = 0;; str.append(ch))
+          for(int esc = 0; pos < string.length() - 1; str.append(ch))
           {
             ch = string.charAt(++pos);
 
@@ -1175,33 +1150,14 @@ public void decode(CachedInputStream input)
         }
         default :
         {
-          StringBuffer str = new StringBuffer();
-          str.append(c);
-
-          for(;;)
-          {
-            final char ch = string.charAt(++pos);
-
-            if(ch == ')')
-            {
-              pos--;
-
-              break;
-            }
-
-            if(Character.isSpace(ch))
-            {
-              break;
-            }
-
-            str.append(ch);
-          }
-
-          start.set(pos + 1);
-
-          return new Token(
-            Token.OBJECT,
-            new Symbol(str.toString()));
+				int i = pos+1;
+				for (; i<string.length(); i++) {
+					char ch = string.charAt(i);
+					if (ch==')'|| Character.isSpace(ch))
+						break;
+				}
+				start.set(i);
+				return new Token(Token.OBJECT, new Symbol(string.substring(pos, i)));
         }
       }
     }
