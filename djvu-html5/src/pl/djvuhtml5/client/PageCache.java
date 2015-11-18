@@ -89,6 +89,8 @@ public class PageCache implements BackgroundProcessor.Operation {
 				if (page == null) {
 					GWT.log("Decoding page " + pageIndex);
 					page = uncodedPages[pageIndex] = document.getPage(pageIndex);
+					if (page == null)
+						return false; // not downloaded yet
 				}
 				if (page.decodeStep()) {
 					pages[pageIndex] = page;
