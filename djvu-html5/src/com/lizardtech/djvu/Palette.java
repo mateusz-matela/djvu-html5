@@ -45,8 +45,8 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.HashMap;
 
 
 /**
@@ -218,6 +218,10 @@ public void decode(final CachedInputStream pool)
 
         colordata[d] = s;
       }
+    }
+    else
+    {
+      colordata = new int[0];
     }
   }
 }
