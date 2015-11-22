@@ -1,78 +1,83 @@
 package pl.djvuhtml5.client;
 
-import java.util.ArrayList;
-
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
-import com.google.gwt.core.client.Scheduler.ScheduledCommand;
+import com.google.gwt.user.client.Window;
 
 public class BackgroundProcessor implements RepeatingCommand {
 
-	public static interface Operation {
-		int MAX_PRIORITY = 10;
-
-		boolean doOperation(int priority);
-	}
-
-	private ArrayList<Operation> operations = new ArrayList<>();
+	private final static int LAZY_MODE_INTERVAL = 400;
 
 	private boolean isRunning;
 
-	private boolean isPauseScheduled;
+	private boolean isInterruptScheduled;
 
-	public void addOperation(Operation operation) {
-		operations.add(operation);
-	}
+	private long lastInterrupt;
 
-	public void removeOperation(Operation operation) {
-		operations.remove(operation);
+	private final Djvu_html5 app;
+
+	/**
+	 * IE hangs while RepeatingCommand execution runs, so this mode interrupts from time to time
+	 * to allow GUI redrawing.
+	 */
+	private final boolean lazyMode;
+
+	public BackgroundProcessor(Djvu_html5 app) {
+		this.app = app;
+
+		String userAgent = Window.Navigator.getUserAgent();
+		lazyMode = userAgent.contains("msie") || userAgent.contains("trident");
 	}
 
 	public void start() {
-		if (!isRunning)
+		if (!isRunning) {
 			Scheduler.get().scheduleIncremental(this);
+			lastInterrupt = System.currentTimeMillis();
+			isInterruptScheduled = false;
+		}
 		isRunning = true;
 	}
 
 	@Override
 	public boolean execute() {
-		for (int p = 0; p < Operation.MAX_PRIORITY; p++) {
-			for (Operation operation : operations) {
-				boolean didSomething = operation.doOperation(p);
-				if (didSomething) {
-					if (isPauseScheduled) {
-						isPauseScheduled = false;
-						Scheduler.get().scheduleFixedDelay(new RepeatingCommand() {
-							
-							@Override
-							public boolean execute() {
-								Scheduler.get().scheduleIncremental(BackgroundProcessor.this);
-								return false;
-							}
-						}, 100);
-						return false;
-					}
-					if (p > 2) {
-						Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-							
-							@Override
-							public void execute() {
-								Scheduler.get().scheduleIncremental(BackgroundProcessor.this);
-							}
-						});
-						return false;
-					}
-					return true;
-				}
+		TileCache tileCache = app.getTileCache();
+		PageCache pageCache = app.getPageCache();
+		boolean didSomething = pageCache.decodePage(true)
+				|| tileCache.prefetchPreviews(false)
+				|| tileCache.prefetchCurrentView(0)
+				|| tileCache.prefetchPreviews(true)
+				|| pageCache.decodePage(false)
+				|| tileCache.prefetchAdjacent(0)
+				|| tileCache.prefetchCurrentView(1)
+				|| tileCache.prefetchCurrentView(-1)
+				|| tileCache.prefetchAdjacent(1)
+				|| tileCache.prefetchAdjacent(-1);
+		if (didSomething) {
+			if (lazyMode && lastInterrupt + LAZY_MODE_INTERVAL < System.currentTimeMillis()) {
+				isInterruptScheduled = true;
 			}
+			if (isInterruptScheduled) {
+				isInterruptScheduled = false;
+				lastInterrupt = System.currentTimeMillis();
+				Scheduler.get().scheduleFixedDelay(new RepeatingCommand() {
+					
+					@Override
+					public boolean execute() {
+						Scheduler.get().scheduleIncremental(BackgroundProcessor.this);
+						return false;
+					}
+				}, 50);
+				return false;
+			}
+			return true;
 		}
 		return isRunning = false;
 	}
 
-	public void pause() {
+	public void interrupt() {
 		if (!isRunning)
 			return;
-		isPauseScheduled = true;
+		isInterruptScheduled = true;
 	}
 
 }

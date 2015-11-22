@@ -24,7 +24,6 @@ import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.user.client.Event;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
-import com.lizardtech.djvu.Document;
 import com.lizardtech.djvu.GRect;
 
 import pl.djvuhtml5.client.PageCache.PageDownloadListener;
@@ -38,11 +37,15 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		void zoomChanged(int currentZoom);
 	}
 
+	private final Djvu_html5 app;
+
 	private double zoom = 0;
 
 	private double zoom100;
 
 	private int page = 0;
+
+	private final TileCache tileCache;
 
 	private DjVuInfo pageInfo;
 
@@ -52,15 +55,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	 */
 	private int centerX, centerY;
 
-	private final TileCache tileCache;
-
-	private final PageCache pageCache;
-
-	private final BackgroundProcessor backgroundProcessor;
-
 	private final Canvas canvas;
-
-	private final Toolbar toolbar;
 
 	private ChangeListener changeListener;
 
@@ -72,29 +67,29 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 	private GRect range = new GRect();
 
-	public SinglePageLayout(Canvas canvas, Toolbar toolbar, Document document) {
-		backgroundProcessor = new BackgroundProcessor();
-		this.pageCache = new PageCache(document, backgroundProcessor);
-		this.tileCache = new TileCache(pageCache, backgroundProcessor);
-		pageCache.addPageDownloadListener(this);
+	public SinglePageLayout(Djvu_html5 app) {
+		this.app = app;
+		this.tileCache = app.getTileCache();
+
+		app.getPageCache().addPageDownloadListener(this);
 		tileCache.addTileCacheListener(this);
-		this.canvas = canvas;
-		this.toolbar = toolbar;
 
-		this.background = DjvuContext.getBackground();
-		this.pageMargin = DjvuContext.getPageMargin();
+		this.canvas = app.getCanvas();
 
-		toolbar.setPageCount(pageCache.getPageCount());
+		this.background = app.getBackground();
+		this.pageMargin = app.getPageMargin();
+
+		app.getToolbar().setPageCount(app.getPageCache().getPageCount());
 
 		new PanController(canvas);
 	}
 
 	public void setPage(int pageNum) {
 		page = pageNum;
-		DjVuPage newPage = pageCache.fetchPage(pageNum);
+		DjVuPage newPage = app.getPageCache().fetchPage(pageNum);
 		if (newPage != null) {
 			pageInfo = newPage.getInfo();
-			toolbar.setZoomOptions(findZoomOptions());
+			app.getToolbar().setZoomOptions(findZoomOptions());
 			checkBounds();
 		} else {
 			pageInfo = null;
@@ -149,7 +144,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	private ArrayList<Integer> findZoomOptions() {
 		ArrayList<Integer> result = new ArrayList<>();
 		result.add(100);
-		final int screenDPI = DjvuContext.getScreenDPI();
+		final int screenDPI = app.getScreenDPI();
 		zoom100 = 1.0 * screenDPI / pageInfo.dpi;
 		int subsample = toSubsample(zoom100);
 		if (toZoom(subsample) / zoom100 > zoom100 / toZoom(subsample + 1))
@@ -343,7 +338,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 					changePage(0, -1, -1);
 					break;
 				case KeyCodes.KEY_END:
-					changePage(pageCache.getPageCount() - 1, 1, 1);
+					changePage(app.getPageCache().getPageCount() - 1, 1, 1);
 					break;
 				default:
 					handled = false;
@@ -380,7 +375,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		}
 
 		private void changePage(int targetPage, int horizontalPosition, int verticalPosition) {
-			if (targetPage >= 0 && targetPage < pageCache.getPageCount()) {
+			if (targetPage >= 0 && targetPage < app.getPageCache().getPageCount()) {
 				if (horizontalPosition < 0)
 					centerX = 0;
 				else if (horizontalPosition > 0)

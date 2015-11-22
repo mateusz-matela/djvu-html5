@@ -21,11 +21,13 @@ import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GMap;
 import com.lizardtech.djvu.GRect;
 
-public class TileCache implements BackgroundProcessor.Operation {
+public class TileCache {
 
 	public final static int MAX_SUBSAMPLE = 12;
 
 	private static final int PREFETCH_AGE = 500;
+
+	private final Djvu_html5 app;
 
 	public final int tileSize;
 
@@ -37,8 +39,6 @@ public class TileCache implements BackgroundProcessor.Operation {
 
 	/** All tiles of max subsample are stored here and will never be thrown away */
 	private final HashMap<TileInfo, CachedItem> smallCache = new HashMap<>();
-
-	private final BackgroundProcessor backgroundProcessor;
 
 	private ArrayList<TileCacheListener> listeners = new ArrayList<>();
 
@@ -54,13 +54,11 @@ public class TileCache implements BackgroundProcessor.Operation {
 	private int lastPageNum = -1, lastSubsample;
 	private final GRect lastRange = new GRect();
 
-	public TileCache(PageCache pageCache, BackgroundProcessor backgroundProcessor) {
-		this.pageCache = pageCache;
-		this.backgroundProcessor = backgroundProcessor;
-		this.tileCacheSize = DjvuContext.getTileCacheSize();
-		this.tileSize = DjvuContext.getTileSize();
-
-		backgroundProcessor.addOperation(this);
+	public TileCache(Djvu_html5 app) {
+		this.app = app;
+		this.pageCache = app.getPageCache();
+		this.tileCacheSize = app.getTileCacheSize();
+		this.tileSize = app.getTileSize();
 
 		missingTileImage = prepareMissingTileImage();
 
@@ -113,7 +111,7 @@ public class TileCache implements BackgroundProcessor.Operation {
 			lastSubsample = subsample;
 			lastRange.clear();
 			lastRange.recthull(lastRange, range);
-			backgroundProcessor.start();
+			app.startProcessing();
 		}
 
 		tempTI.page = pageNum;
@@ -211,31 +209,10 @@ public class TileCache implements BackgroundProcessor.Operation {
 		}
 	}
 
-	@Override
-	public boolean doOperation(int priority) {
-		if (lastPageNum < 0)
-			return false;
-		switch (priority) {
-		case 1:
-			return prefetchPreviews(lastPageNum);
-		case 2:
-			return prefetchCurrentView(lastPageNum);
-		case 3:
-			return prefetchPreviews(-1);
-		case 5:
-			return prefetchAdjacent(lastPageNum);
-		case 6:
-			return prefetchCurrentView(lastPageNum + 1) || prefetchCurrentView(lastPageNum - 1)
-					|| prefetchAdjacent(lastPageNum + 1) || prefetchAdjacent(lastPageNum - 1);
-		default:
-			return false;
-		}
-	}
-
-	private boolean prefetchPreviews(int singlePage) {
+	boolean prefetchPreviews(boolean all) {
 		tempTI.subsample = MAX_SUBSAMPLE;
-		int i = singlePage >= 0 ? singlePage : 0;
-		int limit = singlePage >= 0 ? singlePage + 1 : pageCache.getPageCount();
+		int i = all ? 0 : lastPageNum;
+		int limit = all ? pageCache.getPageCount() : lastPageNum + 1;
 		for (; i < limit; i++) {
 			DjVuPage page = pageCache.getPage(i);
 			if (page == null)
@@ -254,7 +231,8 @@ public class TileCache implements BackgroundProcessor.Operation {
 		return false;
 	}
 
-	private boolean prefetchCurrentView(int pageNum) {
+	boolean prefetchCurrentView(int pageDelta) {
+		int pageNum = lastPageNum + pageDelta;
 		if (pageNum < 0 || pageNum >= pageCache.getPageCount())
 			return false;
 		final DjVuPage page = pageCache.getPage(pageNum);
@@ -273,7 +251,8 @@ public class TileCache implements BackgroundProcessor.Operation {
 		return false;
 	}
 
-	private boolean prefetchAdjacent(int pageNum) {
+	boolean prefetchAdjacent(int pageDelta) {
+		int pageNum = lastPageNum + pageDelta;
 		if (pageNum < 0 || pageNum >= pageCache.getPageCount())
 			return false;
 		final DjVuPage page = pageCache.getPage(pageNum);
@@ -341,7 +320,7 @@ public class TileCache implements BackgroundProcessor.Operation {
 			TileInfo ti = new TileInfo(tileInfo);
 			for (TileCacheListener listener : listeners)
 				listener.tileAvailable(ti);
-			backgroundProcessor.pause();
+			app.interruptProcessing();
 		}
 		return true;
 	}

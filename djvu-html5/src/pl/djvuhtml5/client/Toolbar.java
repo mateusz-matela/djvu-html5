@@ -32,6 +32,8 @@ import pl.djvuhtml5.client.SinglePageLayout.ChangeListener;
 
 public class Toolbar extends FlowPanel {
 
+	private final Djvu_html5 app;
+
 	private SinglePageLayout pageLayout;
 
 	private List<Integer> zoomOptions = Arrays.asList(100);
@@ -42,10 +44,12 @@ public class Toolbar extends FlowPanel {
 
 	private final ComboBox pageCombo;
 
-	public Toolbar(Canvas canvas) {
+	public Toolbar(Djvu_html5 app) {
+		this.app = app;
+
 		setStyleName("toolbar");
 
-		new ToolBarHandler(this, canvas);
+		new ToolBarHandler(this, app.getCanvas());
 
 		zoomCombo = new ComboBox("buttonZoomOut", "buttonZoomIn") {
 
@@ -115,8 +119,8 @@ public class Toolbar extends FlowPanel {
 		for (int i : newZoomOptions) {
 			zoomSelection.addItem(i + "%");
 		}
-		zoomSelection.addItem(DjvuContext.getString("label_fitWidth", "Fit width"));
-		zoomSelection.addItem(DjvuContext.getString("label_fitPage", "Fit page"));
+		zoomSelection.addItem(app.getString("label_fitWidth", "Fit width"));
+		zoomSelection.addItem(app.getString("label_fitPage", "Fit page"));
 
 		if (previousIndex >= zoomOptions.size()) {
 			// either "fit with" or "fit page" was selected  
@@ -179,7 +183,7 @@ public class Toolbar extends FlowPanel {
 			zoomTextBox.selectAll();
 			return;
 		}
-		int zoom = Math.min(Integer.valueOf(digits), DjvuContext.getMaxZoom());
+		int zoom = Math.min(Integer.valueOf(digits), app.getMaxZoom());
 		zoom = Math.max(zoom, zoomOptions.get(zoomOptions.size() - 1));
 		zoomCombo.selection.setSelectedIndex(-1);
 		pageLayout.setZoom(zoom);

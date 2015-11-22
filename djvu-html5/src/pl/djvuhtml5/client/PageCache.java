@@ -11,11 +11,11 @@ import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
 import com.lizardtech.djvu.InputStateListener;
 
-public class PageCache implements BackgroundProcessor.Operation {
+public class PageCache {
+
+	private final Djvu_html5 app;
 
 	private final Document document;
-
-	private final BackgroundProcessor backgroundProcessor;
 
 	private final DjVuPage[] pages;
 
@@ -27,10 +27,10 @@ public class PageCache implements BackgroundProcessor.Operation {
 
 	private int lastRequestedPage = 0;
 
-	public PageCache(Document document, BackgroundProcessor backgroundProcessor) {
-		this.document = document;
-		this.backgroundProcessor = backgroundProcessor;
-		backgroundProcessor.addOperation(this);
+	public PageCache(Djvu_html5 app, String url) throws IOException {
+		this.app = app;
+		this.document = new Document();
+		document.read(url);
 		int pageCount = document.getDjVmDir().get_pages_num();
 		this.pages = new DjVuPage[pageCount];
 		this.uncodedPages = new DjVuPage[pageCount];
@@ -41,7 +41,7 @@ public class PageCache implements BackgroundProcessor.Operation {
 
 	private void startDownload() {
 		if (document.getDjVmDir().is_bundled()) {
-			backgroundProcessor.start();
+			app.startProcessing();
 			return;
 		}
 		for (int i = 0; i < pages.length; i++) {
@@ -54,32 +54,20 @@ public class PageCache implements BackgroundProcessor.Operation {
 
 					@Override
 					public void inputReady() {
-						backgroundProcessor.start();
+						app.startProcessing();
 						startDownload();
 					}
 				});
 				if (data == null || !data.isReady())
 					return;
-				backgroundProcessor.start();
+				app.startProcessing();
 			} catch (IOException e) {
 				Logger.getGlobal().log(Level.SEVERE, "Could not initiate download of page " + pageIndex, e);
 			}
 		}
 	}
 
-	@Override
-	public boolean doOperation(int priority) {
-		switch (priority) {
-		case 0:
-			return decodePage(true);
-		case 4:
-			return decodePage(false);
-		default:
-			return false;
-		}
-	}
-
-	private boolean decodePage(boolean currentOnly) {
+	boolean decodePage(boolean currentOnly) {
 		for (int i = 0; i < (currentOnly ? 1 : pages.length); i++) {
 			final int pageIndex = (lastRequestedPage + i) % pages.length;
 			if (pages[pageIndex] != null)
@@ -99,13 +87,11 @@ public class PageCache implements BackgroundProcessor.Operation {
 					}
 				}
 			} catch (IOException e) {
-				Logger.getGlobal().log(Level.SEVERE, "Error while decoding page " + pageIndex, e);
+				GWT.log("Error while decoding page " + pageIndex, e);
 				return false;
 			}
 			return true;
 		}
-		if (!currentOnly)
-			backgroundProcessor.removeOperation(this); // everything decoded
 		return false;
 	}
 
