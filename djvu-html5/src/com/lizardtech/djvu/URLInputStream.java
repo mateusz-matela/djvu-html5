@@ -46,14 +46,9 @@
 package com.lizardtech.djvu;
 
 import java.io.IOException;
-import java.util.*;
 
-import com.google.gwt.core.client.GWT;
-import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
-import com.google.gwt.xhr.client.ReadyStateChangeHandler;
-import com.google.gwt.xhr.client.XMLHttpRequest;
-import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
+import com.lizardtech.djvu.DataSource.ReadyListener;
 
 
 /**
@@ -71,11 +66,9 @@ public class URLInputStream extends InputStream
 
   /** The default size of each block. */
   public static final int BLOCKSIZE = 8192;
-    
-  /** Object for caching raw data. ! */
-  public static HashMap<String, Uint8Array> cache = new HashMap<>();
 
-  private static final HashMap<String, List<InputStateListener>> listeners = new HashMap<>();
+  /** Needs to be initialized before input streams can be used. */
+  public static DataSource dataSource;
 
   //~ Instance fields --------------------------------------------------------
 
@@ -113,61 +106,17 @@ public class URLInputStream extends InputStream
 	 * 
 	 * @return an initialized DataPool
 	 */
-	public URLInputStream init(final String url, final InputStateListener listener) {
-		data = cache.get(url);
-		if (data == null) {
-			startDownload(url);
-
-			if (listener != null) {
-				List<InputStateListener> listenersList = listeners.get(url);
-				if (listenersList == null) {
-					listeners.put(url, listenersList = new ArrayList<>());
-					listenersList.add(listener);
-				} else {
-					listenersList.add(new InputStateListener() {
-
-						@Override
-						public void inputReady() {
-							init(url, this);
-							listener.inputReady();
-						}
-					});
-				}
-			}
-		} else {
-			offset = 0;
-		}
-		return this;
-	}
-
-	private void startDownload(final String url) {
-		XMLHttpRequest request = XMLHttpRequest.create();
-		request.open("GET", url);
-		request.setResponseType(ResponseType.ArrayBuffer);
-		request.setOnReadyStateChange(new ReadyStateChangeHandler() {
-
+	public URLInputStream init(final String url, final ReadyListener listener) {
+		ReadyListener myListener = listener == null ? null : new ReadyListener() {
 			@Override
-			public void onReadyStateChange(XMLHttpRequest xhr) {
-				if (xhr.getReadyState() == XMLHttpRequest.DONE) {
-					if (xhr.getStatus() == 200) {
-						data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
-						cache.put(url, data);
-					} else {
-						GWT.log("Error downloading " + url);
-						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
-					}
-					fireReady(url);
-				}
+			public void dataReady() {
+				data = dataSource.getData(url, null);
+				listener.dataReady();
 			}
-		});
-		request.send();
-	}
-
-	protected void fireReady(String url) {
-		List<InputStateListener> listenersList = listeners.remove(url);
-		if (listenersList != null)
-			for (InputStateListener listener : listenersList)
-				listener.inputReady();
+		};
+		data = dataSource.getData(url, myListener);
+		offset = 0;
+		return this;
 	}
 
   public boolean isReady()

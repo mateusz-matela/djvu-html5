@@ -2,41 +2,68 @@ package pl.djvuhtml5.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.gwt.core.shared.GWT;
+import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.google.gwt.typedarrays.shared.Uint8Array;
+import com.google.gwt.xhr.client.ReadyStateChangeHandler;
+import com.google.gwt.xhr.client.XMLHttpRequest;
+import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
 import com.lizardtech.djvu.CachedInputStream;
+import com.lizardtech.djvu.DataSource;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
-import com.lizardtech.djvu.InputStateListener;
 
-public class PageCache {
+public class PageCache implements DataSource {
+
+	private static class FileItem {
+		public Uint8Array data;
+		public final List<ReadyListener> listeners = new ArrayList<>();
+	}
 
 	private final Djvu_html5 app;
 
-	private final Document document;
-
-	private final DjVuPage[] pages;
-
-	private final DjVuPage[] uncodedPages;
+	private Document document;
 	
-	private final boolean[] downloadStarted;
+	private final HashMap<String, FileItem> fileCache = new HashMap<>();
+
+	private DjVuPage[] pages;
+
+	private DjVuPage[] uncodedPages;
+	
+	private boolean[] downloadStarted;
 
 	private final ArrayList<PageDownloadListener> listeners = new ArrayList<>();
 
 	private int lastRequestedPage = 0;
 
-	public PageCache(Djvu_html5 app, String url) throws IOException {
+	public PageCache(final Djvu_html5 app, final String url) {
 		this.app = app;
-		this.document = new Document();
-		document.read(url);
-		int pageCount = document.getDjVmDir().get_pages_num();
-		this.pages = new DjVuPage[pageCount];
-		this.uncodedPages = new DjVuPage[pageCount];
-		this.downloadStarted = new boolean[pageCount];
 
-		startDownload();
+		getData(url, new ReadyListener() {
+			
+			@Override
+			public void dataReady() {
+				try {
+					document = new Document();
+					document.read(url);
+					int pageCount = document.getDjVmDir().get_pages_num();
+					pages = new DjVuPage[pageCount];
+					uncodedPages = new DjVuPage[pageCount];
+					downloadStarted = new boolean[pageCount];
+
+					app.getToolbar().setPageCount(pageCount);
+
+					startDownload();
+				} catch (IOException e) {
+					Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
+				}
+			}
+		});
 	}
 
 	private void startDownload() {
@@ -50,10 +77,10 @@ public class PageCache {
 				continue;
 			downloadStarted[pageIndex] = true;
 			try {
-				CachedInputStream data = document.get_data(pageIndex, new InputStateListener() {
+				CachedInputStream data = document.get_data(pageIndex, new ReadyListener() {
 
 					@Override
-					public void inputReady() {
+					public void dataReady() {
 						app.startProcessing();
 						startDownload();
 					}
@@ -107,6 +134,52 @@ public class PageCache {
 
 	public DjVuPage getPage(int number) {
 		return pages[number];
+	}
+
+	@Override
+	public Uint8Array getData(String url, ReadyListener listener) {
+		FileItem entry = fileCache.get(url);
+		if (entry == null)
+			fileCache.put(url, entry = new FileItem());
+		if (entry.data == null && listener != null) {
+			downloadFile(url);
+			entry.listeners.add(listener);
+		}
+		return entry.data;
+	}
+
+	private void downloadFile(final String url) {
+		XMLHttpRequest request = XMLHttpRequest.create();
+		request.open("GET", url);
+		request.setResponseType(ResponseType.ArrayBuffer);
+		request.setOnReadyStateChange(new ReadyStateChangeHandler() {
+
+			@Override
+			public void onReadyStateChange(XMLHttpRequest xhr) {
+				if (xhr.getReadyState() == XMLHttpRequest.DONE) {
+					if (xhr.getStatus() == 200) {
+						FileItem entry = fileCache.get(url);
+						if (entry == null)
+							fileCache.put(url, entry = new FileItem());
+						entry.data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
+					} else {
+						GWT.log("Error downloading " + url);
+						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
+					}
+					fireReady(url);
+				}
+			}
+		});
+		request.send();
+	}
+
+	protected void fireReady(String url) {
+		FileItem entry = fileCache.get(url);
+		if (entry == null)
+			return;
+		for (ReadyListener listener : entry.listeners)
+			listener.dataReady();
+		entry.listeners.clear();
 	}
 
 	public void addPageDownloadListener(PageDownloadListener listener) {

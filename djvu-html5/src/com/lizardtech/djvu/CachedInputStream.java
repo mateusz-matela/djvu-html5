@@ -47,6 +47,8 @@ package com.lizardtech.djvu;
 
 import java.io.IOException;
 
+import com.lizardtech.djvu.DataSource.ReadyListener;
+
   /**
  * This class is an InputStream which spans some of the accessable data in a
  * DataPool object.
@@ -114,7 +116,7 @@ public class CachedInputStream
      *
      * @return the initialized stream
      */
-	public CachedInputStream init(final String url, InputStateListener listener) {
+	public CachedInputStream init(final String url, ReadyListener listener) {
 		wrapped = new URLInputStream().init(url, listener);
 		offset = 0;
 		endOffset = Integer.MAX_VALUE;

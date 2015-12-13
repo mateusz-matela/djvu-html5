@@ -1,9 +1,5 @@
 package pl.djvuhtml5.client;
 
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -15,8 +11,7 @@ import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
-import com.lizardtech.djvu.CachedInputStream;
-import com.lizardtech.djvu.InputStateListener;
+import com.lizardtech.djvu.URLInputStream;
 
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
@@ -60,13 +55,14 @@ public class Djvu_html5 implements EntryPoint {
 			return;
 		}
 
-		new CachedInputStream().init(url, new InputStateListener() {
+		pageCache = new PageCache(this, url);
+		URLInputStream.dataSource = pageCache;
 
-			@Override
-			public void inputReady() {
-				initDocumentDisplay();
-			}
-		});
+		backgroundProcessor = new BackgroundProcessor(this);
+		
+		tileCache = new TileCache(this);
+		pageLayout = new SinglePageLayout(this);
+		toolbar.setPageLayout(pageLayout);
 	}
 
 	private Widget prepareCanvas() {
@@ -107,18 +103,6 @@ public class Djvu_html5 implements EntryPoint {
 		canvas.setCoordinateSpaceHeight(height);
 		if (pageLayout != null)
 			pageLayout.canvasResized();
-	}
-
-	private void initDocumentDisplay() {
-		try {
-			backgroundProcessor = new BackgroundProcessor(this);
-			pageCache = new PageCache(this, url);
-			tileCache = new TileCache(this);
-			pageLayout = new SinglePageLayout(this);
-			toolbar.setPageLayout(pageLayout);
-		} catch (IOException e) {
-			Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
-		}
 	}
 
 	public Canvas getCanvas() {

@@ -79,8 +79,6 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		this.background = app.getBackground();
 		this.pageMargin = app.getPageMargin();
 
-		app.getToolbar().setPageCount(app.getPageCache().getPageCount());
-
 		new PanController(canvas);
 	}
 

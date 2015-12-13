@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.Vector;
 
 import com.google.gwt.core.shared.GWT;
+import com.lizardtech.djvu.DataSource.ReadyListener;
 import com.lizardtech.djvu.DjVmDir.File;
 import com.lizardtech.djvu.outline.Bookmark;
 
@@ -197,7 +198,7 @@ public class Document
    *
    * @throws IOException if an error occurs
    */
-  public CachedInputStream get_data(final String id, final InputStateListener listener)
+  public CachedInputStream get_data(final String id, final ReadyListener listener)
     throws IOException
   {
     if(id == null)
@@ -222,17 +223,17 @@ public class Document
 
         final String fileurl = Utils.url(initURL, id);
         final CachedInputStream pool2 = pool = new CachedInputStream();
-        pool.init(fileurl,new InputStateListener() {
+        pool.init(fileurl, new ReadyListener() {
 			
 			@Override
-			public void inputReady() {
+			public void dataReady() {
 				try {
 					insert_file(pool2, DjVmDir.File.INCLUDE, id);
 				} catch (IOException e) {
 					GWT.log("Could not init page", e);
 				}
 				if (listener != null)
-					listener.inputReady();
+					listener.dataReady();
 			}
 		});
         if (pool.isReady())
@@ -273,7 +274,7 @@ public class Document
    *
    * @throws IOException if an error occurs
    */
-  public CachedInputStream get_data(final int page_num, InputStateListener listener)
+  public CachedInputStream get_data(final int page_num, ReadyListener listener)
     throws IOException
   {
     return get_data(getDjVmDir().page_to_file(page_num).get_load_name(), listener);
