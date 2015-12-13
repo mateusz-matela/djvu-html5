@@ -171,7 +171,7 @@ public class DjVuPage
    * A reference to the foreground pixmap.  This will be regenerated if the
    * if the garbage collector removes it.
    */
-  private Object fgPixmapReference = null;
+  private GPixmap fgPixmapReference = null;
 
   private ArrayList<IFFEnumeration> chunksToDecode = new ArrayList<>();
 
@@ -477,7 +477,7 @@ public class DjVuPage
    */
   public GPixmap getFgPixmap()
   {
-	GPixmap fgPixmap = (GPixmap)fgPixmapReference;
+	GPixmap fgPixmap = fgPixmapReference;
 
     if(fgPixmap == null)
     {
@@ -487,7 +487,7 @@ public class DjVuPage
       {
         synchronized(fgIWPixmapLock)
         {
-		fgPixmap = (GPixmap)fgPixmapReference;
+		fgPixmap = fgPixmapReference;
 
           if(fgPixmap == null)
           {

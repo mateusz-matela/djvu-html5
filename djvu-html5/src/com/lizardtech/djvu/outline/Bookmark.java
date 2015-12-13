@@ -46,12 +46,10 @@
 package com.lizardtech.djvu.outline;
 
 import java.io.IOException;
-import java.util.Enumeration;
-import java.util.Vector;
+import java.util.ArrayList;
 
 import com.lizardtech.djvu.CachedInputStream;
 import com.lizardtech.djvu.Codec;
-import com.lizardtech.djvu.DjVmDir;
 import com.lizardtech.djvu.DjVuOptions;
 
 
@@ -67,20 +65,14 @@ public class Bookmark
 {
   //~ Instance fields --------------------------------------------------------
 
-  // DjVmDir object
-  private DjVmDir djvmDir = null;
-
-  // Object: If String relative or blank url.  If Number, page number.
-  private Object object = null;
+  /** grelative or blank url. */
+  private String url = null;
 
   // example:  "Section 3.5 - Encryption"
   private String  displayName             = null;
   
   // The childen for this bookmark
-  private Vector  children                = new Vector();
-  
-  // True if the URL should be used as the display name.
-  private boolean urlAsDefaultDisplayName = false;
+  private ArrayList<Bookmark> children = new ArrayList<>();
 
   // indicates if this bookmark is valid
   private boolean valid = true;
@@ -103,7 +95,7 @@ public boolean isImageData()
    *
    * @return the Vector of children
    */
-  public Vector getChildren()
+  public ArrayList<Bookmark> getChildren()
   {
     return children;
   }
@@ -125,77 +117,7 @@ public boolean isImageData()
    */
   public String getDisplayName()
   {
-    String retval = displayName;
-
-    if((retval == null) && urlAsDefaultDisplayName)
-    {
-      final DjVmDir djvmDir = getDjVmDir();
-
-      if(djvmDir != null)
-      {
-        Object url = djvmDir.getInitURL();
-
-        if(url != null)
-        {
-          retval = url.toString();
-
-          final int i = retval.lastIndexOf('/');
-
-          if(i >= 0)
-          {
-            retval = retval.substring(i + 1);
-          }
-        }
-      }
-    }
-
-    return retval;
-  }
-
-  /**
-   * Set the document directory.
-   *
-   * @param djvmDir the document directory
-   */
-  public void setDjVmDir(final DjVmDir djvmDir)
-  {
-    if(djvmDir != null)
-    {
-      if(size() == 0)
-      {
-        urlAsDefaultDisplayName = true;
-
-        int          pageno     = 0;
-        final Vector files_list = djvmDir.get_files_list();
-
-        for(Enumeration e = files_list.elements(); e.hasMoreElements();)
-        {
-          final Bookmark bookmark = new Bookmark();
-          DjVmDir.File   file = (DjVmDir.File)e.nextElement();
-
-          if(file.is_page())
-          {
-            bookmark.setDisplayName(file.get_load_name());
-            bookmark.setObject(new Integer(pageno++));
-            addElement(bookmark);
-          }
-        }
-      }
-    }
-
-    setDjVmDir(
-      djvmDir,
-      elements());
-  }
-
-  /**
-   * Query the document directory.
-   *
-   * @return the document directory.
-   */
-  public DjVmDir getDjVmDir()
-  {
-    return djvmDir;
+    return displayName;
   }
 
   /**
@@ -203,9 +125,9 @@ public boolean isImageData()
    *
    * @param object associated object
    */
-  public void setObject(final Object object)
+  public void setObject(final String object)
   {
-    this.object = object;
+    this.url = object;
   }
 
   /**
@@ -213,9 +135,9 @@ public boolean isImageData()
    *
    * @return the object associated with this bookmark
    */
-  public Object getObject()
+  public String getObject()
   {
-    return object;
+    return url;
   }
 
   /**
@@ -225,19 +147,7 @@ public boolean isImageData()
    */
   public void addElement(final Bookmark child)
   {
-    getChildren().addElement(child);
-  }
-
-  /**
-   * Sets the size of this vector.
-   *
-   * @param size DOCUMENT ME!
-   */
-  public synchronized void setSize(final int size)
-  {
-    setValid(false);
-    getChildren().setSize(size);
-    setValid(true);
+    getChildren().add(child);
   }
 
   /**
@@ -268,7 +178,7 @@ public boolean isImageData()
   @Override
 public void decode(final CachedInputStream input)
   {
-    setSize(0);
+    children.clear();
     setObject(null);
     setDisplayName(null);
     setValid(false);
@@ -299,27 +209,7 @@ public void decode(final CachedInputStream input)
    */
   public Bookmark elementAt(final int item)
   {
-    return (Bookmark)getChildren().elementAt(item);
-  }
-
-  /**
-   * Query the Enumeration of childen.
-   *
-   * @return the Enumeration of childen
-   */
-  public Enumeration elements()
-  {
-    return getChildren().elements();
-  }
-
-  /**
-   * Query the number of children.
-   *
-   * @return the number of children
-   */
-  public int size()
-  {
-    return getChildren().size();
+    return children.get(item);
   }
 
   /**
@@ -327,12 +217,12 @@ public void decode(final CachedInputStream input)
    */
   protected void flatten()
   {
-    for(Enumeration e = elements(); e.hasMoreElements();)
+    for(Bookmark child : children)
     {
-      ((Bookmark)e.nextElement()).flatten();
+      child.flatten();
     }
 
-    while(size() == 1)
+    while(children.size() == 1)
     {
       final String   displayName = getDisplayName();
       final Bookmark child = elementAt(0);
@@ -347,28 +237,8 @@ public void decode(final CachedInputStream input)
         break;
       }
 
-      setSize(0);
-
-      for(Enumeration e = child.elements(); e.hasMoreElements();)
-      {
-        addElement((Bookmark)e.nextElement());
-      }
-    }
-  }
-
-  // Set the document directory and all the bookmarks with an Enumeration.
-  private void setDjVmDir(
-    final DjVmDir     djvmDir,
-    final Enumeration e)
-  {
-    this.djvmDir = djvmDir;
-
-    while(e.hasMoreElements())
-    {
-      final Bookmark bookmark = (Bookmark)e.nextElement();
-      bookmark.setDjVmDir(
-        djvmDir,
-        bookmark.elements());
+      children.clear();
+      children.addAll(child.getChildren());
     }
   }
 
