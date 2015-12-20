@@ -385,7 +385,7 @@ public final int getRowSize()
 
     if(npixels > 0)
     {
-		setImageData(bufferCanvas[0].getContext2d().createImageData(rowSize, nrows + 3));
+		setImageData(imageDataFactory.createImageData(rowSize, nrows + 3));
     }
 
     return this;

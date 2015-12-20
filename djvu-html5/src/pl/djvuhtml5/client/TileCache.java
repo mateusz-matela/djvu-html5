@@ -63,6 +63,8 @@ public class TileCache {
 		missingTileImage = prepareMissingTileImage();
 
 		bufferCanvas = new CachedItem(tileSize, tileSize).image;
+
+		GMap.imageDataFactory = app.getCanvas().getContext2d();
 	}
 
 	private CanvasElement prepareMissingTileImage() {

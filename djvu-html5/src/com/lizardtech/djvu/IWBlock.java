@@ -46,6 +46,7 @@
 package com.lizardtech.djvu;
 
 import com.google.gwt.typedarrays.shared.Int16Array;
+import com.google.gwt.typedarrays.shared.TypedArrays;
 
 
 /**
@@ -128,6 +129,8 @@ final class IWBlock
     495, 511, 1007, 1023
   };
 
+  private static final Int16Array zeros = TypedArrays.createInt16Array(1024);
+
   //~ Instance fields --------------------------------------------------------
 
   /** the data structure for this block */
@@ -195,10 +198,7 @@ final class IWBlock
   {
     int n = bmin << 4;
 
-    for(int i = 0; i < 1024; i++)
-    {
-      coeff.set(i, 0);
-    }
+    coeff.set(zeros);
 
     for(int n1 = bmin; n1 < bmax; n1++)
     {
@@ -217,20 +217,6 @@ final class IWBlock
           n++;
         }
       }
-    }
-  }
-
-  /**
-   * Zero a block of data
-   *
-   * @param n position to zero
-   */
-  void clearBlock(int n)
-  {
-    final int nms=n>>4;
-    if(pdata[nms] != null)
-    {
-      pdata[nms][n & 0xf] = null;
     }
   }
 }

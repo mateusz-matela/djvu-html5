@@ -45,9 +45,8 @@
 //
 package com.lizardtech.djvu;
 
-import java.util.*;
+import java.util.HashMap;
 
-import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.typedarrays.shared.TypedArrays;
@@ -64,10 +63,8 @@ public abstract class GMap
   //~ Instance fields --------------------------------------------------------
 
 	protected static int BYTES_PER_PIXEL = 4;
-	protected static int BUFFER_COUNT = 2;
 
-	protected static Canvas[] bufferCanvas = new Canvas[BUFFER_COUNT];
-	protected static GMap[] currentBufferContent = new GMap[BUFFER_COUNT];
+	public static Context2d imageDataFactory;
 
 	protected Uint8Array data;
 	protected ImageData imageData;
@@ -108,12 +105,6 @@ public abstract class GMap
     this.redOffset=redOffset;
     this.greenOffset=greenOffset;
     this.blueOffset=blueOffset;
-
-    if (bufferCanvas[0] == null) {
-    	for (int i = 0 ; i < BUFFER_COUNT; i++) {
-	    	bufferCanvas[i] = Canvas.createIfSupported();
-    	}
-    }
   }
   
   //~ Methods ----------------------------------------------------------------
@@ -142,23 +133,6 @@ public abstract class GMap
    * Puts this bitmap's data on on given canvas context, at position {@code (0,0)}.
    */
   public abstract void putData(Context2d target);
-
-  protected Canvas takeBuffer(int number) {
-	  Canvas canvas = bufferCanvas[number];
-	  if (canvas.getCoordinateSpaceWidth() < ncolumns) {
-		  canvas.setWidth(ncolumns + "px");
-		  canvas.setCoordinateSpaceWidth(ncolumns);
-	  }
-	  if (canvas.getCoordinateSpaceHeight() < nrows) {
-		  canvas.setHeight(nrows + "px");
-		  canvas.setCoordinateSpaceHeight(nrows);
-	  }
-	  if (currentBufferContent[number] != this) {
-		  putData(canvas.getContext2d());
-		  currentBufferContent[number] = this;
-	  }
-	  return canvas;
-  }
 
   protected void setImageData(ImageData imageData) {
 	  this.imageData = imageData;

@@ -46,7 +46,6 @@
 package com.lizardtech.djvu;
 
 import java.io.IOException;
-import java.util.HashMap;
 
 
 /**
@@ -72,9 +71,6 @@ public class Palette
    */
   public int[] colordata = null;
 
-  /** DOCUMENT ME! */
-  private final HashMap<Integer, Integer> pmap = new HashMap<>();
-
   // Quantization data
   private GPixel[] palette = null;
 
@@ -97,16 +93,6 @@ public boolean isImageData()
   { 
       return true;
   }  
-
-  /**
-   * DOCUMENT ME!
-   *
-   * @param palette DOCUMENT ME!
-   */
-  public void setPalette(final GPixel[] palette)
-  {
-    this.palette = palette;
-  }
 
   /**
    * DOCUMENT ME!
@@ -157,9 +143,6 @@ public void decode(final CachedInputStream pool)
   {
     final CachedInputStream input = new CachedInputStream(pool);
 
-    // Make sure that everything is clear
-    pmap.clear();
-
     // Code version
     int version = input.read();
 
@@ -177,7 +160,7 @@ public void decode(final CachedInputStream pool)
       throw new IOException("Bad palette size " + palettesize);
     }
 
-    final GPixel[] palette = new GPixel[palettesize];
+    palette = new GPixel[palettesize];
 
     for(int c = 0; c < palettesize; c++)
     {
@@ -186,8 +169,6 @@ public void decode(final CachedInputStream pool)
       final byte r = (byte)input.read();
       palette[c] = new GPixel(b, g, r);
     }
-
-    setPalette(palette);
 
     // Code data
     if((version & 0x80) != 0)

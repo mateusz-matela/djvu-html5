@@ -45,8 +45,8 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Vector;
 
 
 /**
@@ -253,11 +253,5 @@ public final JB2Decode decodeStart(final CachedInputStream pool)
 
     inherited_dict     = dict;
     inherited_shapes   = dict.get_shape_count();
-
-//    for (int i=0; i<inherited_shapes; i++)
-//    {
-//      JB2Shape jshp = dict.get_shape(i);
-//      if (jshp.bits != null) jshp.bits.share();
-//    }
   }
 }

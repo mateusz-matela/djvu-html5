@@ -45,8 +45,8 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.Vector;
 
 
 /**
@@ -109,9 +109,8 @@ public class JB2Image
     bm.init(sheight, swidth, 0);
     bm.setGrays(1 + (subsample * subsample));
 
-    for(int blitno = 0; blitno < get_blit_count();)
+    for(JB2Blit pblit : blits)
     {
-      final JB2Blit  pblit  = get_blit(blitno++);
       final JB2Shape pshape = get_shape(pblit.shapeno());
 
       if(pshape.getGBitmap() != null)

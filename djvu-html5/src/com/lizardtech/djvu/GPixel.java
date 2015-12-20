@@ -58,21 +58,6 @@ public class GPixel
   /** A white pixel. */
   public static final GPixel WHITE = new GPixel((byte)-1, (byte)-1, (byte)-1);
 
-  /** A black pixel. */
-  public static final GPixel BLACK = new GPixel((byte)0, (byte)0, (byte)0);
-
-  /** A blue pixel. */
-  public static final GPixel BLUE = new GPixel((byte)0, (byte)0, (byte)-1);
-
-  /** A green pixel. */
-  public static final GPixel GREEN = new GPixel((byte)0, (byte)-1, (byte)0);
-
-  /** A red pixel. */
-  public static final GPixel RED = new GPixel((byte)-1, (byte)0, (byte)0);
-
-  /** Number of colors in a pixel.  */
-  public static final int NUMELEMS = 3;
-
   //~ Instance fields --------------------------------------------------------
 
   private byte blue;

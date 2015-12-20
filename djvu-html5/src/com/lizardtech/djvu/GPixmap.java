@@ -671,7 +671,7 @@ public class GPixmap
     {
       if(data == null)
       {
-    	  setImageData(bufferCanvas[0].getContext2d().createImageData(ncolumns, nrows));
+    	  setImageData(imageDataFactory.createImageData(ncolumns, nrows));
     	  if (filler == null) {
     		  for (int i = 0; i < npix; i++)
     			  data.set(i * ncolors + 3, 0xFF);
