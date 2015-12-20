@@ -141,9 +141,6 @@ public class DjVuPage
   /** Lock used for accessing the background IWPixmap codec. */
   public final Object bgIWPixmapLock = new String("bgIWPixmap");
 
-  /** Lock used for accessing the foreground IWPixmap codec. */
-  public final Object fgIWPixmapLock = new String("fgIWPixmap");
-
   /** Lock used for accessing the foreground JB2Dict codec. */
   public final Object fgJb2DictLock = new String("fgJb2Dict");
 
@@ -177,11 +174,7 @@ public class DjVuPage
    */
   private HashMap<Object, Codec> codecTable = new HashMap<>();
 
-  /**
-   * A reference to the foreground pixmap.  This will be regenerated if the
-   * if the garbage collector removes it.
-   */
-  private GPixmap fgPixmapReference = null;
+  private GPixmap fgPixmap = null;
 
   private ArrayList<IFFEnumeration> chunksToDecode = new ArrayList<>();
 
@@ -439,17 +432,6 @@ public class DjVuPage
   }
 
   /**
-   * Query the foreground IWPixmap for this page.
-   *
-   * @return The foreground IWPixmap for this page.
-   */
-  public IWPixmap getFgIWPixmap()
-  {
-    // There is no need to synchronize since we won't access data which could be updated.
-    return (IWPixmap)codecTable.get(fgIWPixmapLock);
-  }
-
-  /**
    * Query the foreground Jb2 codec for this page.
    *
    * @return the foreground Jb2 codec for this page.
@@ -480,37 +462,6 @@ public class DjVuPage
   {
     // There is no need to synchronize since we won't access data which could be updated.
     return (Palette)codecTable.get(fgPaletteLock);
-  }
-
-  /**
-   * Query the foreground pixmap for this page.
-   *
-   * @return The foreground pixmap for this page.
-   */
-  public GPixmap getFgPixmap()
-  {
-	GPixmap fgPixmap = fgPixmapReference;
-
-    if(fgPixmap == null)
-    {
-      final IWPixmap fgIWPixmap = getFgIWPixmap();
-
-      if(fgIWPixmap != null)
-      {
-        synchronized(fgIWPixmapLock)
-        {
-		fgPixmap = fgPixmapReference;
-
-          if(fgPixmap == null)
-          {
-            fgPixmap            = fgIWPixmap.getPixmap();
-            fgPixmapReference   = fgPixmap;
-          }
-        }
-      }
-    }
-
-    return fgPixmap;
   }
 
   /**
@@ -626,7 +577,7 @@ public class DjVuPage
     }
 
     return hasCodec(bgIWPixmapLock) && !hasCodec(fgJb2Lock)
-    && !hasCodec(fgIWPixmapLock);
+    && fgPixmap == null;
   }
 
   /**
@@ -777,7 +728,7 @@ public class DjVuPage
       return false;
     }
 
-    return !(hasCodec(bgIWPixmapLock) || hasCodec(fgIWPixmapLock)
+    return !(hasCodec(bgIWPixmapLock) || fgPixmap != null
     || hasCodec(fgPaletteLock));
   }
 
@@ -831,9 +782,8 @@ public class DjVuPage
 
     int fgred = 0;
 
-    if(hasCodec(fgIWPixmapLock))
+    if(fgPixmap != null)
     {
-      final GPixmap fgPixmap = getFgPixmap();
       fgred = compute_red(
           width,
           height,
@@ -979,16 +929,13 @@ public class DjVuPage
         return true;
       }
 
-      // Three layer model.
-      final IWPixmap fgIWPixmap = getFgIWPixmap();
 
-      if(fgIWPixmap != null)
+      if(fgPixmap != null)
       {
         GBitmap bm = getBitmap(rect, subsample);
 
         if((bm != null) && (pm != null))
         {
-          final GPixmap fgPixmap = getFgPixmap();
           int           w   = fgPixmap.columns();
           int           h   = fgPixmap.rows();
           int           red = compute_red(width, height, w, h);
@@ -1107,7 +1054,7 @@ public class DjVuPage
         }
         else if(chkid.equals("FGbz"))
         {
-          if(hasCodec(fgIWPixmapLock))
+          if(fgPixmap != null)
           {
             throw new IllegalStateException("Duplicate foreground");
           }
@@ -1171,11 +1118,11 @@ public class DjVuPage
             throw new IllegalStateException(
               "DjVu Decoder: Corrupted data (Duplicate foreground layer)");
           }
-
-          addCodecChunk(
-            fgIWPixmapLock,
-            new IWPixmap(),
-            iff);
+          if (fgPixmap != null)
+        	  throw new IllegalStateException("DjVu Decoder: Corrupted data (Duplicate foreground layer)");
+          IWPixmap fgIWPixmap = new IWPixmap();
+          fgIWPixmap.decode(iff);
+          fgPixmap = fgIWPixmap.getPixmap();
         }
         else if(chkid.equals("BG2k"))
         {
@@ -1187,7 +1134,7 @@ public class DjVuPage
         }
         else if(chkid.equals("FG2k"))
         {
-          if(hasCodec(fgIWPixmapLock) || hasCodec(fgPaletteLock))
+          if(fgPixmap != null || hasCodec(fgPaletteLock))
           {
             throw new IllegalStateException(
               "DjVu Decoder: Corrupted data (Duplicate foreground layer)");
@@ -1209,7 +1156,7 @@ public class DjVuPage
               "DjVu Decoder: Corrupted data (Duplicate background layer)");
           }
         }
-        else if(chkid.equals("FGjp") && hasCodec(fgIWPixmapLock))
+        else if(chkid.equals("FGjp") && fgPixmap != null)
         {
           throw new IllegalStateException(
             "DjVu Decoder: Corrupted data (Duplicate foreground layer)");
