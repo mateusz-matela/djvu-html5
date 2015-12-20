@@ -212,6 +212,8 @@ public class TileCache {
 	}
 
 	boolean prefetchPreviews(boolean all) {
+		if (lastPageNum < 0)
+			return false;
 		tempTI.subsample = MAX_SUBSAMPLE;
 		int i = all ? 0 : lastPageNum;
 		int limit = all ? pageCache.getPageCount() : lastPageNum + 1;
