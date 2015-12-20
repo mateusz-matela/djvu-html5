@@ -112,6 +112,14 @@ import com.lizardtech.djvu.text.DjVuText;
  */
 public class DjVuPage
 {
+	private static class CodecInclude {
+		public Object lock;
+		public Codec codec;
+		public CodecInclude(Object lock, Codec codec) {
+			this.lock = lock;
+			this.codec = codec;
+		}
+	}
   //~ Static fields/initializers ---------------------------------------------
 
   /** This is the version of DjVu this code was written for. */
@@ -122,6 +130,8 @@ public class DjVuPage
 
   /** This is the newest version of DjVu we should attempt to decode. */
   public static final int DJVUVERSION_TOO_NEW = 22;
+
+  private static HashMap<String, List<CodecInclude>> sharedIncludes = new HashMap<>();
   
   //~ Instance fields --------------------------------------------------------
 
@@ -175,7 +185,9 @@ public class DjVuPage
 
   private ArrayList<IFFEnumeration> chunksToDecode = new ArrayList<>();
 
-  private CachedInputStream waitingForInlude;
+  private String waitingForInclude;
+
+  private List<CodecInclude> currentIncludes;
 
   private JB2Decode jb2ToDecode;
 
@@ -1115,7 +1127,7 @@ public class DjVuPage
         }
         else if(chkid.equals("INCL"))
         {
-         waitingForInlude = createCachedInputStream(iff.readFullyUTF());
+         waitingForInclude = iff.readFullyUTF();
         }
         else if(chkid.equals("FGbz"))
         {
@@ -1336,6 +1348,10 @@ public class DjVuPage
         ? codecTable.remove(nameLock)
         : codecTable.put(nameLock, codec);
     }
+    if (currentIncludes != null) {
+    	CodecInclude include = new CodecInclude(nameLock, codec);
+		currentIncludes.add(include);
+    }
 
     if((codec != null)&&codec.isImageData())
     {
@@ -1377,7 +1393,7 @@ public class DjVuPage
 			if (getProgressiveCount() != 0) {
 				throw new IllegalStateException(DjVuPage.class.getName() + " decode already called.");
 			}
-			progressiveCount = new Integer(1);
+			progressiveCount = 1;
 		}
 
 		final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
@@ -1418,14 +1434,28 @@ public class DjVuPage
 				jb2ToDecode = null;
 			return false;
 		}
-		if (waitingForInlude != null) {
-			if (!decodeInclude(waitingForInlude))
-				return false; //waiting for download
-			waitingForInlude = null;
+		if (waitingForInclude != null) {
+			List<CodecInclude> includes = sharedIncludes.get(waitingForInclude);
+			if (includes != null) {
+				for (CodecInclude include : includes)
+					setCodec(include.lock, include.codec);
+			} else {
+				CachedInputStream includeStream = createCachedInputStream(waitingForInclude);
+				if (!decodeInclude(includeStream))
+					return false; //waiting for download
+				if (currentIncludes == null) {
+					currentIncludes = new ArrayList<>();
+					sharedIncludes.put(waitingForInclude, currentIncludes);
+				}
+			}
+			waitingForInclude = null;
 		}
 		ArrayList<IFFEnumeration> ctd = chunksToDecode;
-		while (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).hasMoreElements())
+		while (!ctd.isEmpty() && !ctd.get(ctd.size() - 1).hasMoreElements()) {
 			ctd.remove(ctd.size() - 1);
+			if (ctd.size() == 1)
+				currentIncludes = null;
+		}
 		if (ctd.isEmpty()) {
 			decodeFinish();
 			return true;
