@@ -254,4 +254,12 @@ public final JB2Decode decodeStart(final CachedInputStream pool)
     inherited_dict     = dict;
     inherited_shapes   = dict.get_shape_count();
   }
+
+public int getMemoryUsage() {
+	int usage = 0;
+	for (JB2Shape shape : shapes) {
+		usage += shape.getGBitmap().getMemoryUsage();
+	}
+	return usage;
+}
 }

@@ -45,7 +45,7 @@
 //
 package com.lizardtech.djvu;
 
-import java.io.*;
+import java.io.IOException;
 
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
@@ -397,4 +397,11 @@ public void decode(final CachedInputStream bs)
 
     return crcb_delay;
   }
+
+	public int getMemoryUsage() {
+		int usage = ymap.nb * 2048;
+		if (cbmap != null)
+			usage *= 3;
+		return usage;
+	}
 }

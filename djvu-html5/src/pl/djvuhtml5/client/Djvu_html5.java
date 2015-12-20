@@ -141,6 +141,10 @@ public class Djvu_html5 implements EntryPoint {
 		return getInt("tileCacheSize", 256);
 	}
 
+	public int getPageCacheSize() {
+		return getInt("pageCacheSize", 128 * 1024 * 1024);
+	}
+
 	public String getBackground() {
 		return getString("background", "#666");
 	}

@@ -224,5 +224,7 @@ public abstract class GMap
     return needRamp;
   }
   
-  
+	public int getMemoryUsage() {
+		return data.byteLength();
+	}
 }

@@ -205,4 +205,8 @@ public void decode(final CachedInputStream pool)
       colordata = new int[0];
     }
   }
+
+	public int getMemoryUsage() {
+		return palette.length * 10 + colordata.length * 4;
+	}
 }

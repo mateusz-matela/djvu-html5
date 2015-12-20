@@ -41,6 +41,8 @@ public class PageCache implements DataSource {
 
 	private int lastRequestedPage = 0;
 
+	private long memoryUsage = 0;
+
 	public PageCache(final Djvu_html5 app, final String url) {
 		this.app = app;
 
@@ -109,6 +111,8 @@ public class PageCache implements DataSource {
 				}
 				if (page.decodeStep()) {
 					pages[pageIndex] = page;
+					memoryUsage += page.getMemoryUsage();
+					GWT.log("Memory usage: " + memoryUsage);
 					for (PageDownloadListener listener : listeners) {
 						listener.pageAvailable(pageIndex);
 					}
@@ -162,6 +166,7 @@ public class PageCache implements DataSource {
 						if (entry == null)
 							fileCache.put(url, entry = new FileItem());
 						entry.data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
+						memoryUsage += entry.data.length();
 					} else {
 						GWT.log("Error downloading " + url);
 						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());

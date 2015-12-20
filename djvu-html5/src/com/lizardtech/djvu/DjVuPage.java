@@ -1430,4 +1430,20 @@ public class DjVuPage
 		}
 		setCodec(fgJb2DictLock, null);
 	}
+
+	public int getMemoryUsage() {
+		int usage = 0;
+		IWPixmap iwmap = getBgIWPixmap();
+		if (iwmap != null)
+			usage += iwmap.getMemoryUsage();
+		JB2Dict jb2 = getFgJb2();
+		if (jb2 != null)
+			usage += jb2.getMemoryUsage();
+		Palette palette = getFgPalette();
+		if (palette != null)
+			usage += palette.getMemoryUsage();
+		if (fgPixmap != null)
+			usage += fgPixmap.data.byteLength();
+		return usage;
+	}
 }
