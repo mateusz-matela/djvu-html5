@@ -1481,5 +1481,6 @@ public class DjVuPage
 				throw new IllegalStateException("DjVu Decoder: Corrupted data (Missing IW44 data chunks)");
 			}
 		}
+		setCodec(fgJb2DictLock, null);
 	}
 }
