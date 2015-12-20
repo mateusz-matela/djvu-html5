@@ -1054,28 +1054,6 @@ public class DjVuPage
   }
 
   /**
-   * Called after processing each chunk to log progress and optionally run
-   * the garbage collector.
-   *
-   * @param chkid name of chunk processed
-   */
-  protected void clean(final String chkid)
-  {
-//    final Runtime run  = Runtime.getRuntime();
-//    final long    used = run.totalMemory() - run.freeMemory();
-//    final long    t    = System.currentTimeMillis() - startTime;
-//    final String  d    = "000" + t;
-//    Utils.verbose(
-//      id + ". chkid=" + chkid + ",memory=" + used + " time=" + (t / 1000L)
-//      + "." + d.substring(d.length() - 3));
-
-    if(DjVuOptions.COLLECT_GARBAGE)
-    {
-      System.gc();
-    }
-  }
-
-  /**
    * Called to decode a chunk.
    *
    * @param iff stream being processed
@@ -1090,8 +1068,6 @@ public class DjVuPage
     throws IOException
   {
     final String chkid=iff.getName();
-    try
-    {
       if(chkid.equals("Djbz"))
       {
         addCodecChunk(
@@ -1239,12 +1215,6 @@ public class DjVuPage
             "DjVu Decoder: Corrupted data (Duplicate foreground layer)");
         }
       }
-    }
-    finally
-    {
-//      iff.chunkClose();
-      clean(chkid);
-    }
   }
 
   /**
@@ -1415,7 +1385,6 @@ public class DjVuPage
 				}
 
 				addCodecChunk(infoLock, new DjVuInfo(), chunk);
-				clean(chunk.getName());
 			}
 		} else if ("FORM:PM44".equals(formStream.getName()) || "FORM:BM44".equals(formStream.getName())) {
 			mimetype = "image/iw44";
@@ -1457,8 +1426,12 @@ public class DjVuPage
 				currentIncludes = null;
 		}
 		if (ctd.isEmpty()) {
-			decodeFinish();
-			return true;
+			if (sjbzChunk != null) {
+				parseSjbz(new CachedInputStream(sjbzChunk));
+			} else {
+				decodeFinish();
+				return true;
+			}
 		}
 		CachedInputStream chunk = ctd.get(ctd.size() - 1).nextElement();
 		if (mimetype.equals("image/djvu")) {
@@ -1493,12 +1466,8 @@ public class DjVuPage
 		return false;
 	}
 
-	private void decodeFinish() throws IOException {
+	private void decodeFinish() {
 		if (mimetype.equals("image/djvu")) {
-			if (sjbzChunk != null) {
-				parseSjbz(new CachedInputStream(sjbzChunk));
-				clean("Sjbz");
-			}
 			final IWPixmap bgIWPixmap = getBgIWPixmap();
 			if (bgIWPixmap != null) {
 				bgIWPixmap.close_codec();
