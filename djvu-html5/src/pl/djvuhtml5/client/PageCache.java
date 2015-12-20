@@ -25,17 +25,19 @@ public class PageCache implements DataSource {
 		public final List<ReadyListener> listeners = new ArrayList<>();
 	}
 
+	private static class PageItem {
+		public boolean downloadStarted;
+		public boolean isDecoded;
+		public DjVuPage page;
+	}
+
 	private final Djvu_html5 app;
 
 	private Document document;
 	
 	private final HashMap<String, FileItem> fileCache = new HashMap<>();
 
-	private DjVuPage[] pages;
-
-	private DjVuPage[] uncodedPages;
-	
-	private boolean[] downloadStarted;
+	private List<PageItem> pages;
 
 	private final ArrayList<PageDownloadListener> listeners = new ArrayList<>();
 
@@ -54,9 +56,9 @@ public class PageCache implements DataSource {
 					document = new Document();
 					document.read(url);
 					int pageCount = document.getDjVmDir().get_pages_num();
-					pages = new DjVuPage[pageCount];
-					uncodedPages = new DjVuPage[pageCount];
-					downloadStarted = new boolean[pageCount];
+					pages = new ArrayList<>(pageCount);
+					for (int i = 0; i < pageCount; i++)
+						pages.add(new PageItem());
 
 					app.getToolbar().setPageCount(pageCount);
 
@@ -73,11 +75,12 @@ public class PageCache implements DataSource {
 			app.startProcessing();
 			return;
 		}
-		for (int i = 0; i < pages.length; i++) {
-			final int pageIndex = (lastRequestedPage + i) % pages.length;
-			if (downloadStarted[pageIndex])
+		for (int i = 0; i < pages.size(); i++) {
+			final int pageIndex = (lastRequestedPage + i) % pages.size();
+			PageItem pageItem = pages.get(pageIndex);
+			if (pageItem.downloadStarted)
 				continue;
-			downloadStarted[pageIndex] = true;
+			pageItem.downloadStarted = true;
 			try {
 				CachedInputStream data = document.get_data(pageIndex, new ReadyListener() {
 
@@ -97,20 +100,21 @@ public class PageCache implements DataSource {
 	}
 
 	boolean decodePage(boolean currentOnly) {
-		for (int i = 0; i < (currentOnly ? 1 : pages.length); i++) {
-			final int pageIndex = (lastRequestedPage + i) % pages.length;
-			if (pages[pageIndex] != null)
+		for (int i = 0; i < (currentOnly ? 1 : pages.size()); i++) {
+			final int pageIndex = (lastRequestedPage + i) % pages.size();
+			PageItem pageItem = pages.get(pageIndex);
+			if (pageItem.isDecoded)
 				continue;
-			DjVuPage page = uncodedPages[pageIndex];
+			DjVuPage page = pageItem.page;
 			try {
 				if (page == null) {
 					GWT.log("Decoding page " + pageIndex);
-					page = uncodedPages[pageIndex] = document.getPage(pageIndex);
+					page = pageItem.page = document.getPage(pageIndex);
 					if (page == null)
 						return false; // not downloaded yet
 				}
 				if (page.decodeStep()) {
-					pages[pageIndex] = page;
+					pageItem.isDecoded = true;
 					memoryUsage += page.getMemoryUsage();
 					GWT.log("Memory usage: " + memoryUsage);
 					for (PageDownloadListener listener : listeners) {
@@ -127,17 +131,17 @@ public class PageCache implements DataSource {
 	}
 
 	public int getPageCount() {
-		return pages.length;
+		return pages.size();
 	}
 
 	public DjVuPage fetchPage(int number) {
 		lastRequestedPage = number;
-		DjVuPage page = pages[number];
-		return page;
+		return getPage(number);
 	}
 
 	public DjVuPage getPage(int number) {
-		return pages[number];
+		PageItem pageItem = pages.get(number);
+		return pageItem.isDecoded ? pageItem.page : null;
 	}
 
 	@Override
