@@ -32,9 +32,23 @@ public class PageCache implements DataSource {
 		}
 	}
 
-	private static class PageItem {
-		public boolean isDecoded;
+	private class PageItem implements Comparable<PageItem> {
+		public final int pageNum;
 		public DjVuPage page;
+		public boolean isDecoded;
+		public int rank = 10000;
+
+		public PageItem(int pageNum) {
+			this.pageNum = pageNum;
+		}
+
+		@Override
+		public int compareTo(PageItem o) {
+			int result = this.rank - o.rank;
+			if (result == 0)
+				result = Math.abs(lastRequestedPage - o.pageNum) - Math.abs(lastRequestedPage - this.pageNum);
+			return result;
+		}
 	}
 
 	private final Djvu_html5 app;
@@ -47,7 +61,7 @@ public class PageCache implements DataSource {
 
 	private List<PageItem> pages;
 
-	private long pagesMemoryUsage = 0;
+	private int pagesMemoryUsage = 0;
 
 	private final ArrayList<PageDownloadListener> listeners = new ArrayList<>();
 
@@ -56,56 +70,91 @@ public class PageCache implements DataSource {
 	public PageCache(final Djvu_html5 app, final String url) {
 		this.app = app;
 
-		getData(url, new ReadyListener() {
+		Uint8Array data = getData(url, new ReadyListener() {
 			
 			@Override
 			public void dataReady() {
-				try {
-					document = new Document();
-					document.read(url);
-					int pageCount = document.getDjVmDir().get_pages_num();
-					pages = new ArrayList<>(pageCount);
-					for (int i = 0; i < pageCount; i++)
-						pages.add(new PageItem());
-
-					app.getToolbar().setPageCount(pageCount);
-
-					app.startProcessing();
-				} catch (IOException e) {
-					Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
-				}
+				init(url);
 			}
 		});
+		if (data != null)
+			init(url);
+	}
+
+	private void init(String url) {
+		try {
+			document = new Document();
+			document.read(url);
+			int pageCount = document.getDjVmDir().get_pages_num();
+			pages = new ArrayList<>(pageCount);
+			for (int i = 0; i < pageCount; i++)
+				pages.add(new PageItem(i));
+
+			app.getToolbar().setPageCount(pageCount);
+
+			app.startProcessing();
+		} catch (IOException e) {
+			Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
+		}
 	}
 
 	boolean decodePage(boolean currentOnly) {
-		for (int i = 0; i < (currentOnly ? 1 : pages.size()); i++) {
-			final int pageIndex = (lastRequestedPage + i) % pages.size();
-			PageItem pageItem = pages.get(pageIndex);
-			if (pageItem.isDecoded)
-				continue;
-			DjVuPage page = pageItem.page;
-			try {
-				if (page == null) {
-					page = pageItem.page = document.getPage(pageIndex);
-					if (page == null)
-						return false; // not downloaded yet
-					GWT.log("Decoding page " + pageIndex);
-				}
-				if (page.decodeStep()) {
-					pageItem.isDecoded = true;
-					pagesMemoryUsage += page.getMemoryUsage();
-					for (PageDownloadListener listener : listeners) {
-						listener.pageAvailable(pageIndex);
-					}
-				}
-			} catch (IOException e) {
-				GWT.log("Error while decoding page " + pageIndex, e);
+		PageItem currentPageItem = pages.get(lastRequestedPage);
+		if (currentOnly) {
+			if (currentPageItem.isDecoded)
 				return false;
+			return decodePage(currentPageItem);
+		}
+		List<PageItem> pagesTemp = new ArrayList<>(pages);
+		Collections.sort(pagesTemp);
+		pagesTemp.remove(currentPageItem);
+		pagesTemp.add(currentPageItem);
+
+		int totalMemory = 0;
+		int memoryLimit = app.getPageCacheSize();
+		int fetchIndex = pages.size();
+		while (fetchIndex-- > 0 && totalMemory < memoryLimit) {
+			PageItem pageItem = pagesTemp.get(fetchIndex);
+			if (!pageItem.isDecoded)
+				break;
+			totalMemory += pageItem.page.getMemoryUsage();
+		}
+		if (fetchIndex < 0)
+			return false; // all is decoded
+		for (int i = 0; pagesMemoryUsage > memoryLimit && i < fetchIndex; i++) {
+			PageItem pageItem = pagesTemp.get(i);
+			if (pageItem.isDecoded) {
+				pagesMemoryUsage -= pageItem.page.getMemoryUsage();
+				pageItem.isDecoded = false;
+			}
+			pageItem.page = null;
+		}
+		if (pagesMemoryUsage > memoryLimit)
+			return false; // all the best pages are in memory
+
+		return decodePage(pagesTemp.get(fetchIndex));
+	}
+
+	private boolean decodePage(PageItem pageItem) {
+		DjVuPage page = pageItem.page;
+		try {
+			if (page == null) {
+				page = pageItem.page = document.getPage(pageItem.pageNum);
+				if (page == null)
+					return true; // not downloaded yet
+				GWT.log("Decoding page " + pageItem.pageNum);
+			}
+			if (page.decodeStep()) {
+				pageItem.isDecoded = true;
+				pagesMemoryUsage += page.getMemoryUsage();
+				for (PageDownloadListener listener : listeners)
+					listener.pageAvailable(pageItem.pageNum);
 			}
 			return true;
+		} catch (IOException e) {
+			GWT.log("Error while decoding page " + pageItem.pageNum, e);
+			return false;
 		}
-		return false;
 	}
 
 	public int getPageCount() {
@@ -113,8 +162,36 @@ public class PageCache implements DataSource {
 	}
 
 	public DjVuPage fetchPage(int number) {
-		lastRequestedPage = number;
+		if (lastRequestedPage != number) {
+			lastRequestedPage = number;
+			updateRanks();
+		}
+		app.startProcessing();
 		return getPage(number);
+	}
+
+	private void updateRanks() {
+		int points = 0;
+		for (PageItem item : pages) {
+			int d = item.rank / 50;
+			points += d;
+			item.rank -= d;
+		}
+		int[] dd = { 1, -1 };
+		int i = 0;
+		while (points > 0) {
+			for (int d : dd) {
+				int p = points / 5 + 1;
+				points -= p;
+				int index = lastRequestedPage + d * (i % pages.size());
+				if (index < 0 || index >= pages.size())
+					continue;
+				pages.get(index).rank += p;
+				if (points <= 0)
+					break;
+			}
+			i++;
+		}
 	}
 
 	public DjVuPage getPage(int number) {
