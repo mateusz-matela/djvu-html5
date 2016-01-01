@@ -28,6 +28,8 @@ public class Djvu_html5 implements EntryPoint {
 	private Canvas canvas;
 	private SinglePageLayout pageLayout;
 	private Toolbar toolbar;
+	private Scrollbar horizontalScrollbar;
+	private Scrollbar verticalScrollbar;
 	private TileCache tileCache;
 	private PageCache pageCache;
 	private BackgroundProcessor backgroundProcessor;
@@ -44,6 +46,8 @@ public class Djvu_html5 implements EntryPoint {
 		RootPanel container = RootPanel.get("djvuContainer");
 		container.add(prepareCanvas());
 		container.add(toolbar = new Toolbar(this));
+		container.add(horizontalScrollbar = new Scrollbar(true));
+		container.add(verticalScrollbar = new Scrollbar(false));
 
 		url = Window.Location.getParameter("file");
 		if (url == null || url.isEmpty())
@@ -127,6 +131,14 @@ public class Djvu_html5 implements EntryPoint {
 
 	public Toolbar getToolbar() {
 		return toolbar;
+	}
+
+	public Scrollbar getHorizontalScrollbar() {
+		return horizontalScrollbar;
+	}
+
+	public Scrollbar getVerticalScrollbar() {
+		return verticalScrollbar;
 	}
 
 	public String getIndexFile() {

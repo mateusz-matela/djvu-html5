@@ -190,6 +190,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			centerY = Math.max(centerY, h / 2 - pageMargin);
 			centerY = Math.min(centerY, ph - h / 2 + pageMargin);
 		}
+
+		app.getHorizontalScrollbar().setRange(centerX - w / 2 + pageMargin, centerX + w / 2, pw + 2 * pageMargin);
+		app.getVerticalScrollbar().setRange(centerY - h / 2 + pageMargin, centerY + h / 2, ph + 2 * pageMargin);
 	}
 
 	public void setChangeListener(ChangeListener changeListener) {

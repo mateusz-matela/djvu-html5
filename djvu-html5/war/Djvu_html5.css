@@ -24,18 +24,37 @@ body {
 	transition: top 1s;
 }
 
-.content {
-	overflow: hidden;
-	position: absolute;
-	height: 100%;
-	width: 100%;
-}
-
 .toolbarSquareButton {
 	width: 40px;
 	height: 40px;
 	background-repeat: no-repeat;
 	background-size: contain;
+}
+
+.scrollbar {
+	position: absolute;
+	background-color: #BBB;
+	border-radius: 4px;
+	opacity: 0.6;
+	box-shadow: 0 0 0 1px white, 0 0 0 2px black;
+	margin: 2px;
+}
+
+.scrollbarVertical {
+	right: 1px;
+	width: 10px;
+}
+
+.scrollbarHorizontal {
+	bottom: 1px;
+	height: 10px;
+}
+
+.content {
+	overflow: hidden;
+	position: absolute;
+	height: 100%;
+	width: 100%;
 }
 
 .buttonZoomIn {
