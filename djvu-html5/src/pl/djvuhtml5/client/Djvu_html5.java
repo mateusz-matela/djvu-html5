@@ -49,6 +49,11 @@ public class Djvu_html5 implements EntryPoint {
 		container.add(horizontalScrollbar = new Scrollbar(true));
 		container.add(verticalScrollbar = new Scrollbar(false));
 
+		UIHider uiHider = new UIHider(canvas);
+		uiHider.addUIElement(toolbar, "toolbarHidden");
+		uiHider.addUIElement(horizontalScrollbar, "scrollbarHidden");
+		uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
+
 		url = Window.Location.getParameter("file");
 		if (url == null || url.isEmpty())
 			url = container.getElement().getAttribute("file");

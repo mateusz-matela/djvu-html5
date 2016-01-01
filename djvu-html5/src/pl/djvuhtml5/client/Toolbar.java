@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.dom.client.SpanElement;
 import com.google.gwt.event.dom.client.BlurEvent;
 import com.google.gwt.event.dom.client.BlurHandler;
@@ -15,18 +14,10 @@ import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyPressEvent;
 import com.google.gwt.event.dom.client.KeyPressHandler;
-import com.google.gwt.event.dom.client.MouseMoveEvent;
-import com.google.gwt.event.dom.client.MouseMoveHandler;
-import com.google.gwt.event.dom.client.MouseOutEvent;
-import com.google.gwt.event.dom.client.MouseOutHandler;
-import com.google.gwt.event.dom.client.MouseOverEvent;
-import com.google.gwt.event.dom.client.MouseOverHandler;
-import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.TextBox;
-import com.google.gwt.user.client.ui.Widget;
 
 import pl.djvuhtml5.client.SinglePageLayout.ChangeListener;
 
@@ -48,8 +39,6 @@ public class Toolbar extends FlowPanel {
 		this.app = app;
 
 		setStyleName("toolbar");
-
-		new ToolBarHandler(this, app.getCanvas());
 
 		zoomCombo = new ComboBox("buttonZoomOut", "buttonZoomIn") {
 
@@ -317,47 +306,5 @@ public class Toolbar extends FlowPanel {
 		protected abstract void valueSelected();
 
 		protected abstract void changeValueClicked(int direction);
-	}
-
-	private class ToolBarHandler implements MouseMoveHandler, MouseOverHandler, MouseOutHandler {
-
-		private static final int TOOLBAR_HIDE_DELAY = 1500;
-
-		private boolean isMouseOverToolbar = false;
-
-		private final Widget toolBar;
-
-		private final Timer timer = new Timer() {
-			
-			@Override
-			public void run() {
-				if (!isMouseOverToolbar)
-					toolBar.addStyleName("toolbarHidden");
-			}
-		};
-
-		public ToolBarHandler(Widget toolbar, Canvas canvas) {
-			this.toolBar = toolbar;
-			canvas.addMouseMoveHandler(this);
-			toolBar.addDomHandler(this, MouseOverEvent.getType());
-			toolBar.addDomHandler(this, MouseOutEvent.getType());
-		}
-
-		@Override
-		public void onMouseMove(MouseMoveEvent event) {
-			toolBar.removeStyleName("toolbarHidden");
-			timer.cancel();
-			timer.schedule(TOOLBAR_HIDE_DELAY);
-		}
-
-		@Override
-		public void onMouseOver(MouseOverEvent event) {
-			isMouseOverToolbar = true;
-		}
-
-		@Override
-		public void onMouseOut(MouseOutEvent event) {
-			isMouseOverToolbar = false;
-		}
 	}
 }
