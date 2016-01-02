@@ -184,7 +184,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			centerX = Math.max(centerX, w / 2 - pageMargin);
 			centerX = Math.min(centerX, pw - w / 2 + pageMargin);
 		}
-	
+
 		if (ph < h) {
 			centerY = ph / 2;
 		} else {
@@ -220,10 +220,10 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 		int tileSize = tileCache.tileSize;
 		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
-		range.xmin = Math.max(0, centerX - w / 2) / tileSize;
-		range.xmax = Math.min((int) Math.ceil(pw / scale), centerX + w / 2) / tileSize;
-		range.ymin = Math.max(0, centerY - h / 2) / tileSize;
-		range.ymax = Math.min((int) Math.ceil(ph / scale), centerY + h / 2) / tileSize;
+		range.xmin = (int) (Math.max(0, centerX - w * 0.5) / tileSize / scale);
+		range.xmax = (int) Math.ceil(Math.min(pw, centerX + w * 0.5) / tileSize / scale);
+		range.ymin = (int) (Math.max(0, centerY - h * 0.5) / tileSize / scale);
+		range.ymax = (int) Math.ceil(Math.min(ph, centerY + h * 0.5) / tileSize / scale);
 		imagesArray = tileCache.getTileImages(page, subsample, range , imagesArray);
 		for (int y = range.ymin; y <= range.ymax; y++)
 			for (int x = range.xmin; x <= range.xmax; x++) {
