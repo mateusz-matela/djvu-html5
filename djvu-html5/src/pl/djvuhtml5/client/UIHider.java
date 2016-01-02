@@ -3,16 +3,20 @@ package pl.djvuhtml5.client;
 import java.util.ArrayList;
 
 import com.google.gwt.canvas.client.Canvas;
+import com.google.gwt.event.dom.client.MouseDownEvent;
+import com.google.gwt.event.dom.client.MouseDownHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseMoveHandler;
 import com.google.gwt.event.dom.client.MouseOutEvent;
 import com.google.gwt.event.dom.client.MouseOutHandler;
 import com.google.gwt.event.dom.client.MouseOverEvent;
 import com.google.gwt.event.dom.client.MouseOverHandler;
+import com.google.gwt.event.dom.client.MouseUpEvent;
+import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Widget;
 
-public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHandler {
+public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHandler, MouseDownHandler, MouseUpHandler {
 
 	private static class UIElement {
 		public final Widget widget;
@@ -28,13 +32,15 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 
 	private final ArrayList<UIElement> uiElements = new ArrayList<>();
 
+	private int previousX, previousY;
 	private boolean isMouseOverUI = false;
+	private boolean isMouseDown = false;
 
 	private final Timer timer = new Timer() {
 
 		@Override
 		public void run() {
-			if (!isMouseOverUI) {
+			if (!isMouseOverUI && !isMouseDown) {
 				for (UIElement element : uiElements)
 					element.widget.addStyleName(element.hiddenStyleName);
 			}
@@ -45,6 +51,8 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 		uiElements.add(new UIElement(widget, hiddenStyleName));
 		widget.addDomHandler(this, MouseOverEvent.getType());
 		widget.addDomHandler(this, MouseOutEvent.getType());
+		widget.addDomHandler(this, MouseDownEvent.getType());
+		widget.addDomHandler(this, MouseUpEvent.getType());
 	}
 
 	public UIHider(Canvas canvas) {
@@ -53,6 +61,10 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
+		if (previousX == event.getX() && previousY == event.getY())
+			return;
+		previousX = event.getX();
+		previousY = event.getY();
 		for (UIElement element : uiElements)
 			element.widget.removeStyleName(element.hiddenStyleName);
 		timer.cancel();
@@ -67,5 +79,15 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 	@Override
 	public void onMouseOut(MouseOutEvent event) {
 		isMouseOverUI = false;
+	}
+
+	@Override
+	public void onMouseDown(MouseDownEvent event) {
+		isMouseDown = true;
+	}
+
+	@Override
+	public void onMouseUp(MouseUpEvent event) {
+		isMouseDown = false;
 	}
 }
