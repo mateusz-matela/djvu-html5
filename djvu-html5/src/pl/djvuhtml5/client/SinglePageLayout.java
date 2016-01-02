@@ -305,11 +305,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		public void onKeyDown(KeyDownEvent event) {
 			int key = event.getNativeKeyCode();
 			if (event.isControlKeyDown()) {
-				if (key == KEY_PLUS) {
-					// TODO zoom
-					event.preventDefault();
-				} else if (key == KEY_MINUS) {
-					// TODO zoom
+				if (key == KEY_PLUS || key == KEY_MINUS) {
+					app.getToolbar().zoomChangeClicked(key == KEY_PLUS ? 1 : -1);
 					event.preventDefault();
 				}
 			} else {
@@ -358,8 +355,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		public void onMouseWheel(MouseWheelEvent event) {
 			int delta = event.getDeltaY();
 			if (event.isControlKeyDown()) {
-				// TODO zoom
-				
+				app.getToolbar().zoomChangeClicked(Integer.signum(-delta));
 			} else {
 				if (!pan(0, delta * PAN_STEP / 2))
 					changePage(page + Integer.signum(delta), 0, -delta);
