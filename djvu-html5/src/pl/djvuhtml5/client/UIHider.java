@@ -8,6 +8,8 @@ import com.google.gwt.event.dom.client.BlurEvent;
 import com.google.gwt.event.dom.client.BlurHandler;
 import com.google.gwt.event.dom.client.FocusEvent;
 import com.google.gwt.event.dom.client.FocusHandler;
+import com.google.gwt.event.dom.client.KeyDownEvent;
+import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
@@ -21,9 +23,8 @@ import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Widget;
 
-public class UIHider
- implements MouseMoveHandler, MouseOverHandler, MouseOutHandler, MouseDownHandler, MouseUpHandler,
-		FocusHandler, BlurHandler {
+public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHandler, MouseDownHandler, MouseUpHandler,
+		KeyDownHandler, FocusHandler, BlurHandler {
 
 	private static class UIElement {
 		public final Widget widget;
@@ -65,8 +66,16 @@ public class UIHider
 
 	public UIHider(Canvas canvas) {
 		canvas.addMouseMoveHandler(this);
+		canvas.addKeyDownHandler(this);
 		canvas.addFocusHandler(this);
 		canvas.addBlurHandler(this);
+	}
+
+	private void showUI() {
+		for (UIElement element : uiElements)
+			element.widget.removeStyleName(element.hiddenStyleName);
+		timer.cancel();
+		timer.schedule(UI_HIDE_DELAY);
 	}
 
 	@Override
@@ -75,10 +84,7 @@ public class UIHider
 			return;
 		previousX = event.getX();
 		previousY = event.getY();
-		for (UIElement element : uiElements)
-			element.widget.removeStyleName(element.hiddenStyleName);
-		timer.cancel();
-		timer.schedule(UI_HIDE_DELAY);
+		showUI();
 	}
 
 	@Override
@@ -99,6 +105,11 @@ public class UIHider
 	@Override
 	public void onMouseUp(MouseUpEvent event) {
 		isMouseDown = false;
+	}
+
+	@Override
+	public void onKeyDown(KeyDownEvent event) {
+		showUI();
 	}
 
 	@Override
