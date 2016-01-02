@@ -3,6 +3,11 @@ package pl.djvuhtml5.client;
 import java.util.ArrayList;
 
 import com.google.gwt.canvas.client.Canvas;
+import com.google.gwt.core.shared.GWT;
+import com.google.gwt.event.dom.client.BlurEvent;
+import com.google.gwt.event.dom.client.BlurHandler;
+import com.google.gwt.event.dom.client.FocusEvent;
+import com.google.gwt.event.dom.client.FocusHandler;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseDownHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
@@ -16,7 +21,9 @@ import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Widget;
 
-public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHandler, MouseDownHandler, MouseUpHandler {
+public class UIHider
+ implements MouseMoveHandler, MouseOverHandler, MouseOutHandler, MouseDownHandler, MouseUpHandler,
+		FocusHandler, BlurHandler {
 
 	private static class UIElement {
 		public final Widget widget;
@@ -35,12 +42,13 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 	private int previousX, previousY;
 	private boolean isMouseOverUI = false;
 	private boolean isMouseDown = false;
+	private boolean hasCanvasFocus = false;
 
 	private final Timer timer = new Timer() {
 
 		@Override
 		public void run() {
-			if (!isMouseOverUI && !isMouseDown) {
+			if (!isMouseOverUI && !isMouseDown && hasCanvasFocus) {
 				for (UIElement element : uiElements)
 					element.widget.addStyleName(element.hiddenStyleName);
 			}
@@ -57,6 +65,8 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 
 	public UIHider(Canvas canvas) {
 		canvas.addMouseMoveHandler(this);
+		canvas.addFocusHandler(this);
+		canvas.addBlurHandler(this);
 	}
 
 	@Override
@@ -89,5 +99,16 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 	@Override
 	public void onMouseUp(MouseUpEvent event) {
 		isMouseDown = false;
+	}
+
+	@Override
+	public void onFocus(FocusEvent event) {
+		hasCanvasFocus = true;
+	}
+
+	@Override
+	public void onBlur(BlurEvent event) {
+		GWT.log("Canvas lost focus");
+		hasCanvasFocus = false;
 	}
 }
