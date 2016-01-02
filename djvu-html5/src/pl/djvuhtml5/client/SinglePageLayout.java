@@ -27,6 +27,7 @@ import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
 
 import pl.djvuhtml5.client.PageCache.PageDownloadListener;
+import pl.djvuhtml5.client.Scrollbar.ScrollPanListener;
 import pl.djvuhtml5.client.TileCache.TileCacheListener;
 import pl.djvuhtml5.client.TileCache.TileInfo;
 
@@ -88,7 +89,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		if (newPage != null) {
 			pageInfo = newPage.getInfo();
 			app.getToolbar().setZoomOptions(findZoomOptions());
-			checkBounds();
+			viewChanged();
 		} else {
 			pageInfo = null;
 		}
@@ -102,7 +103,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	}
 
 	public void canvasResized() {
-		checkBounds();
+		viewChanged();
 		redraw();
 	}
 
@@ -133,7 +134,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		centerX *= zoom / this.zoom;
 		centerY *= zoom / this.zoom;
 		this.zoom = zoom;
-		checkBounds();
+		viewChanged();
 		redraw();
 		if (changeListener != null)
 			changeListener.zoomChanged(getZoom());
@@ -172,7 +173,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		return result;
 	}
 
-	private void checkBounds() {
+	private void viewChanged() {
 		if (pageInfo == null)
 			return;
 		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
@@ -191,8 +192,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			centerY = Math.min(centerY, ph - h / 2 + pageMargin);
 		}
 
-		app.getHorizontalScrollbar().setRange(centerX - w / 2 + pageMargin, centerX + w / 2, pw + 2 * pageMargin);
-		app.getVerticalScrollbar().setRange(centerY - h / 2 + pageMargin, centerY + h / 2, ph + 2 * pageMargin);
+		double pw2 = pw + 2 * pageMargin, ph2 = ph + 2 * pageMargin;
+		app.getHorizontalScrollbar().setThumb((centerX + pageMargin) / pw2, w / pw2);
+		app.getVerticalScrollbar().setThumb((centerY + pageMargin) / ph2, h / ph2);
 	}
 
 	public void setChangeListener(ChangeListener changeListener) {
@@ -248,8 +250,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			redraw();
 	}
 
-	private class PanController
-			implements MouseDownHandler, MouseUpHandler, MouseMoveHandler, MouseWheelHandler, KeyDownHandler {
+	private class PanController implements MouseDownHandler, MouseUpHandler, MouseMoveHandler, MouseWheelHandler,
+			KeyDownHandler, ScrollPanListener {
 
 		private static final int KEY_PLUS = 187;
 		private static final int KEY_MINUS = 189;
@@ -266,6 +268,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			canvas.addMouseWheelHandler(this);
 			canvas.addKeyDownHandler(this);
 			canvas.setFocus(true);
+
+			app.getHorizontalScrollbar().addScrollPanListener(this);
+			app.getVerticalScrollbar().addScrollPanListener(this);
 		}
 
 		@Override
@@ -362,12 +367,23 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			event.preventDefault();
 		}
 
+		@Override
+		public void thumbDragged(double newCenter, boolean isHorizontal) {
+			if (isHorizontal) {
+				double pw2 = pageInfo.width * zoom + 2 * pageMargin;
+				pan((int) (newCenter * pw2 - pageMargin + 0.5) - centerX, 0);
+			} else {
+				double ph2 = pageInfo.height * zoom + 2 * pageMargin;
+				pan(0, (int) (newCenter * ph2 - pageMargin + 0.5) - centerY);
+			}
+		}
+
 		private boolean pan(int x, int y) {
 			int oldX = centerX;
 			int oldY = centerY;
 			centerX += x;
 			centerY += y;
-			checkBounds();
+			viewChanged();
 			if (centerX != oldX || centerY != oldY) {
 				redraw();
 				return true;
