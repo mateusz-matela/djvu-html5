@@ -3,7 +3,6 @@ package pl.djvuhtml5.client;
 import java.util.ArrayList;
 
 import com.google.gwt.canvas.client.Canvas;
-import com.google.gwt.core.shared.GWT;
 import com.google.gwt.event.dom.client.BlurEvent;
 import com.google.gwt.event.dom.client.BlurHandler;
 import com.google.gwt.event.dom.client.FocusEvent;
@@ -119,7 +118,6 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 
 	@Override
 	public void onBlur(BlurEvent event) {
-		GWT.log("Canvas lost focus");
 		hasCanvasFocus = false;
 	}
 }

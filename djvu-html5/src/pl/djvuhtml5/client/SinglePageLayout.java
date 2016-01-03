@@ -8,28 +8,13 @@ import java.util.ArrayList;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
-import com.google.gwt.core.client.JsArray;
 import com.google.gwt.dom.client.CanvasElement;
-import com.google.gwt.dom.client.NativeEvent;
-import com.google.gwt.dom.client.Touch;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyDownEvent;
 import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.event.dom.client.MouseDownEvent;
-import com.google.gwt.event.dom.client.MouseDownHandler;
-import com.google.gwt.event.dom.client.MouseMoveEvent;
-import com.google.gwt.event.dom.client.MouseMoveHandler;
-import com.google.gwt.event.dom.client.MouseUpEvent;
-import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
-import com.google.gwt.event.dom.client.TouchEndEvent;
-import com.google.gwt.event.dom.client.TouchEndHandler;
-import com.google.gwt.event.dom.client.TouchMoveEvent;
-import com.google.gwt.event.dom.client.TouchMoveHandler;
-import com.google.gwt.event.dom.client.TouchStartEvent;
-import com.google.gwt.event.dom.client.TouchStartHandler;
-import com.google.gwt.user.client.Event;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
@@ -258,26 +243,16 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			redraw();
 	}
 
-	private class PanController implements MouseDownHandler, MouseUpHandler, MouseMoveHandler, MouseWheelHandler,
-			TouchStartHandler, TouchMoveHandler, TouchEndHandler, KeyDownHandler, ScrollPanListener {
+	private class PanController extends PanListener implements MouseWheelHandler, KeyDownHandler, ScrollPanListener {
 
 		private static final int KEY_PLUS = 187;
 		private static final int KEY_MINUS = 189;
 
 		private static final int PAN_STEP = 100;
 
-		private boolean isMouseDown = false;
-		private Integer touchId = null;
-		private int x, y;
-
 		public PanController(Canvas canvas) {
-			canvas.addMouseDownHandler(this);
-			canvas.addMouseUpHandler(this);
-			canvas.addMouseMoveHandler(this);
+			super(canvas);
 			canvas.addMouseWheelHandler(this);
-			canvas.addTouchStartHandler(this);
-			canvas.addTouchEndHandler(this);
-			canvas.addTouchMoveHandler(this);
 			canvas.addKeyDownHandler(this);
 			canvas.setFocus(true);
 
@@ -288,70 +263,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		@Override
 		public void onMouseDown(MouseDownEvent event) {
 			canvas.setFocus(true);
-			int button = event.getNativeButton();
-			if ((button == NativeEvent.BUTTON_LEFT || button == NativeEvent.BUTTON_MIDDLE) && touchId == null) {
-				isMouseDown = true;
-				x = event.getX();
-				y = event.getY();
-				event.preventDefault();
-				Event.setCapture(canvas.getElement());
-			}
-		}
-
-		@Override
-		public void onMouseUp(MouseUpEvent event) {
-			isMouseDown = false;
-			Event.releaseCapture(canvas.getElement());
-		}
-
-		@Override
-		public void onMouseMove(MouseMoveEvent event) {
-			if (isMouseDown) {
-				pan(x - event.getX(), y - event.getY());
-				x = event.getX();
-				y = event.getY();
-			}
-		}
-
-		@Override
-		public void onTouchStart(TouchStartEvent event) {
-			if (touchId != null || isMouseDown)
-				return;
-			Touch touch = event.getTouches().get(0);
-			touchId = touch.getIdentifier();
-			x = touch.getClientX();
-			y = touch.getClientY();
-			event.preventDefault();
-		}
-
-		@Override
-		public void onTouchEnd(TouchEndEvent event) {
-			if (touchId == null)
-				return;
-			JsArray<Touch> touches = event.getTouches();
-			for (int i = 0; i < touches.length(); i++) {
-				Touch touch = touches.get(i);
-				if (touch.getIdentifier() == touchId)
-					return;
-			}
-			touchId = null;
-			event.preventDefault();
-		}
-
-		@Override
-		public void onTouchMove(TouchMoveEvent event) {
-			if (touchId == null)
-				return;
-			JsArray<Touch> touches = event.getTouches();
-			for (int i = 0; i < touches.length(); i++) {
-				Touch touch = touches.get(i);
-				if (touch.getIdentifier() != touchId)
-					continue;
-				pan(x - touch.getClientX(), y - touch.getClientY());
-				x = touch.getClientX();
-				y = touch.getClientY();
-				event.preventDefault();
-			}
+			super.onMouseDown(event);
 		}
 
 		@Override
@@ -366,28 +278,28 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 				boolean handled = true;
 				switch (key) {
 				case KeyCodes.KEY_UP:
-					if (!pan(0, -PAN_STEP))
+					if (!tryPan(0, -PAN_STEP))
 						changePage(page - 1, 0, 1);
 					break;
 				case KeyCodes.KEY_DOWN:
-					if (!pan(0, PAN_STEP))
+					if (!tryPan(0, PAN_STEP))
 						changePage(page + 1, 0, -1);
 					break;
 				case KeyCodes.KEY_LEFT:
-					if (!pan(-PAN_STEP, 0))
+					if (!tryPan(-PAN_STEP, 0))
 						changePage(page - 1, 1, 0);
 					break;
 				case KeyCodes.KEY_RIGHT:
-					if (!pan(PAN_STEP, 0))
+					if (!tryPan(PAN_STEP, 0))
 						changePage(page + 1, -1, 0);
 					break;
 				case KeyCodes.KEY_PAGEUP:
-					if (!pan(0, -canvas.getCoordinateSpaceHeight() + PAN_STEP))
+					if (!tryPan(0, -canvas.getCoordinateSpaceHeight() + PAN_STEP))
 						changePage(page - 1, 0, 1);
 					break;
 				case KeyCodes.KEY_PAGEDOWN:
 				case KeyCodes.KEY_SPACE:
-					if (!pan(0, canvas.getCoordinateSpaceHeight() - PAN_STEP))
+					if (!tryPan(0, canvas.getCoordinateSpaceHeight() - PAN_STEP))
 						changePage(page + 1, 0, -1);
 					break;
 				case KeyCodes.KEY_HOME:
@@ -410,7 +322,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			if (event.isControlKeyDown()) {
 				app.getToolbar().zoomChangeClicked(Integer.signum(-delta));
 			} else {
-				if (!pan(0, delta * PAN_STEP / 2))
+				if (!tryPan(0, delta * PAN_STEP / 2))
 					changePage(page + Integer.signum(delta), 0, -delta);
 			}
 			event.preventDefault();
@@ -420,18 +332,23 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		public void thumbDragged(double newCenter, boolean isHorizontal) {
 			if (isHorizontal) {
 				double pw2 = pageInfo.width * zoom + 2 * pageMargin;
-				pan((int) (newCenter * pw2 - pageMargin + 0.5) - centerX, 0);
+				tryPan((int) (newCenter * pw2 - pageMargin + 0.5) - centerX, 0);
 			} else {
 				double ph2 = pageInfo.height * zoom + 2 * pageMargin;
-				pan(0, (int) (newCenter * ph2 - pageMargin + 0.5) - centerY);
+				tryPan(0, (int) (newCenter * ph2 - pageMargin + 0.5) - centerY);
 			}
 		}
 
-		private boolean pan(int x, int y) {
+		@Override
+		protected void pan(int dx, int dy) {
+			tryPan(dx, dy);
+		}
+
+		private boolean tryPan(int dx, int dy) {
 			int oldX = centerX;
 			int oldY = centerY;
-			centerX += x;
-			centerY += y;
+			centerX -= dx;
+			centerY -= dy;
 			viewChanged();
 			if (centerX != oldX || centerY != oldY) {
 				redraw();
