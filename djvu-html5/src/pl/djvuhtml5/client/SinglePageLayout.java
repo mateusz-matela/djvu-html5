@@ -8,8 +8,10 @@ import java.util.ArrayList;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
+import com.google.gwt.core.client.JsArray;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.NativeEvent;
+import com.google.gwt.dom.client.Touch;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyDownEvent;
 import com.google.gwt.event.dom.client.KeyDownHandler;
@@ -21,6 +23,12 @@ import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.dom.client.MouseUpHandler;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
+import com.google.gwt.event.dom.client.TouchEndEvent;
+import com.google.gwt.event.dom.client.TouchEndHandler;
+import com.google.gwt.event.dom.client.TouchMoveEvent;
+import com.google.gwt.event.dom.client.TouchMoveHandler;
+import com.google.gwt.event.dom.client.TouchStartEvent;
+import com.google.gwt.event.dom.client.TouchStartHandler;
 import com.google.gwt.user.client.Event;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
@@ -251,14 +259,15 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	}
 
 	private class PanController implements MouseDownHandler, MouseUpHandler, MouseMoveHandler, MouseWheelHandler,
-			KeyDownHandler, ScrollPanListener {
+			TouchStartHandler, TouchMoveHandler, TouchEndHandler, KeyDownHandler, ScrollPanListener {
 
 		private static final int KEY_PLUS = 187;
 		private static final int KEY_MINUS = 189;
 
 		private static final int PAN_STEP = 100;
 
-		private boolean isDown = false;
+		private boolean isMouseDown = false;
+		private Integer touchId = null;
 		private int x, y;
 
 		public PanController(Canvas canvas) {
@@ -266,6 +275,9 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 			canvas.addMouseUpHandler(this);
 			canvas.addMouseMoveHandler(this);
 			canvas.addMouseWheelHandler(this);
+			canvas.addTouchStartHandler(this);
+			canvas.addTouchEndHandler(this);
+			canvas.addTouchMoveHandler(this);
 			canvas.addKeyDownHandler(this);
 			canvas.setFocus(true);
 
@@ -277,8 +289,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		public void onMouseDown(MouseDownEvent event) {
 			canvas.setFocus(true);
 			int button = event.getNativeButton();
-			if (button == NativeEvent.BUTTON_LEFT || button == NativeEvent.BUTTON_MIDDLE) {
-				isDown = true;
+			if ((button == NativeEvent.BUTTON_LEFT || button == NativeEvent.BUTTON_MIDDLE) && touchId == null) {
+				isMouseDown = true;
 				x = event.getX();
 				y = event.getY();
 				event.preventDefault();
@@ -288,16 +300,57 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 		@Override
 		public void onMouseUp(MouseUpEvent event) {
-			isDown = false;
+			isMouseDown = false;
 			Event.releaseCapture(canvas.getElement());
 		}
 
 		@Override
 		public void onMouseMove(MouseMoveEvent event) {
-			if (isDown) {
+			if (isMouseDown) {
 				pan(x - event.getX(), y - event.getY());
 				x = event.getX();
 				y = event.getY();
+			}
+		}
+
+		@Override
+		public void onTouchStart(TouchStartEvent event) {
+			if (touchId != null || isMouseDown)
+				return;
+			Touch touch = event.getTouches().get(0);
+			touchId = touch.getIdentifier();
+			x = touch.getClientX();
+			y = touch.getClientY();
+			event.preventDefault();
+		}
+
+		@Override
+		public void onTouchEnd(TouchEndEvent event) {
+			if (touchId == null)
+				return;
+			JsArray<Touch> touches = event.getTouches();
+			for (int i = 0; i < touches.length(); i++) {
+				Touch touch = touches.get(i);
+				if (touch.getIdentifier() == touchId)
+					return;
+			}
+			touchId = null;
+			event.preventDefault();
+		}
+
+		@Override
+		public void onTouchMove(TouchMoveEvent event) {
+			if (touchId == null)
+				return;
+			JsArray<Touch> touches = event.getTouches();
+			for (int i = 0; i < touches.length(); i++) {
+				Touch touch = touches.get(i);
+				if (touch.getIdentifier() != touchId)
+					continue;
+				pan(x - touch.getClientX(), y - touch.getClientY());
+				x = touch.getClientX();
+				y = touch.getClientY();
+				event.preventDefault();
 			}
 		}
 
