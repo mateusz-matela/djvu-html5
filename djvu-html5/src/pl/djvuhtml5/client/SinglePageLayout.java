@@ -348,14 +348,14 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 		@Override
 		protected void pan(int dx, int dy) {
-			tryPan(dx, dy);
+			tryPan(-dx, -dy);
 		}
 
 		private boolean tryPan(int dx, int dy) {
 			int oldX = centerX;
 			int oldY = centerY;
-			centerX -= dx;
-			centerY -= dy;
+			centerX += dx;
+			centerY += dy;
 			viewChanged();
 			if (centerX != oldX || centerY != oldY) {
 				redraw();
