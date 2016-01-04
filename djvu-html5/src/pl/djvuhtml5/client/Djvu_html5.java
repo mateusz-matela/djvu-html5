@@ -1,5 +1,7 @@
 package pl.djvuhtml5.client;
 
+import java.util.MissingResourceException;
+
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -40,8 +42,12 @@ public class Djvu_html5 implements EntryPoint {
 	@Override
 	public void onModuleLoad() {
 		Djvu_html5.instance = this;
-		
-		context = Dictionary.getDictionary(CONTEXT_GLOBAL_VARIABLE);
+
+		try {
+			context = Dictionary.getDictionary(CONTEXT_GLOBAL_VARIABLE);
+		} catch (MissingResourceException e) {
+			// no custom config
+		}
 
 		RootPanel container = RootPanel.get("djvuContainer");
 		container.add(prepareCanvas());
@@ -190,13 +196,13 @@ public class Djvu_html5 implements EntryPoint {
 	}
 
 	public String getString(String key, String defaultValue) {
-		if (!instance.context.keySet().contains(key))
+		if (instance.context == null || !instance.context.keySet().contains(key))
 			return defaultValue;
 		return instance.context.get(key);
 	}
 
 	private int getInt(String key, int defaultValue) {
-		if (!instance.context.keySet().contains(key))
+		if (instance.context == null || !instance.context.keySet().contains(key))
 			return defaultValue;
 		String value = instance.context.get(key);
 		try {
