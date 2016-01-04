@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.gwt.dom.client.SpanElement;
 import com.google.gwt.event.dom.client.BlurEvent;
 import com.google.gwt.event.dom.client.BlurHandler;
 import com.google.gwt.event.dom.client.ChangeEvent;
@@ -29,18 +28,18 @@ public class Toolbar extends FlowPanel {
 
 	private List<Integer> zoomOptions = Arrays.asList(100);
 
-	private final ComboBox zoomCombo;
+	private final SelectionPanel zoomPanel;
 
 	private int pagesCount;
 
-	private final ComboBox pageCombo;
+	private final SelectionPanel pagePanel;
 
 	public Toolbar(Djvu_html5 app) {
 		this.app = app;
 
 		setStyleName("toolbar");
 
-		zoomCombo = new ComboBox("buttonZoomOut", "buttonZoomIn") {
+		zoomPanel = new SelectionPanel("buttonZoomOut", "buttonZoomIn") {
 
 			@Override
 			protected void valueTypedIn() {
@@ -57,51 +56,47 @@ public class Toolbar extends FlowPanel {
 				zoomChangeClicked(direction);
 			}
 		};
-		add(zoomCombo);
+		add(zoomPanel);
 		setZoomOptions(zoomOptions);
 
-		FlowPanel divisor = new FlowPanel(SpanElement.TAG);
-		divisor.setStyleName("toolbarDivisor");
-		add(divisor);
+		pagePanel = new SelectionPanel("buttonPagePrev", "buttonPageNext") {
 
-		pageCombo = new ComboBox("buttonPagePrev", "buttonPageNext") {
-			
 			@Override
 			protected void valueTypedIn() {
 				pageTypedIn();
 			}
-			
+
 			@Override
 			protected void valueSelected() {
 				pageSelectionChanged();
 			}
-			
+
 			@Override
 			protected void changeValueClicked(int direction) {
 				pageChangeClicked(direction);
 			}
 		};
-		add(pageCombo);
+		add(pagePanel);
 	}
 
 	public void setPageLayout(SinglePageLayout pageLayout) {
 		this.pageLayout = pageLayout;
 		pageLayout.setChangeListener(new ChangeListener() {
-			
+
 			@Override
 			public void zoomChanged(int currentZoom) {
-				zoomCombo.textBox.setText(currentZoom + "%");
+				zoomPanel.textBox.setText(currentZoom + "%");
 			}
-			
+
 			@Override
 			public void pageChanged(int currentPage) {
-				pageCombo.textBox.setText((currentPage + 1) + "");
+				pagePanel.textBox.setText((currentPage + 1) + "");
 			}
 		});
 	}
 
 	public void setZoomOptions(List<Integer> newZoomOptions) {
-		ListBox zoomSelection = zoomCombo.selection;
+		ListBox zoomSelection = zoomPanel.selection;
 		int previousIndex = zoomSelection.getSelectedIndex();
 
 		zoomSelection.clear();
@@ -130,7 +125,7 @@ public class Toolbar extends FlowPanel {
 
 	public void setPageCount(int pagesCount) {
 		this.pagesCount = pagesCount;
-		ListBox pageSelection = pageCombo.selection;
+		ListBox pageSelection = pagePanel.selection;
 		pageSelection.clear();
 		for (int i = 1; i <= pagesCount; i++) {
 			pageSelection.addItem(i + "");
@@ -142,7 +137,7 @@ public class Toolbar extends FlowPanel {
 	protected void zoomSelectionChanged() {
 		if (pageLayout == null)
 			return;
-		ListBox zoomSelection = zoomCombo.selection;
+		ListBox zoomSelection = zoomPanel.selection;
 		int index = zoomSelection.getSelectedIndex();
 		if (index < zoomOptions.size()) {
 			pageLayout.setZoom(zoomOptions.get(index));
@@ -158,14 +153,14 @@ public class Toolbar extends FlowPanel {
 				throw new RuntimeException();
 			}
 		}
-		zoomCombo.textBox.setText(zoomSelection.getSelectedItemText());
+		zoomPanel.textBox.setText(zoomSelection.getSelectedItemText());
 		zoomSelection.setFocus(false);
 	}
 
 	protected void zoomTypedIn() {
 		if (pageLayout == null)
 			return;
-		TextBox zoomTextBox = zoomCombo.textBox;
+		TextBox zoomTextBox = zoomPanel.textBox;
 		String digits = zoomTextBox.getText().replaceAll("[^0-9]", "");
 		if (digits.isEmpty() || digits.length() > 6) {
 			zoomTextBox.setText(pageLayout.getZoom() + "%");
@@ -174,7 +169,7 @@ public class Toolbar extends FlowPanel {
 		}
 		int zoom = Math.min(Integer.valueOf(digits), app.getMaxZoom());
 		zoom = Math.max(zoom, zoomOptions.get(zoomOptions.size() - 1));
-		zoomCombo.selection.setSelectedIndex(-1);
+		zoomPanel.selection.setSelectedIndex(-1);
 		pageLayout.setZoom(zoom);
 		zoomTextBox.setText(zoom + "%");
 		zoomTextBox.setFocus(false);
@@ -191,30 +186,30 @@ public class Toolbar extends FlowPanel {
 		}
 		index = Math.min(index, zoomOptions.size() - 1);
 		index = Math.max(index, 0);
-		zoomCombo.selection.setSelectedIndex(index);
+		zoomPanel.selection.setSelectedIndex(index);
 		zoomSelectionChanged();
 	}
 
 	protected void pageSelectionChanged() {
-		int page = pageCombo.selection.getSelectedIndex();
+		int page = pagePanel.selection.getSelectedIndex();
 		if (pageLayout != null)
 			pageLayout.setPage(page);
-		pageCombo.selection.setFocus(false);
+		pagePanel.selection.setFocus(false);
 	}
 
 	protected void pageTypedIn() {
 		if (pageLayout == null)
 			return;
-		TextBox pageTextBox = pageCombo.textBox;
+		TextBox pageTextBox = pagePanel.textBox;
 		String digits = pageTextBox.getText().replaceAll("[^0-9]", "");
 		if (digits.isEmpty() || digits.length() > 6) {
-			pageTextBox.setText(pageCombo.selection.getSelectedItemText());
+			pageTextBox.setText(pagePanel.selection.getSelectedItemText());
 			pageTextBox.selectAll();
 			return;
 		}
 		int page = Math.min(Integer.valueOf(digits), pagesCount) - 1;
 		page = Math.max(page, 0);
-		pageCombo.selection.setSelectedIndex(page);
+		pagePanel.selection.setSelectedIndex(page);
 		pageLayout.setPage(page);
 		pageTextBox.setFocus(false);
 	}
@@ -222,24 +217,23 @@ public class Toolbar extends FlowPanel {
 	protected void pageChangeClicked(int direction) {
 		if (pageLayout == null)
 			return;
-		int page = pageCombo.selection.getSelectedIndex() + direction;
+		int page = pagePanel.selection.getSelectedIndex() + direction;
 		page = Math.max(0, Math.min(pagesCount - 1, page));
-		pageCombo.selection.setSelectedIndex(page);
+		pagePanel.selection.setSelectedIndex(page);
 		pageSelectionChanged();
 	}
 
-	private static abstract class ComboBox extends FlowPanel {
+	private static abstract class SelectionPanel extends FlowPanel {
 		public final ListBox selection;
 		public final TextBox textBox;
 
-		public ComboBox(String leftButtonStyle, String rightButtonStyle) {
-			super(SpanElement.TAG);
+		public SelectionPanel(String leftButtonStyle, String rightButtonStyle) {
+			setStyleName("toolbarItem");
 
 			Button leftButton = new Button();
 			leftButton.setStyleName("toolbarSquareButton");
 			leftButton.addStyleName(leftButtonStyle);
 			leftButton.addClickHandler(new ClickHandler() {
-				
 				@Override
 				public void onClick(ClickEvent event) {
 					changeValueClicked(-1);
@@ -247,13 +241,12 @@ public class Toolbar extends FlowPanel {
 			});
 			add(leftButton);
 
-			FlowPanel comboPanel = new FlowPanel(SpanElement.TAG);
+			FlowPanel comboPanel = new FlowPanel();
 			add(comboPanel);
 			comboPanel.setStyleName("comboBox");
 			selection = new ListBox();
 			selection.setStyleName("comboBoxSelection");
 			selection.addChangeHandler(new ChangeHandler() {
-				
 				@Override
 				public void onChange(ChangeEvent event) {
 					valueSelected();
@@ -264,7 +257,6 @@ public class Toolbar extends FlowPanel {
 			textBox = new TextBox();
 			textBox.setStyleName("comboBoxText");
 			textBox.addKeyPressHandler(new KeyPressHandler() {
-				
 				@Override
 				public void onKeyPress(KeyPressEvent event) {
 					if (event.getCharCode() == KeyCodes.KEY_ENTER) {
@@ -273,14 +265,12 @@ public class Toolbar extends FlowPanel {
 				}
 			});
 			textBox.addBlurHandler(new BlurHandler() {
-				
 				@Override
 				public void onBlur(BlurEvent event) {
 					valueTypedIn();
 				}
 			});
 			textBox.addClickHandler(new ClickHandler() {
-				
 				@Override
 				public void onClick(ClickEvent event) {
 					textBox.selectAll();
@@ -292,7 +282,6 @@ public class Toolbar extends FlowPanel {
 			rightButton.setStyleName("toolbarSquareButton");
 			rightButton.addStyleName(rightButtonStyle);
 			rightButton.addClickHandler(new ClickHandler() {
-				
 				@Override
 				public void onClick(ClickEvent event) {
 					changeValueClicked(1);
