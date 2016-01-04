@@ -49,10 +49,13 @@ public class Djvu_html5 implements EntryPoint {
 		container.add(horizontalScrollbar = new Scrollbar(true));
 		container.add(verticalScrollbar = new Scrollbar(false));
 
-		UIHider uiHider = new UIHider(canvas);
-		uiHider.addUIElement(toolbar, "toolbarHidden");
-		uiHider.addUIElement(horizontalScrollbar, "scrollbarHidden");
-		uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
+		int uiHideDelay = getUiHideDelay();
+		if (uiHideDelay > 0) {
+			UIHider uiHider = new UIHider(canvas, uiHideDelay);
+			uiHider.addUIElement(toolbar, "toolbarHidden");
+			uiHider.addUIElement(horizontalScrollbar, "scrollbarHidden");
+			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
+		}
 
 		url = Window.Location.getParameter("file");
 		if (url == null || url.isEmpty())
@@ -168,6 +171,10 @@ public class Djvu_html5 implements EntryPoint {
 
 	public String getBackground() {
 		return getString("background", "#666");
+	}
+
+	private int getUiHideDelay() {
+		return getInt("uiHideDelay", 1500);
 	}
 
 	public int getPageMargin() {

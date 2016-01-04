@@ -39,7 +39,7 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 		}
 	}
 
-	private static final int UI_HIDE_DELAY = 1500;
+	private final int uiHideDelay;
 
 	private final ArrayList<UIElement> uiElements = new ArrayList<>();
 
@@ -70,7 +70,8 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 		widget.addDomHandler(this, TouchEndEvent.getType());
 	}
 
-	public UIHider(Canvas canvas) {
+	public UIHider(Canvas canvas, int uiHideDelay) {
+		this.uiHideDelay = uiHideDelay;
 		canvas.addMouseMoveHandler(this);
 		canvas.addTouchStartHandler(this);
 		canvas.addTouchEndHandler(this);
@@ -83,7 +84,7 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 		for (UIElement element : uiElements)
 			element.widget.removeStyleName(element.hiddenStyleName);
 		timer.cancel();
-		timer.schedule(UI_HIDE_DELAY);
+		timer.schedule(uiHideDelay);
 	}
 
 	@Override
