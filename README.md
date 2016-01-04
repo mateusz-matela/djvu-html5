@@ -10,7 +10,9 @@ Released under the GNU General Public License version 2, see the [LICENSE](LICEN
 
 ## Getting started
 
-[Download](https://github.com/mateusz-matela/djvu-html5/releases) and unpack the latest version. Open the `Djvu_html5.html` file in a web browser to see the viewer with a sample document opened (this works best in Firefox, Chrome needs to be started with parameter `--allow-file-access-from-files` for this to work). This html file can be used directly or as an example of how to invoke the viewer: reference the required stylesheet and javascript and add a `<div id="djvuContainer">` element that the viewer can attach to.
+[Download](https://github.com/mateusz-matela/djvu-html5/releases) and unpack the latest version. Open the `Djvu_html5.html` file in a web browser to see the viewer with a sample document opened (this works best in Firefox, Chrome needs to be started with parameter `--allow-file-access-from-files` for this to work).
+This html file can be used directly or as an example of how to invoke the viewer: reference the required stylesheet and javascript and add a `<div id="djvuContainer">` element that the viewer can attach to.
+For best experience on mobile devices, it's recommended to **disable page scaling** with proper `<meta name="viewport" ...>` tag - otherwise a user may end up with resized view, not able to restore it as all touch input is intercepted by the djvu canvas.
 
 The location of the DjVu document that should be opened can be defined in one of three ways:
 
