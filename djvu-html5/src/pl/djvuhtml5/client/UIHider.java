@@ -19,11 +19,15 @@ import com.google.gwt.event.dom.client.MouseOverEvent;
 import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.event.dom.client.MouseUpHandler;
+import com.google.gwt.event.dom.client.TouchEndEvent;
+import com.google.gwt.event.dom.client.TouchEndHandler;
+import com.google.gwt.event.dom.client.TouchStartEvent;
+import com.google.gwt.event.dom.client.TouchStartHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Widget;
 
-public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHandler, MouseDownHandler, MouseUpHandler,
-		KeyDownHandler, FocusHandler, BlurHandler {
+public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHandler, MouseOverHandler, MouseOutHandler,
+		MouseDownHandler, MouseUpHandler, KeyDownHandler, FocusHandler, BlurHandler {
 
 	private static class UIElement {
 		public final Widget widget;
@@ -42,13 +46,14 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 	private int previousX, previousY;
 	private boolean isMouseOverUI = false;
 	private boolean isMouseDown = false;
+	private boolean isTouchDown = false;
 	private boolean hasCanvasFocus = false;
 
 	private final Timer timer = new Timer() {
 
 		@Override
 		public void run() {
-			if (!isMouseOverUI && !isMouseDown && hasCanvasFocus) {
+			if (!isMouseOverUI && !isMouseDown && !isTouchDown && hasCanvasFocus) {
 				for (UIElement element : uiElements)
 					element.widget.addStyleName(element.hiddenStyleName);
 			}
@@ -61,10 +66,14 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 		widget.addDomHandler(this, MouseOutEvent.getType());
 		widget.addDomHandler(this, MouseDownEvent.getType());
 		widget.addDomHandler(this, MouseUpEvent.getType());
+		widget.addDomHandler(this, TouchStartEvent.getType());
+		widget.addDomHandler(this, TouchEndEvent.getType());
 	}
 
 	public UIHider(Canvas canvas) {
 		canvas.addMouseMoveHandler(this);
+		canvas.addTouchStartHandler(this);
+		canvas.addTouchEndHandler(this);
 		canvas.addKeyDownHandler(this);
 		canvas.addFocusHandler(this);
 		canvas.addBlurHandler(this);
@@ -83,6 +92,19 @@ public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHand
 			return;
 		previousX = event.getX();
 		previousY = event.getY();
+		showUI();
+	}
+
+	@Override
+	public void onTouchStart(TouchStartEvent event) {
+		isTouchDown = true;
+		showUI();
+	}
+
+	@Override
+	public void onTouchEnd(TouchEndEvent event) {
+		if (event.getTouches().length() == 0)
+			isTouchDown = false;
 		showUI();
 	}
 

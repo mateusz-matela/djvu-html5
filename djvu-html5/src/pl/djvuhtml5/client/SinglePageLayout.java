@@ -15,6 +15,7 @@ import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
+import com.google.gwt.event.dom.client.TouchStartEvent;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
@@ -264,6 +265,12 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		public void onMouseDown(MouseDownEvent event) {
 			canvas.setFocus(true);
 			super.onMouseDown(event);
+		}
+
+		@Override
+		public void onTouchStart(TouchStartEvent event) {
+			canvas.setFocus(true);
+			super.onTouchStart(event);
 		}
 
 		@Override
