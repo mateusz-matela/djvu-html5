@@ -8,6 +8,10 @@ Adapted and optimized for [GWT framework](http://www.gwtproject.org/) by Mateusz
 
 Released under the GNU General Public License version 2, see the [LICENSE](LICENSE) file for details.
 
+## Live demo
+
+**[Click here to open the viewer with a sample DjVu file](http://mateusz-matela.github.io/djvu-html5/demo.html)**
+
 ## Getting started
 
 [Download](https://github.com/mateusz-matela/djvu-html5/releases) and unpack the latest version. Open the `Djvu_html5.html` file in a web browser to see the viewer with a sample document opened (this works best in Firefox, Chrome needs to be started with parameter `--allow-file-access-from-files` for this to work).
