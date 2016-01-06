@@ -490,10 +490,10 @@ public class DjVuPage
    *
    * @return Hidden text for this page.
    */
-  public Codec getText()
+  public DjVuText getText()
   {
     // There is no need to synchronize since we won't access data which could be updated.
-    return codecTable.get(textLock);
+    return (DjVuText) codecTable.get(textLock);
   }
 
   /**

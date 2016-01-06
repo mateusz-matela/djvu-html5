@@ -45,12 +45,18 @@
 //
 package com.lizardtech.djvu.text;
 
-import com.lizardtech.djvu.*;
-import com.lizardtech.djvu.ByteArrayOutputStream;
-import com.lizardtech.djvu.InputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.Enumeration;
+import java.util.Vector;
 
-import java.io.*;
-import java.util.*;
+import com.lizardtech.djvu.BSInputStream;
+import com.lizardtech.djvu.ByteArrayOutputStream;
+import com.lizardtech.djvu.CachedInputStream;
+import com.lizardtech.djvu.Codec;
+import com.lizardtech.djvu.GRect;
+import com.lizardtech.djvu.InputStream;
+import com.lizardtech.djvu.NumContext;
 
 
 /**
@@ -342,19 +348,19 @@ public void decode(CachedInputStream input)
    *
    * @return a vector of the smallest level rectangles representing the text found
    */
-  public Vector find_text_with_rect(
+  public Vector<GRect> find_text_with_rect(
     GRect        box,
     StringBuffer text,
     int          padding)
   {
-    Vector     retval     = new Vector();
+    Vector<GRect>     retval     = new Vector<>();
     NumContext text_start = new NumContext(0);
     NumContext text_end   = new NumContext(0);
     page_zone.get_text_with_rect(box, text_start, text_end);
 
     if(text_start.intValue() != text_end.intValue())
     {
-      Vector zones = new Vector();
+      Vector<Zone> zones = new Vector<>();
       page_zone.append_zones(
         zones,
         text_start.intValue(),
@@ -368,11 +374,11 @@ public void decode(CachedInputStream input)
         {
           if(padding >= 0)
           {
-            ((Zone)zones.elementAt(pos)).get_smallest(retval, padding);
+            zones.elementAt(pos).get_smallest(retval, padding);
           }
           else
           {
-            ((Zone)zones.elementAt(pos)).get_smallest(retval);
+            zones.elementAt(pos).get_smallest(retval);
           }
         }
         while((++pos) < zones.size());
@@ -395,7 +401,7 @@ public void decode(CachedInputStream input)
    *
    * @return a vector of the smallest level rectangles representing the text found
    */
-  public Vector find_text_with_rect(
+  public Vector<GRect> find_text_with_rect(
     GRect        box,
     StringBuffer text)
   {
@@ -413,7 +419,7 @@ public void decode(CachedInputStream input)
   public void get_zones(
     int    zone_type,
     Zone   parent,
-    Vector zone_list)
+    Vector<Zone> zone_list)
   {
     // search all branches under parent
     Zone zone = parent;
@@ -422,7 +428,7 @@ public void decode(CachedInputStream input)
     {
       for(int pos = 0; pos < zone.children.size(); ++pos)
       {
-        Zone zcur = (Zone)zone.children.elementAt(pos);
+        Zone zcur = zone.children.elementAt(pos);
 
         if(zcur.ztype == zone_type)
         {
@@ -431,9 +437,9 @@ public void decode(CachedInputStream input)
             zone_list.addElement(zcur);
           }
         }
-        else if(((Zone)zone.children.elementAt(pos)).ztype < zone_type)
+        else if(zone.children.elementAt(pos).ztype < zone_type)
         {
-          get_zones(zone_type, (Zone)zone.children.elementAt(pos), zone_list);
+          get_zones(zone_type, zone.children.elementAt(pos), zone_list);
         }
       }
     }
@@ -459,14 +465,14 @@ public void decode(CachedInputStream input)
    *
    * @throws IOException if an IO error occures.
    */
-  public DjVuText init(final Enumeration iff)
+  public DjVuText init(final Enumeration<CachedInputStream> iff)
     throws IOException
   {
     if(iff != null)
     {
       while(iff.hasMoreElements())
       {
-        CachedInputStream chunk=(CachedInputStream)iff.nextElement();
+        CachedInputStream chunk=iff.nextElement();
         final String xchkid = chunk.getName();
         if(xchkid.startsWith("FORM:"))
         {
@@ -493,7 +499,7 @@ public void decode(CachedInputStream input)
   public DjVuText init(CachedInputStream pool)
     throws IOException
   {
-    final Enumeration e=pool.getIFFChunks();
+    final Enumeration<CachedInputStream> e=pool.getIFFChunks();
     if(e != null)
     {
       return init(e);
@@ -550,7 +556,7 @@ public void decode(CachedInputStream input)
    * @throws IllegalArgumentException if no none-white spaces are specified in the search string
    */
   public int search_string(
-    final Vector  zone_list,
+    final Vector<Zone>  zone_list,
     final String  string,
     int           from,
     final boolean search_fwd,
@@ -659,7 +665,7 @@ public void decode(CachedInputStream input)
    * @throws IllegalArgumentException if no none-white spaces are specified in the search string
    */
   public int search_string(
-    final Vector  zone_list,
+    final Vector<Zone>  zone_list,
     final String  string,
     final int     from,
     final boolean search_fwd,
@@ -939,7 +945,7 @@ public String toString()
   // empty list.
   ///
   private void find_zones(
-    final Vector zone_list,
+    final Vector<Zone> zone_list,
     final byte[] substring,
     int          from,
     boolean      whole_word,
@@ -986,7 +992,7 @@ public String toString()
 
       // It's a whole word search and the zone isn't empty
       // Get the WORD zone that contains the beginning of the substring
-      Zone first = (Zone)zone_list.elementAt(0);
+      Zone first = zone_list.elementAt(0);
 
       if(first == null)
       {
@@ -1023,7 +1029,7 @@ public String toString()
       // go on to check the end.
       {
         // Get the last WORD zone covering the substring
-        Zone last = (Zone)zone_list.elementAt(zone_list.size() - 1);
+        Zone last = zone_list.elementAt(zone_list.size() - 1);
 
         if((last != null) && (last.ztype > WORD))
         {
@@ -1082,38 +1088,20 @@ public String toString()
     return pos;
   }
 
-  // skip whitespace characters
-  private static int skipSpaces(
-    final String string,
-    int          pos)
-  {
-    final int length = string.length();
-
-    while(pos < length)
-    {
-      if(!isspace(string.charAt(pos++)))
-      {
-        return pos - 1;
-      }
-    }
-
-    return length;
-  }
-
   //*
   // For the byteArray starting at byteArray_start of length length
   // the function will generate a list of smallest zones of the
   // same type that covers the byteArray and will return it.
   // The list of zones in order.
   ///
-  private Vector find_smallest_zones(
-    Vector zone_list,
+  private Vector<Zone> find_smallest_zones(
+    Vector<Zone> zone_list,
     int    start,
     int    length)
   {
     if(zone_list == null)
     {
-      zone_list = new Vector();
+      zone_list = new Vector<>();
     }
     else
     {
@@ -1190,11 +1178,11 @@ public String toString()
     while(zone.ztype < max_type)
     {
       int          pos      = 0;
-      final Vector children = zone.children;
+      final Vector<Zone> children = zone.children;
 
       for(; pos < children.size(); ++pos)
       {
-        if(search_zone((Zone)children.elementAt(pos), start) > start)
+        if(search_zone(children.elementAt(pos), start) > start)
         {
           break;
         }
@@ -1205,10 +1193,10 @@ public String toString()
         break;
       }
 
-      zone = (Zone)children.elementAt(pos);
+      zone = children.elementAt(pos);
     }
 
-    return (Zone)zone;
+    return zone;
   }
 
   // Find the next java identifier character
@@ -1219,34 +1207,6 @@ public String toString()
     while(
       (pos < byteArray.length)
       && !isJavaIdentifier(getChar(byteArray, pos)))
-    {
-      pos = nextChar(byteArray, pos);
-    }
-
-    return pos;
-  }
-
-  // find the next space character
-  private int nextSpace(
-    final String string,
-    int          pos)
-  {
-    final int length = string.length();
-
-    while((pos < length) && !Character.isSpace(string.charAt(pos)))
-    {
-      pos++;
-    }
-
-    return pos;
-  }
-
-  // find the next space character
-  private int nextSpace(
-    final byte[] byteArray,
-    int          pos)
-  {
-    while((pos < byteArray.length) && !isspace(getChar(byteArray, pos)))
     {
       pos = nextChar(byteArray, pos);
     }
@@ -1383,7 +1343,7 @@ public String toString()
     //~ Instance fields ------------------------------------------------------
 
     /** List of children zone. */
-    public Vector children = new Vector();
+    public Vector<Zone> children = new Vector<>();
 
     /**
      * Controls whether separators are added between lexical elements. This
@@ -1441,7 +1401,7 @@ public String toString()
      * @param end byte position to list
      */
     public void append_zones(
-      final Vector list,
+      final Vector<Zone> list,
       final int    start,
       final int    end)
     {
@@ -1461,7 +1421,7 @@ public String toString()
 
             do
             {
-              ((Zone)children.elementAt(pos++)).append_zones(
+              children.elementAt(pos++).append_zones(
                 list,
                 start,
                 end);
@@ -1478,7 +1438,7 @@ public String toString()
       {
         for(int pos = 0; pos < children.size();)
         {
-          ((Zone)children.elementAt(pos++)).append_zones(list, start, end);
+          children.elementAt(pos++).append_zones(list, start, end);
         }
       }
     }
@@ -1498,7 +1458,7 @@ public String toString()
      *
      * @param list vector to append zones to
      */
-    public void get_smallest(final Vector list)
+    public void get_smallest(final Vector<GRect> list)
     {
       if(children.size() > 0)
       {
@@ -1506,7 +1466,7 @@ public String toString()
 
         do
         {
-          ((Zone)children.elementAt(pos++)).get_smallest(list);
+          children.elementAt(pos++).get_smallest(list);
         }
         while(children.size() > pos);
       }
@@ -1525,7 +1485,7 @@ public String toString()
      * @param padding number of pixels to expand each zone by
      */
     public void get_smallest(
-      Vector    list,
+      Vector<GRect>    list,
       final int padding)
     {
       if(children.size() > 0)
@@ -1534,7 +1494,7 @@ public String toString()
 
         do
         {
-          ((Zone)children.elementAt(pos++)).get_smallest(list, padding);
+          children.elementAt(pos++).get_smallest(list, padding);
         }
         while(children.size() > pos);
       }
@@ -1616,7 +1576,7 @@ public String toString()
 
         do
         {
-          ((Zone)children.elementAt(pos)).get_text_with_rect(
+          children.elementAt(pos).get_text_with_rect(
             box,
             byteArray_start,
             byteArray_end);
@@ -1646,7 +1606,7 @@ public String toString()
 
       for(int i = 0; i < children.size(); ++i)
       {
-        ((Zone)children.elementAt(i)).cleartext();
+        children.elementAt(i).cleartext();
       }
     }
 
@@ -1744,15 +1704,6 @@ public String toString()
       }
     }
 
-    private void decode(
-      InputStream bs,
-      int         maxtext,
-      Zone        parent)
-      throws IOException
-    {
-      decode(bs, maxtext, parent, null);
-    }
-
     // decode this zone from the text data
     private void decode(
       InputStream bs,
@@ -1774,7 +1725,7 @@ public String toString()
 
         for(int i = 0; i < children.size(); ++i)
         {
-          ((Zone)children.elementAt(i)).normtext(instr, outstr);
+          children.elementAt(i).normtext(instr, outstr);
         }
 
         text_length = outstr.size() - text_start;
@@ -1800,7 +1751,7 @@ public String toString()
         // Clear textual information on lower level nodes
         for(int i = 0; i < children.size(); ++i)
         {
-          ((Zone)children.elementAt(i)).cleartext();
+          children.elementAt(i).cleartext();
         }
       }
 

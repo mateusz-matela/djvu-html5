@@ -734,43 +734,6 @@ public synchronized void decode(final CachedInputStream pool)
     }
 
     /**
-     * Query a description of the file type.
-     * 
-     * @return a String describing the file type. 
-     *
-     * @throws IOException if an error occurs
-     */
-    public String get_str_type()
-      throws IOException
-    {
-      String type;
-
-      switch(flags & TYPE_MASK)
-      {
-        case INCLUDE :
-          type = "INCLUDE";
-
-          break;
-        case PAGE :
-          type = "PAGE";
-
-          break;
-        case THUMBNAILS :
-          type = "THUMBNAILS";
-
-          break;
-        case SHARED_ANNO :
-          type = "SHARED_ANNO";
-
-          break;
-        default :
-          throw new IOException("DjVmDir.get_str_type");
-      }
-
-      return type;
-    }
-
-    /**
      * Query if this is an include file.
      *
      * @return true if this is an include file
