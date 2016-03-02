@@ -40,7 +40,9 @@ It is highly recommended to use Google Chrome - this browser is currently the fa
 
 ## Getting involved
 
-The project is prepared with Eclipse and Google Plugin. If you want another tool stack, you're on your own (help with improving this welcome).
+The project is prepared with Eclipse and Google Plugin. It can be imprted directly as an Eclipse project or managed with Maven. If you want another tool stack, you're on your own (help with improving this welcome).
+
+### Instructions for Eclipse
 
 1. Dwonload Eclipse from https://www.eclipse.org/downloads/, recommended package is IDE for Jave EE Developers.
 2. Dwonload GWT SDK 2.7.0 from http://www.gwtproject.org/download.html
@@ -52,11 +54,17 @@ In the Markers view, use a quick fix `The GWT SDK JAR gwt-servlet.jar is missing
 7. Right-click on the project, `Run as` -> `Web Application (GWT Super Dev Mode)`. The viewer should now be available here: http://127.0.0.1:8888/Djvu_html5.html
 8. To prepare distribution that can be put on an external web server, right-click on the project, `Google` -> `GWT Compile`. Select the project and proceed with the compilation. Copy `djvu-html5/war` to the external server.
 
-## Maven project
+### Instructions for Maven
 
-The project can be added on Eclipse or IntelliJ. To compile from command line, the instructions are:
-1. On Maven
-2. mvn clean install
-3. mvn gwt:run
-4. GWT Development Mode is opened, then we wait to the html is loaded.
-5. When the terminal shows the message "The code server is ready at http://127.0.0.1:9876", the viewer should be available here: http://127.0.0.1:8888/Djvu_html5.html
+The project can be added in Eclipse or IntelliJ.
+To compile and run from command line:
+
+1. `cd` into `djvu-html` directory and type:
+
+    ```
+    > mvn clean install
+    > mvn gwt:run
+    ```
+
+2. GWT Development Mode window shows up, wait until the Jetty server starts.
+3. When the terminal shows the message `The code server is ready at http://127.0.0.1:9876`, the viewer should be available here: http://127.0.0.1:8888/Djvu_html5.html
