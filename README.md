@@ -52,7 +52,7 @@ In the Markers view, use a quick fix `The GWT SDK JAR gwt-servlet.jar is missing
 7. Right-click on the project, `Run as` -> `Web Application (GWT Super Dev Mode)`. The viewer should now be available here: http://127.0.0.1:8888/Djvu_html5.html
 8. To prepare distribution that can be put on an external web server, right-click on the project, `Google` -> `GWT Compile`. Select the project and proceed with the compilation. Copy `djvu-html5/war` to the external server.
 
-Maven project
+## Maven project
 
 The project can be added on Eclipse or IntelliJ. To compile from command line, the instructions are:
 1. On Maven
