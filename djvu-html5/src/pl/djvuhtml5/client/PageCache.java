@@ -102,6 +102,7 @@ public class PageCache implements DataSource {
 		PageItem currentPageItem = pages.get(lastRequestedPage);
 		if (currentOnly) {
 			if (currentPageItem.isDecoded)
+				app.interruptProcessing();	
 				return false;
 			return decodePage(currentPageItem);
 		}
@@ -120,6 +121,7 @@ public class PageCache implements DataSource {
 			totalMemory += pageItem.page.getMemoryUsage();
 		}
 		if (fetchIndex < 0)
+                        app.interruptProcessing();
 			return false; // all is decoded
 		for (int i = 0; pagesMemoryUsage > memoryLimit && i < fetchIndex; i++) {
 			PageItem pageItem = pagesTemp.get(i);
@@ -129,6 +131,7 @@ public class PageCache implements DataSource {
 			}
 			pageItem.page = null;
 		}
+                app.interruptProcessing();
 		if (pagesMemoryUsage > memoryLimit)
 			return false; // all the best pages are in memory
 
