@@ -14,6 +14,7 @@ import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.lizardtech.djvu.URLInputStream;
+import com.google.gwt.user.client.ui.HTML;
 
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
@@ -35,7 +36,7 @@ public class Djvu_html5 implements EntryPoint {
 	private TileCache tileCache;
 	private PageCache pageCache;
 	private BackgroundProcessor backgroundProcessor;
-
+	private HTML imagenLoading;
 	/**
 	 * This is the entry point method.
 	 */
@@ -54,6 +55,10 @@ public class Djvu_html5 implements EntryPoint {
 		container.add(toolbar = new Toolbar(this));
 		container.add(horizontalScrollbar = new Scrollbar(true));
 		container.add(verticalScrollbar = new Scrollbar(false));
+
+		imagenLoading = new HTML("<div></div>");
+		imagenLoading.setStyleName("loading");
+		container.add(imagenLoading);
 
 		int uiHideDelay = getUiHideDelay();
 		if (uiHideDelay > 0) {
@@ -77,7 +82,7 @@ public class Djvu_html5 implements EntryPoint {
 		URLInputStream.dataSource = pageCache;
 
 		backgroundProcessor = new BackgroundProcessor(this);
-		
+
 		tileCache = new TileCache(this);
 		pageLayout = new SinglePageLayout(this);
 		toolbar.setPageLayout(pageLayout);
@@ -95,14 +100,14 @@ public class Djvu_html5 implements EntryPoint {
 		panel.setStyleName("content");
 
 		Window.addResizeHandler(new ResizeHandler() {
-			
+
 			@Override
 			public void onResize(ResizeEvent event) {
 				resizeCanvas();
 			}
 		});
 		Scheduler.get().scheduleFinally(new Scheduler.ScheduledCommand() {
-			
+
 			@Override
 			public void execute() {
 				resizeCanvas();
@@ -136,10 +141,12 @@ public class Djvu_html5 implements EntryPoint {
 	}
 
 	public void startProcessing() {
+		loadingImageVisible(true);
 		backgroundProcessor.start();
 	}
 
 	public void interruptProcessing() {
+		loadingImageVisible(false);
 		backgroundProcessor.interrupt();
 	}
 
@@ -193,6 +200,10 @@ public class Djvu_html5 implements EntryPoint {
 
 	public int getMaxZoom() {
 		return getInt("maxZoom", 10000);
+	}
+
+	public void loadingImageVisible(boolean visible) {
+		imagenLoading.setVisible(visible);
 	}
 
 	public String getString(String key, String defaultValue) {
