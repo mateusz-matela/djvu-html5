@@ -101,6 +101,7 @@ public class PageCache implements DataSource {
 	boolean decodePage(boolean currentOnly) {
 		PageItem currentPageItem = pages.get(lastRequestedPage);
 		if (currentOnly) {
+			app.setLoadingImageVisible(!currentPageItem.isDecoded);
 			if (currentPageItem.isDecoded)
 				return false;
 			return decodePage(currentPageItem);

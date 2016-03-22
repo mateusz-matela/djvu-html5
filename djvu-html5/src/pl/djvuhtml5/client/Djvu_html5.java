@@ -10,6 +10,7 @@ import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.i18n.client.Dictionary;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
@@ -35,6 +36,7 @@ public class Djvu_html5 implements EntryPoint {
 	private TileCache tileCache;
 	private PageCache pageCache;
 	private BackgroundProcessor backgroundProcessor;
+	private Label loadingImage;
 
 	/**
 	 * This is the entry point method.
@@ -54,6 +56,10 @@ public class Djvu_html5 implements EntryPoint {
 		container.add(toolbar = new Toolbar(this));
 		container.add(horizontalScrollbar = new Scrollbar(true));
 		container.add(verticalScrollbar = new Scrollbar(false));
+
+		loadingImage = new Label();
+		loadingImage.setStyleName("loading");
+		container.add(loadingImage);
 
 		int uiHideDelay = getUiHideDelay();
 		if (uiHideDelay > 0) {
@@ -141,6 +147,10 @@ public class Djvu_html5 implements EntryPoint {
 
 	public void interruptProcessing() {
 		backgroundProcessor.interrupt();
+	}
+
+	public void setLoadingImageVisible(boolean visible) {
+		loadingImage.setVisible(visible);
 	}
 
 	public Toolbar getToolbar() {
