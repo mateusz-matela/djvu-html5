@@ -110,3 +110,16 @@ body {
 	top: 2px;
 	left: 3px;
 }
+
+.loading {
+    position: absolute;
+    left: 50%;
+    width: 120px;
+    height: 120px;
+    margin-right: -50%;
+    margin-top: 22%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    background-image: url("img/ajax-loader.gif");
+    background-repeat: no-repeat;
+}

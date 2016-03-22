@@ -101,8 +101,12 @@ public class PageCache implements DataSource {
 	boolean decodePage(boolean currentOnly) {
 		PageItem currentPageItem = pages.get(lastRequestedPage);
 		if (currentOnly) {
-			if (currentPageItem.isDecoded)
+			if (currentPageItem.isDecoded){
+				app.loadingImageVisible(false);
 				return false;
+			} else {
+				app.loadingImageVisible(true);
+			}
 			return decodePage(currentPageItem);
 		}
 		List<PageItem> pagesTemp = new ArrayList<>(pages);
@@ -115,12 +119,17 @@ public class PageCache implements DataSource {
 		int fetchIndex = pages.size();
 		while (fetchIndex-- > 0 && totalMemory < memoryLimit) {
 			PageItem pageItem = pagesTemp.get(fetchIndex);
-			if (!pageItem.isDecoded)
+			if (!pageItem.isDecoded) {
 				break;
+			} else {
+				app.loadingImageVisible(false);
+			}
 			totalMemory += pageItem.page.getMemoryUsage();
 		}
-		if (fetchIndex < 0)
+		if (fetchIndex < 0) {
+			app.loadingImageVisible(false);
 			return false; // all is decoded
+		}
 		for (int i = 0; pagesMemoryUsage > memoryLimit && i < fetchIndex; i++) {
 			PageItem pageItem = pagesTemp.get(i);
 			if (pageItem.isDecoded) {
