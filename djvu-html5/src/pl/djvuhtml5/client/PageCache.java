@@ -18,6 +18,8 @@ import com.lizardtech.djvu.DataSource;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
 
+import pl.djvuhtml5.client.Djvu_html5.Status;
+
 public class PageCache implements DataSource {
 
 	private static class FileItem implements Comparable<FileItem> {
@@ -101,7 +103,7 @@ public class PageCache implements DataSource {
 	boolean decodePage(boolean currentOnly) {
 		PageItem currentPageItem = pages.get(lastRequestedPage);
 		if (currentOnly) {
-			app.setLoadingImageVisible(!currentPageItem.isDecoded);
+			app.setStatus(currentPageItem.isDecoded ? null : Status.LOADING);
 			if (currentPageItem.isDecoded)
 				return false;
 			return decodePage(currentPageItem);
@@ -233,11 +235,13 @@ public class PageCache implements DataSource {
 						filesMemoryUsage += entry.data.byteLength();
 						checkFilesMemory();
 						app.startProcessing();
+						fireReady(url);
 					} else {
 						GWT.log("Error downloading " + url);
 						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
+						app.setStatus(Status.ERROR);
+						fileCache.get(url).downloadStarted = false;
 					}
-					fireReady(url);
 				}
 			}
 		});

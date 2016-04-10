@@ -21,6 +21,16 @@ import com.lizardtech.djvu.URLInputStream;
  */
 public class Djvu_html5 implements EntryPoint {
 
+	public static enum Status {
+		LOADING(0), ERROR(1);
+
+		public final int imagePosition;
+
+		Status(int imagePosition) {
+			this.imagePosition = imagePosition;
+		}
+	}
+
 	private static final String CONTEXT_GLOBAL_VARIABLE = "DJVU_CONTEXT";
 
 	private static Djvu_html5 instance;
@@ -36,7 +46,8 @@ public class Djvu_html5 implements EntryPoint {
 	private TileCache tileCache;
 	private PageCache pageCache;
 	private BackgroundProcessor backgroundProcessor;
-	private Label loadingImage;
+	private Label statusImage;
+	private Status currentStatus;
 
 	/**
 	 * This is the entry point method.
@@ -57,9 +68,9 @@ public class Djvu_html5 implements EntryPoint {
 		container.add(horizontalScrollbar = new Scrollbar(true));
 		container.add(verticalScrollbar = new Scrollbar(false));
 
-		loadingImage = new Label();
-		loadingImage.setStyleName("loading");
-		container.add(loadingImage);
+		statusImage = new Label();
+		statusImage.setStyleName("statusImage");
+		container.add(statusImage);
 
 		int uiHideDelay = getUiHideDelay();
 		if (uiHideDelay > 0) {
@@ -149,8 +160,16 @@ public class Djvu_html5 implements EntryPoint {
 		backgroundProcessor.interrupt();
 	}
 
-	public void setLoadingImageVisible(boolean visible) {
-		loadingImage.setVisible(visible);
+	public void setStatus(Status status) {
+		if (status == currentStatus)
+			return;
+		statusImage.setVisible(status != null);
+		if (status != null && currentStatus != Status.ERROR) {
+			statusImage.getElement().getStyle().setProperty("backgroundPosition",
+					-status.imagePosition * statusImage.getOffsetHeight() + "px 0px");
+		}
+		if (status == null || currentStatus != Status.ERROR)
+			currentStatus = status;
 	}
 
 	public Toolbar getToolbar() {

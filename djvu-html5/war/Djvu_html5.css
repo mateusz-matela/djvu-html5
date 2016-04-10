@@ -111,13 +111,13 @@ body {
 	left: 3px;
 }
 
-.loading {
+.statusImage {
 	position: absolute;
 	left: 50%;
 	top: 50%;
 	width: 128px;
 	height: 128px;
 	margin: -72px 0 0 -64px;
-	background-image: url("img/loading.png");
+	background-image: url("img/status.png");
 	background-repeat: no-repeat;
 }

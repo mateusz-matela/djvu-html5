@@ -4,6 +4,8 @@ import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.user.client.Window;
 
+import pl.djvuhtml5.client.Djvu_html5.Status;
+
 public class BackgroundProcessor implements RepeatingCommand {
 
 	private final static int LAZY_MODE_INTERVAL = 400;
@@ -40,6 +42,15 @@ public class BackgroundProcessor implements RepeatingCommand {
 
 	@Override
 	public boolean execute() {
+		try {
+			return doExecute();
+		} catch (Exception e) {
+			app.setStatus(Status.ERROR);
+			throw e;
+		}
+	}
+
+	private boolean doExecute() {
 		TileCache tileCache = app.getTileCache();
 		PageCache pageCache = app.getPageCache();
 		boolean didSomething = pageCache.decodePage(true)
