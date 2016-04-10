@@ -337,6 +337,8 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 		@Override
 		public void thumbDragged(double newCenter, boolean isHorizontal) {
+			if (pageInfo == null)
+				return;
 			if (isHorizontal) {
 				double pw2 = pageInfo.width * zoom + 2 * pageMargin;
 				tryPan((int) (newCenter * pw2 - pageMargin + 0.5) - centerX, 0);

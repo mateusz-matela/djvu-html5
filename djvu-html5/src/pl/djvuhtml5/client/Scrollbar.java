@@ -64,7 +64,7 @@ public class Scrollbar extends FlowPanel {
 				thumbWidth = getOffsetHeight();
 				fullRange = getParent().getOffsetHeight();
 			}
-			double newCenter = ((thumbStart + thumbWidth * 0.5) - (isHorizontal ? dx : dy)) / fullRange;
+			double newCenter = ((thumbStart + thumbWidth * 0.5) + (isHorizontal ? dx : dy)) / fullRange;
 			for (ScrollPanListener listener : panListeners)
 				listener.thumbDragged(newCenter, isHorizontal);
 		}
