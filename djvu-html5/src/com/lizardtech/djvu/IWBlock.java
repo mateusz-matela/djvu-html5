@@ -46,6 +46,7 @@
 package com.lizardtech.djvu;
 
 import com.google.gwt.typedarrays.shared.Int16Array;
+import com.google.gwt.typedarrays.shared.Int8Array;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 
 
@@ -131,17 +132,22 @@ final class IWBlock
 
   private static final Int16Array zeros = TypedArrays.createInt16Array(1024);
 
+  class Block {
+	  private int offset;
+	  public int get(int pos) {
+		  return pdata.get(pos + offset);
+	  }
+	  public void set(int pos, int value) {
+		  pdata.set(pos + offset, value);
+	  }
+  }
   //~ Instance fields --------------------------------------------------------
 
   /** the data structure for this block */
-  private short[][][] pdata = {null, null, null, null};
-
-  //~ Constructors -----------------------------------------------------------
-
-  /**
-   * Creates a new IWBlock object.
-   */
-  public IWBlock() {}
+  private Int16Array pdata = TypedArrays.createInt16Array(1024);
+  /** value at index i: 1 if block i has been initialized, 0 otherwise */
+  private Int8Array blockInitialized = TypedArrays.createInt8Array(64);
+  private Block block = new Block();
 
   //~ Methods ----------------------------------------------------------------
 
@@ -152,36 +158,27 @@ final class IWBlock
    *
    * @return the requested block
    */
-  short[] getBlock(final int n)
+  Block getBlock(final int n)
   {
-    final int nms=n>>4;
-    return (pdata[nms] != null)
-      ?pdata[nms][n & 0xf]:null;
+		if (blockInitialized.get(n) == 0)
+			return null;
+		block.offset = n * 16;
+		return block;
   }
 
   /**
    * Query a data block.
    *
    * @param n the block to query.
-   * @param map to use
    *
    * @return the requested block
    */
-   short[] getInitializedBlock(
+   Block getInitializedBlock(
     final int   n)
   {
-    final int nms=n>>4;
-    if(pdata[nms] == null)
-    {
-      pdata[nms] = new short[16][];
-    }
-    final int nls=n&0xf;
-    if(pdata[nms][nls] == null)
-    {
-      pdata[nms][nls] = new short[16];
-    }
-
-    return pdata[nms][nls];
+    blockInitialized.set(n, 1);
+    block.offset = n * 16;
+    return block;
   }
 
   /**
@@ -202,7 +199,7 @@ final class IWBlock
 
     for(int n1 = bmin; n1 < bmax; n1++)
     {
-      short[] d = getBlock(n1);
+      Block d = getBlock(n1);
 
       if(d == null)
       {
@@ -212,7 +209,7 @@ final class IWBlock
       {
         for(int n2 = 0; n2 < 16;)
         {
-          coeff.set(zigzagloc[n], d[n2]);
+          coeff.set(zigzagloc[n], d.get(n2));
           n2++;
           n++;
         }

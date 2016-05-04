@@ -50,6 +50,7 @@ import java.io.IOException;
 import com.google.gwt.typedarrays.shared.Int32Array;
 import com.google.gwt.typedarrays.shared.Int8Array;
 import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.lizardtech.djvu.IWBlock.Block;
 
 
 final class IWCodec
@@ -203,7 +204,7 @@ final class IWCodec
     for(int buckno = 0; buckno < nbucket;)
     {
       int     bstatetmp = 0;
-      short[] pcoeff = blk.getBlock(fbucket + buckno);
+      Block pcoeff = blk.getBlock(fbucket + buckno);
 
       if(pcoeff == null)
       {
@@ -216,7 +217,7 @@ final class IWCodec
           int cstatetmp = cstate.get(cidx + i) & 1;
           if(cstatetmp == 0)
           {
-        	cstatetmp = pcoeff[i] != 0 ? 2 : 8;
+        	cstatetmp = pcoeff.get(i) != 0 ? 2 : 8;
         	cstate.set(cidx + i, cstatetmp);
           }
           bstatetmp |= cstatetmp;
@@ -252,28 +253,28 @@ final class IWCodec
           if(!DjVuOptions.NOCTX_BUCKET_UPPER && (band > 0))
           {
             int     k = (fbucket + buckno) << 2;
-            short[] b = blk.getBlock(k >> 4);
+            Block b = blk.getBlock(k >> 4);
 
             if(b != null)
             {
               k &= 0xf;
 
-              if(b[k] != 0)
+              if(b.get(k) != 0)
               {
                 ctx++;
               }
 
-              if(b[k + 1] != 0)
+              if(b.get(k + 1) != 0)
               {
                 ctx++;
               }
 
-              if(b[k + 2] != 0)
+              if(b.get(k + 2) != 0)
               {
                 ctx++;
               }
 
-              if((ctx < 3) && (b[k + 3] != 0))
+              if((ctx < 3) && (b.get(k + 3) != 0))
               {
                 ctx++;
               }
@@ -302,7 +303,7 @@ final class IWCodec
       {
         if((bucketstate.get(buckno) & 4) != 0)
         {
-          short[] pcoeff = blk.getBlock(fbucket + buckno);
+          Block pcoeff = blk.getBlock(fbucket + buckno);
 
           if(pcoeff == null)
           {
@@ -370,11 +371,11 @@ final class IWCodec
 
                 if(zp.IWdecoder() != 0)
                 {
-                  pcoeff[i] = (short)(-coeff);
+                  pcoeff.set(i, (short)(-coeff));
                 }
                 else
                 {
-                  pcoeff[i] = (short)coeff;
+                  pcoeff.set(i, (short)coeff);
                 }
               }
 
@@ -407,13 +408,13 @@ final class IWCodec
       {
         if((bucketstate.get(buckno) & 2) != 0)
         {
-          short[] pcoeff = blk.getBlock(fbucket + buckno);
+          Block pcoeff = blk.getBlock(fbucket + buckno);
 
           for(int i = 0; i < 16; i++)
           {
             if((cstate.get(cidx + i) & 2) != 0)
             {
-              int coeff = pcoeff[i];
+              int coeff = pcoeff.get(i);
 
               if(coeff < 0)
               {
@@ -450,13 +451,13 @@ final class IWCodec
                 }
               }
 
-              if(pcoeff[i] > 0)
+              if(pcoeff.get(i) > 0)
               {
-                pcoeff[i] = (short)coeff;
+                pcoeff.set(i, (short)coeff);
               }
               else
               {
-                pcoeff[i] = (short)(-coeff);
+                pcoeff.set(i, (short)(-coeff));
               }
             }
           }
