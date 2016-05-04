@@ -399,7 +399,7 @@ public void decode(final CachedInputStream bs)
   }
 
 	public int getMemoryUsage() {
-		int usage = ymap.nb * 2048;
+		int usage = ymap.nb * 8192;
 		if (cbmap != null)
 			usage *= 3;
 		return usage;

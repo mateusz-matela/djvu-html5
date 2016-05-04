@@ -102,20 +102,21 @@ public class PageCache implements DataSource {
 
 	boolean decodePage(boolean currentOnly) {
 		PageItem currentPageItem = pages.get(lastRequestedPage);
+		int memoryLimit = app.getPageCacheSize();
+		List<PageItem> pagesTemp = new ArrayList<>(pages);
+		Collections.sort(pagesTemp);
+		pagesTemp.remove(currentPageItem);
+
 		if (currentOnly) {
 			app.setStatus(currentPageItem.isDecoded ? null : Status.LOADING);
 			if (currentPageItem.isDecoded)
 				return false;
+			cleanCacheOverflow(pagesTemp, memoryLimit);
 			return decodePage(currentPageItem);
 		}
-		List<PageItem> pagesTemp = new ArrayList<>(pages);
-		Collections.sort(pagesTemp);
-		pagesTemp.remove(currentPageItem);
-		pagesTemp.add(currentPageItem);
 
 		int totalMemory = 0;
-		int memoryLimit = app.getPageCacheSize();
-		int fetchIndex = pages.size();
+		int fetchIndex = pagesTemp.size();
 		while (fetchIndex-- > 0 && totalMemory < memoryLimit) {
 			PageItem pageItem = pagesTemp.get(fetchIndex);
 			if (!pageItem.isDecoded)
@@ -124,7 +125,15 @@ public class PageCache implements DataSource {
 		}
 		if (fetchIndex < 0)
 			return false; // all is decoded
-		for (int i = 0; pagesMemoryUsage > memoryLimit && i < fetchIndex; i++) {
+		cleanCacheOverflow(pagesTemp.subList(0, fetchIndex), memoryLimit);
+		if (pagesMemoryUsage > memoryLimit)
+			return false; // all the best pages are in memory
+
+		return decodePage(pagesTemp.get(fetchIndex));
+	}
+
+	private void cleanCacheOverflow(List<PageItem> pagesTemp, int memoryLimit) {
+		for (int i = 0; pagesMemoryUsage > memoryLimit && i < pagesTemp.size(); i++) {
 			PageItem pageItem = pagesTemp.get(i);
 			if (pageItem.isDecoded) {
 				pagesMemoryUsage -= pageItem.page.getMemoryUsage();
@@ -132,10 +141,6 @@ public class PageCache implements DataSource {
 			}
 			pageItem.page = null;
 		}
-		if (pagesMemoryUsage > memoryLimit)
-			return false; // all the best pages are in memory
-
-		return decodePage(pagesTemp.get(fetchIndex));
 	}
 
 	private boolean decodePage(PageItem pageItem) {
