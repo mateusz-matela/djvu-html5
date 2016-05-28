@@ -51,6 +51,11 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 
+import com.google.gwt.canvas.client.Canvas;
+import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.user.client.Event;
+import com.google.gwt.user.client.EventListener;
+import com.google.gwt.user.client.ui.Image;
 import com.lizardtech.djvu.anno.DjVuAnno;
 import com.lizardtech.djvu.text.DjVuText;
 
@@ -235,7 +240,7 @@ public class DjVuPage
       gamma_correction = 10D;
     }
 
-    final IWPixmap bgIWPixmap = getBgIWPixmap();
+    final Pixmap bgIWPixmap = getBgPixmap();
 
     if(bgIWPixmap != null)
     {
@@ -329,11 +334,6 @@ public class DjVuPage
         }
       }
 
-      if(DjVuOptions.COLLECT_GARBAGE)
-      {
-        System.gc();
-      }
-
       return pm;
     }
     else
@@ -363,13 +363,11 @@ public class DjVuPage
   }
 
   /**
-   * Query the background IWPixmap codec for this page.
-   *
-   * @return the background IWPixmap codec for this page.
+   * @return the background Pixmap codec for this page.
    */
-  public IWPixmap getBgIWPixmap()
+  public Pixmap getBgPixmap()
   {
-    return (IWPixmap)getCodec(bgIWPixmapLock);
+    return (Pixmap)getCodec(bgIWPixmapLock);
   }
 
   /**
@@ -1113,13 +1111,11 @@ public class DjVuPage
         }
         else if(chkid.equals("FG44"))
         {
-          if(hasCodec(fgPaletteLock))
+          if(hasCodec(fgPaletteLock) || fgPixmap != null)
           {
             throw new IllegalStateException(
               "DjVu Decoder: Corrupted data (Duplicate foreground layer)");
           }
-          if (fgPixmap != null)
-        	  throw new IllegalStateException("DjVu Decoder: Corrupted data (Duplicate foreground layer)");
           IWPixmap fgIWPixmap = new IWPixmap();
           fgIWPixmap.decode(iff);
           fgPixmap = fgIWPixmap.getPixmap();
@@ -1155,16 +1151,58 @@ public class DjVuPage
             throw new IllegalStateException(
               "DjVu Decoder: Corrupted data (Duplicate background layer)");
           }
+          setCodec(bgIWPixmapLock, decodeJPEG(iff));
         }
-        else if(chkid.equals("FGjp") && fgPixmap != null)
+        else if(chkid.equals("FGjp"))
         {
-          throw new IllegalStateException(
-            "DjVu Decoder: Corrupted data (Duplicate foreground layer)");
+			if (fgPixmap != null || hasCodec(fgPaletteLock)) {
+				throw new IllegalStateException("DjVu Decoder: Corrupted data (Duplicate foreground layer)");
+			}
+			fgPixmap = decodeJPEG(iff);
         }
       }
   }
+  
+  private native String btoa(String b64) /*-{
+	return btoa(b64);
+  }-*/;
 
-  /**
+  private GPixmap decodeJPEG(CachedInputStream iff) throws IOException {
+	final GPixmap result = new GPixmap();
+
+	final Image image = new Image();
+	final ImageElement imageElement = image.getElement().cast();
+	imageElement.getStyle().setProperty("visibility", "hidden");
+	Event.setEventListener(imageElement, new EventListener() {
+		@Override
+		public void onBrowserEvent(Event event) {
+			if (Event.ONLOAD == event.getTypeInt()) {
+				final int w = imageElement.getWidth(), h = imageElement.getHeight();
+				final Canvas canvas = Canvas.createIfSupported();
+				canvas.setWidth(w + "px");
+				canvas.setCoordinateSpaceWidth(w);
+				canvas.setHeight(h + "px");
+				canvas.setCoordinateSpaceHeight(h);
+				canvas.getContext2d().drawImage(imageElement, 0, 0);
+
+				result.init(h, w, null);
+				result.setImageData(canvas.getContext2d().getImageData(0, 0, w, h));
+			}
+		}
+	});
+	
+	StringBuilder data = new StringBuilder();
+	int b;
+	while ((b = iff.read()) != -1) {
+		data.append((char) b);
+	}
+	String dataURL = "data:image/jpeg;base64," + btoa(data.toString());
+	image.setUrl(dataURL);
+
+	return result;
+}
+
+/**
    * Called to decode an include chunk.
    *
    * @param pool chunk to be read
@@ -1415,9 +1453,9 @@ public class DjVuPage
 
 	private void decodeFinish() {
 		if (mimetype.equals("image/djvu")) {
-			final IWPixmap bgIWPixmap = getBgIWPixmap();
-			if (bgIWPixmap != null) {
-				bgIWPixmap.close_codec();
+			final Pixmap bgIWPixmap = getBgPixmap();
+			if (bgIWPixmap instanceof IWPixmap) {
+				((IWPixmap) bgIWPixmap).close_codec();
 			}
 			final DjVuInfo info = getInfo();
 			if (info == null) {
@@ -1433,7 +1471,7 @@ public class DjVuPage
 
 	public int getMemoryUsage() {
 		int usage = 0;
-		IWPixmap iwmap = getBgIWPixmap();
+		Pixmap iwmap = getBgPixmap();
 		if (iwmap != null)
 			usage += iwmap.getMemoryUsage();
 		JB2Dict jb2 = getFgJb2();

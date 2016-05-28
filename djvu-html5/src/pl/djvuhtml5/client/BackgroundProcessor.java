@@ -1,5 +1,6 @@
 package pl.djvuhtml5.client;
 
+import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.user.client.Window;
@@ -46,7 +47,8 @@ public class BackgroundProcessor implements RepeatingCommand {
 			return doExecute();
 		} catch (Exception e) {
 			app.setStatus(Status.ERROR);
-			throw e;
+			GWT.log("background processing failed", e);
+			return isRunning = false;
 		}
 	}
 

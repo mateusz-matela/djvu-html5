@@ -45,6 +45,8 @@
 //
 package com.lizardtech.djvu;
 
+import java.io.IOException;
+
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.typedarrays.shared.Int32Array;
 import com.google.gwt.typedarrays.shared.TypedArrays;
@@ -57,7 +59,7 @@ import com.google.gwt.typedarrays.shared.Uint8Array;
  * @version $ $
  */
 public class GPixmap
-  extends GMap
+  extends GMap implements Pixmap
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -853,4 +855,53 @@ public class GPixmap
   {
     return new GPixelReference(this, row, column);
   }
+
+@Override
+public int getWidth() {
+	return columns();
+}
+
+@Override
+public int getHeight() {
+	return rows();
+}
+
+@Override
+public GPixmap getPixmap(int subsample, GRect rect, GPixmap retval) {
+	if (retval == null)
+		retval = new GPixmap();
+	retval.init(rect.height(), rect.width(), null);
+	GPixelReference src = new GPixelReference(this, 0);
+	GPixelReference dst = new GPixelReference(retval, 0);
+	for (int x = rect.xmin; x < rect.xmax; x++) {
+		for (int y = rect.ymin; y < rect.ymax; y++) {
+			dst.setOffset(y - rect.ymin, x - rect.xmin);
+			int r = 0, g = 0, b = 0;
+			int count = 0;
+			for (int x2 = x * subsample; x2 < (x + 1) * subsample && x2 < getWidth(); x2++) {
+				for (int y2 = y * subsample; y2 < (y + 1) * subsample && y2 < getHeight(); y2++) {
+					src.setOffset(getHeight() - y2, x2);
+					r += src.getRed();
+					g += src.getGreen();
+					b += src.getBlue();
+					count++;
+				}
+			}
+			dst.setRed(r / count);
+			dst.setGreen(g / count);
+			dst.setBlue(b / count);
+		}
+	}
+	return retval;
+}
+
+@Override
+public void decode(CachedInputStream pool) throws IOException {
+	throw new IllegalStateException();
+}
+
+@Override
+public boolean isImageData() {
+	return false;
+}
 }

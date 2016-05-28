@@ -55,7 +55,7 @@ import com.google.gwt.typedarrays.shared.Uint8Array;
  *  This class represents structured wavelette data.
  */
 public class IWPixmap
-  implements Codec
+  implements Pixmap
 {
   //~ Static fields/initializers ---------------------------------------------
 
@@ -253,7 +253,8 @@ public void decode(final CachedInputStream bs)
    *
    * @return DOCUMENT ME!
    */
-  public int getHeight()
+  @Override
+public int getHeight()
   {
     return (ymap != null)
     ? ymap.ih
@@ -311,16 +312,8 @@ public void decode(final CachedInputStream bs)
     return ppm;
   }
 
-  /**
-   * Create a pixmap with the specified subsample rate and bounds.
-   *
-   * @param subsample rate at which to subsample
-   * @param rect Bounding box of the desired pixmap.
-   * @param retval An old pixmap to try updating, or null.
-   *
-   * @return DOCUMENT ME!
-   */
-  public GPixmap getPixmap(
+  @Override
+public GPixmap getPixmap(
     int     subsample,
     GRect   rect,
     GPixmap retval)
@@ -376,7 +369,8 @@ public void decode(final CachedInputStream bs)
    *
    * @return DOCUMENT ME!
    */
-  public int getWidth()
+  @Override
+public int getWidth()
   {
     return (ymap != null)?ymap.iw:0;
   }
@@ -398,6 +392,7 @@ public void decode(final CachedInputStream bs)
     return crcb_delay;
   }
 
+	@Override
 	public int getMemoryUsage() {
 		int usage = ymap.nb * 2500;
 		if (cbmap != null)
