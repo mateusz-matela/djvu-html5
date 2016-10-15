@@ -170,6 +170,10 @@ public class PageCache implements DataSource {
 	}
 
 	public DjVuPage fetchPage(int number) {
+		if (pages == null) {
+			lastRequestedPage = number;
+			return null;
+		}
 		if (lastRequestedPage != number) {
 			lastRequestedPage = number;
 			updateRanks();

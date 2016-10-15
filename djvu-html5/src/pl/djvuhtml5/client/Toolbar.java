@@ -91,6 +91,7 @@ public class Toolbar extends FlowPanel {
 			@Override
 			public void pageChanged(int currentPage) {
 				pagePanel.textBox.setText((currentPage + 1) + "");
+				pagePanel.selection.setSelectedIndex(currentPage);
 			}
 		});
 	}
@@ -130,8 +131,6 @@ public class Toolbar extends FlowPanel {
 		for (int i = 1; i <= pagesCount; i++) {
 			pageSelection.addItem(i + "");
 		}
-		pageSelection.setSelectedIndex(0);
-		pageSelectionChanged();
 	}
 
 	protected void zoomSelectionChanged() {

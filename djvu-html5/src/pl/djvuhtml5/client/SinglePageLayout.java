@@ -16,6 +16,9 @@ import com.google.gwt.event.dom.client.MouseDownEvent;
 import com.google.gwt.event.dom.client.MouseWheelEvent;
 import com.google.gwt.event.dom.client.MouseWheelHandler;
 import com.google.gwt.event.dom.client.TouchStartEvent;
+import com.google.gwt.http.client.UrlBuilder;
+import com.google.gwt.user.client.Timer;
+import com.google.gwt.user.client.Window;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
@@ -38,9 +41,11 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 	private double zoom100;
 
-	private int page = 0;
+	private int page;
 
 	private final TileCache tileCache;
+
+	private final PageCache pageCache;
 
 	private DjVuInfo pageInfo;
 
@@ -62,11 +67,14 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 	private GRect range = new GRect();
 
+	private Timer locationUpdater;
+
 	public SinglePageLayout(Djvu_html5 app) {
 		this.app = app;
 		this.tileCache = app.getTileCache();
+		this.pageCache = app.getPageCache();
 
-		app.getPageCache().addPageDownloadListener(this);
+		pageCache.addPageDownloadListener(this);
 		tileCache.addTileCacheListener(this);
 
 		this.canvas = app.getCanvas();
@@ -75,6 +83,13 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		this.pageMargin = app.getPageMargin();
 
 		new PanController(canvas);
+
+		try {
+			page = Integer.parseInt(Window.Location.getParameter("p")) - 1;
+		} catch (Exception e) {
+			page = 0;
+		}
+		pageCache.fetchPage(page);
 	}
 
 	public void setPage(int pageNum) {
@@ -90,6 +105,30 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		redraw();
 		if (changeListener != null)
 			changeListener.pageChanged(pageNum);
+		scheduleURLUpdate();
+	}
+
+	private void scheduleURLUpdate() {
+		if (locationUpdater == null) {
+			locationUpdater = new Timer() {
+				@Override
+				public void run() {
+					UrlBuilder url = Window.Location.createUrlBuilder();
+					if (page > 0) {
+						url.setParameter("p", Integer.toString(page + 1));
+					} else {
+						url.removeParameter("p");
+					}
+					updateURLWithoutReloading(url.buildString());
+				}
+
+				private native void updateURLWithoutReloading(String newUrl) /*-{
+					$wnd.history.replaceState(newUrl, "", newUrl);
+				}-*/;
+			};
+		}
+		locationUpdater.cancel();
+		locationUpdater.schedule(500);
 	}
 
 	public int getPage() {
