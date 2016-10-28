@@ -49,7 +49,7 @@ public class PageCache implements DataSource {
 			int result = this.rank - o.rank;
 			if (result == 0)
 				result = Math.abs(lastRequestedPage - o.pageNum) - Math.abs(lastRequestedPage - this.pageNum);
-			return result;
+			return -result;
 		}
 	}
 
@@ -62,6 +62,8 @@ public class PageCache implements DataSource {
 	private long filesMemoryUsage = 0;
 
 	private List<PageItem> pages;
+	/** The most important pages are at the beginning. */
+	private List<PageItem> pagesByRank;
 
 	private int pagesMemoryUsage = 0;
 
@@ -92,6 +94,9 @@ public class PageCache implements DataSource {
 			for (int i = 0; i < pageCount; i++)
 				pages.add(new PageItem(i));
 
+			pagesByRank = new ArrayList<>(pages);
+			Collections.sort(pagesByRank);
+
 			app.getToolbar().setPageCount(pageCount);
 
 			app.startProcessing();
@@ -100,41 +105,46 @@ public class PageCache implements DataSource {
 		}
 	}
 
-	boolean decodePage(boolean currentOnly) {
+	public boolean decodeCurrentPage() {
 		PageItem currentPageItem = pages.get(lastRequestedPage);
+		app.setStatus(currentPageItem.isDecoded ? null : Status.LOADING);
+		if (currentPageItem.isDecoded)
+			return false;
+		cleanCacheOverflow(0);
+		return decodePage(currentPageItem);
+	}
+
+	public boolean decodePages() {
 		int memoryLimit = app.getPageCacheSize();
-		List<PageItem> pagesTemp = new ArrayList<>(pages);
-		Collections.sort(pagesTemp);
-		pagesTemp.remove(currentPageItem);
-
-		if (currentOnly) {
-			app.setStatus(currentPageItem.isDecoded ? null : Status.LOADING);
-			if (currentPageItem.isDecoded)
-				return false;
-			cleanCacheOverflow(pagesTemp, memoryLimit);
-			return decodePage(currentPageItem);
-		}
-
 		int totalMemory = 0;
-		int fetchIndex = pagesTemp.size();
-		while (fetchIndex-- > 0 && totalMemory < memoryLimit) {
-			PageItem pageItem = pagesTemp.get(fetchIndex);
+		int fetchIndex = 0;
+		while (fetchIndex < pagesByRank.size() && totalMemory < memoryLimit) {
+			PageItem pageItem = pagesByRank.get(fetchIndex);
 			if (!pageItem.isDecoded)
 				break;
 			totalMemory += pageItem.page.getMemoryUsage();
+			fetchIndex++;
 		}
-		if (fetchIndex < 0)
+		if (fetchIndex == pagesByRank.size())
 			return false; // all is decoded
-		cleanCacheOverflow(pagesTemp.subList(0, fetchIndex), memoryLimit);
+		cleanCacheOverflow(fetchIndex + 1);
 		if (pagesMemoryUsage > memoryLimit)
 			return false; // all the best pages are in memory
 
-		return decodePage(pagesTemp.get(fetchIndex));
+		return decodePage(pagesByRank.get(fetchIndex));
 	}
 
-	private void cleanCacheOverflow(List<PageItem> pagesTemp, int memoryLimit) {
-		for (int i = 0; pagesMemoryUsage > memoryLimit && i < pagesTemp.size(); i++) {
-			PageItem pageItem = pagesTemp.get(i);
+	/**
+	 * @param cutoffIndex
+	 *            pages in ranking from first to this index will not be removed.
+	 *            Not inclusive (the page at this index can be removed).
+	 */
+	private void cleanCacheOverflow(int cutoffIndex) {
+		int memoryLimit = app.getPageCacheSize();
+		for (int i = pagesByRank.size() - 1; pagesMemoryUsage > memoryLimit && i >= cutoffIndex; i--) {
+			PageItem pageItem = pagesByRank.get(i);
+			if (pageItem.pageNum == lastRequestedPage)
+				continue;
 			if (pageItem.isDecoded) {
 				pagesMemoryUsage -= pageItem.page.getMemoryUsage();
 				pageItem.isDecoded = false;
@@ -177,6 +187,7 @@ public class PageCache implements DataSource {
 		if (lastRequestedPage != number) {
 			lastRequestedPage = number;
 			updateRanks();
+			Collections.sort(pagesByRank);
 		}
 		app.startProcessing();
 		return getPage(number);
