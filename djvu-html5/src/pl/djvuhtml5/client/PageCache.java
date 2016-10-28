@@ -22,16 +22,11 @@ import pl.djvuhtml5.client.Djvu_html5.Status;
 
 public class PageCache implements DataSource {
 
-	private static class FileItem implements Comparable<FileItem> {
+	private static class FileItem {
 		public Uint8Array data;
+		public int dataSize;
 		public final List<ReadyListener> listeners = new ArrayList<>();
-		public long lastUsed;
 		public boolean downloadStarted;
-
-		@Override
-		public int compareTo(FileItem o) {
-			return (int) (this.lastUsed - o.lastUsed);
-		}
 	}
 
 	private class PageItem implements Comparable<PageItem> {
@@ -59,6 +54,8 @@ public class PageCache implements DataSource {
 	private Document document;
 	
 	private final HashMap<String, FileItem> fileCache = new HashMap<>();
+	/** Most recently used files are at the beginning */
+	private final List<FileItem> filesByMRU = new ArrayList<>();
 
 	private long filesMemoryUsage = 0;
 
@@ -236,7 +233,8 @@ public class PageCache implements DataSource {
 		}
 		if (entry.data == null && listener != null)
 			entry.listeners.add(listener);
-		entry.lastUsed = System.currentTimeMillis();
+		filesByMRU.remove(entry);
+		filesByMRU.add(0, entry);
 		return entry.data;
 	}
 
@@ -254,8 +252,8 @@ public class PageCache implements DataSource {
 						if (entry == null)
 							fileCache.put(url, entry = new FileItem());
 						entry.data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
-						entry.lastUsed = System.currentTimeMillis();
-						filesMemoryUsage += entry.data.byteLength();
+						entry.dataSize = entry.data.byteLength();
+						filesMemoryUsage += entry.dataSize;
 						checkFilesMemory();
 						app.startProcessing();
 						fireReady(url);
@@ -273,15 +271,11 @@ public class PageCache implements DataSource {
 
 	protected void checkFilesMemory() {
 		int limit = app.getFileCacheSize();
-		if (filesMemoryUsage <= limit)
-			return;
-		ArrayList<FileItem> files = new ArrayList<>(fileCache.values());
-		Collections.sort(files);
-		while (filesMemoryUsage > limit && files.size() > 4) {
-			FileItem item = files.remove(0);
+		for (int i = filesByMRU.size() - 1; filesMemoryUsage > limit && i > 4; i--) {
+			FileItem item = filesByMRU.remove(i);
 			if (item.data == null)
 				continue;
-			filesMemoryUsage -= item.data.byteLength();
+			filesMemoryUsage -= item.dataSize;
 			item.data = null;
 			item.downloadStarted = false;
 		}
