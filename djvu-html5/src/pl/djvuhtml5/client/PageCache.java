@@ -38,6 +38,7 @@ public class PageCache implements DataSource {
 		public final int pageNum;
 		public DjVuPage page;
 		public boolean isDecoded;
+		public int memoryUsage;
 		public int rank = 10000;
 
 		public PageItem(int pageNum) {
@@ -122,16 +123,17 @@ public class PageCache implements DataSource {
 			PageItem pageItem = pagesByRank.get(fetchIndex);
 			if (!pageItem.isDecoded)
 				break;
-			totalMemory += pageItem.page.getMemoryUsage();
+			totalMemory += pageItem.memoryUsage;
 			fetchIndex++;
 		}
 		if (fetchIndex == pagesByRank.size())
 			return false; // all is decoded
 		cleanCacheOverflow(fetchIndex + 1);
-		if (pagesMemoryUsage > memoryLimit)
+		PageItem pageToDecode = pagesByRank.get(fetchIndex);
+		if (pagesMemoryUsage + pageToDecode.memoryUsage > memoryLimit)
 			return false; // all the best pages are in memory
 
-		return decodePage(pagesByRank.get(fetchIndex));
+		return decodePage(pageToDecode);
 	}
 
 	/**
@@ -146,7 +148,7 @@ public class PageCache implements DataSource {
 			if (pageItem.pageNum == lastRequestedPage)
 				continue;
 			if (pageItem.isDecoded) {
-				pagesMemoryUsage -= pageItem.page.getMemoryUsage();
+				pagesMemoryUsage -= pageItem.memoryUsage;
 				pageItem.isDecoded = false;
 			}
 			pageItem.page = null;
@@ -164,7 +166,8 @@ public class PageCache implements DataSource {
 			}
 			if (page.decodeStep()) {
 				pageItem.isDecoded = true;
-				pagesMemoryUsage += page.getMemoryUsage();
+				pageItem.memoryUsage = page.getMemoryUsage();
+				pagesMemoryUsage += pageItem.memoryUsage;
 				for (PageDownloadListener listener : listeners)
 					listener.pageAvailable(pageItem.pageNum);
 			}
@@ -196,7 +199,7 @@ public class PageCache implements DataSource {
 	private void updateRanks() {
 		int points = 0;
 		for (PageItem item : pages) {
-			int d = item.rank / 50;
+			int d = item.rank / 10;
 			points += d;
 			item.rank -= d;
 		}
@@ -204,11 +207,11 @@ public class PageCache implements DataSource {
 		int i = 0;
 		while (points > 0) {
 			for (int d : dd) {
-				int p = points / 5 + 1;
-				points -= p;
 				int index = lastRequestedPage + d * (i % pages.size());
 				if (index < 0 || index >= pages.size())
 					continue;
+				int p = points / 10 + 1;
+				points -= p;
 				pages.get(index).rank += p;
 				if (points <= 0)
 					break;
