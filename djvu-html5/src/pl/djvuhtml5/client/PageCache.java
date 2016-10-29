@@ -15,8 +15,10 @@ import com.google.gwt.xhr.client.ReadyStateChangeHandler;
 import com.google.gwt.xhr.client.XMLHttpRequest;
 import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
 import com.lizardtech.djvu.DataSource;
+import com.lizardtech.djvu.DjVmDir;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
+import com.lizardtech.djvu.Utils;
 
 import pl.djvuhtml5.client.Djvu_html5.Status;
 
@@ -58,6 +60,8 @@ public class PageCache implements DataSource {
 	private final List<FileItem> filesByMRU = new ArrayList<>();
 
 	private long filesMemoryUsage = 0;
+
+	private int downloadsInProgress = 0;
 
 	private List<PageItem> pages;
 	/** The most important pages are at the beginning. */
@@ -224,12 +228,9 @@ public class PageCache implements DataSource {
 
 	@Override
 	public Uint8Array getData(String url, ReadyListener listener) {
-		FileItem entry = fileCache.get(url);
-		if (entry == null)
-			fileCache.put(url, entry = new FileItem());
+		FileItem entry = getCachedFile(url);
 		if (!entry.downloadStarted) {
 			downloadFile(url);
-			entry.downloadStarted = true;
 		}
 		if (entry.data == null && listener != null)
 			entry.listeners.add(listener);
@@ -243,20 +244,19 @@ public class PageCache implements DataSource {
 		request.open("GET", url);
 		request.setResponseType(ResponseType.ArrayBuffer);
 		request.setOnReadyStateChange(new ReadyStateChangeHandler() {
-
 			@Override
 			public void onReadyStateChange(XMLHttpRequest xhr) {
 				if (xhr.getReadyState() == XMLHttpRequest.DONE) {
+					downloadsInProgress--;
 					if (xhr.getStatus() == 200) {
-						FileItem entry = fileCache.get(url);
-						if (entry == null)
-							fileCache.put(url, entry = new FileItem());
+						FileItem entry = getCachedFile(url);
 						entry.data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
 						entry.dataSize = entry.data.byteLength();
 						filesMemoryUsage += entry.dataSize;
 						checkFilesMemory();
 						app.startProcessing();
 						fireReady(url);
+						continueDownload();
 					} else {
 						GWT.log("Error downloading " + url);
 						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
@@ -267,6 +267,8 @@ public class PageCache implements DataSource {
 			}
 		});
 		request.send();
+		fileCache.get(url).downloadStarted = true;
+		downloadsInProgress++;
 	}
 
 	protected void checkFilesMemory() {
@@ -288,6 +290,29 @@ public class PageCache implements DataSource {
 		for (ReadyListener listener : entry.listeners)
 			listener.dataReady();
 		entry.listeners.clear();
+	}
+
+	protected void continueDownload() {
+		DjVmDir dir = document.getDjVmDir();
+		if (downloadsInProgress > 0 || dir.is_bundled() || filesMemoryUsage > app.getFileCacheSize())
+			return;
+		for (PageItem page : pagesByRank) {
+			String url = Utils.url(dir.getInitURL(), dir.page_to_file(page.pageNum).get_load_name());
+			FileItem file = getCachedFile(url);
+			if (file.data == null && !file.downloadStarted) {
+				if (filesMemoryUsage + file.dataSize < app.getFileCacheSize()) {
+					downloadFile(url);
+				}
+				break;
+			}
+		}
+	}
+
+	private FileItem getCachedFile(String url) {
+		FileItem file = fileCache.get(url);
+		if (file == null)
+			fileCache.put(url, file = new FileItem());
+		return file;
 	}
 
 	public void addPageDownloadListener(PageDownloadListener listener) {
