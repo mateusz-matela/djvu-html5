@@ -123,6 +123,12 @@ public class URLInputStream extends InputStream
 		return this;
 	}
 
+	public URLInputStream init(Uint8Array data) {
+		this.data = data;
+		offset = 0;
+		return this;
+	}
+
   public boolean isReady()
   {
 	  return data != null;

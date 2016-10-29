@@ -58,6 +58,7 @@ public class BackgroundProcessor implements RepeatingCommand {
 		boolean didSomething = pageCache.decodeCurrentPage()
 				|| tileCache.prefetchPreviews(false)
 				|| tileCache.prefetchCurrentView(0)
+				|| pageCache.decodeTexts()
 				|| tileCache.prefetchPreviews(true)
 				|| pageCache.decodePages()
 				|| tileCache.prefetchAdjacent(0)

@@ -14,11 +14,14 @@ import com.google.gwt.typedarrays.shared.Uint8Array;
 import com.google.gwt.xhr.client.ReadyStateChangeHandler;
 import com.google.gwt.xhr.client.XMLHttpRequest;
 import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
+import com.lizardtech.djvu.CachedInputStream;
 import com.lizardtech.djvu.DataSource;
 import com.lizardtech.djvu.DjVmDir;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
+import com.lizardtech.djvu.URLInputStream;
 import com.lizardtech.djvu.Utils;
+import com.lizardtech.djvu.text.DjVuText;
 
 import pl.djvuhtml5.client.Djvu_html5.Status;
 
@@ -34,6 +37,7 @@ public class PageCache implements DataSource {
 	private class PageItem implements Comparable<PageItem> {
 		public final int pageNum;
 		public DjVuPage page;
+		public DjVuText text;
 		public boolean isDecoded;
 		public int memoryUsage;
 		public int rank = 10000;
@@ -49,6 +53,14 @@ public class PageCache implements DataSource {
 				result = Math.abs(lastRequestedPage - o.pageNum) - Math.abs(lastRequestedPage - this.pageNum);
 			return -result;
 		}
+
+		public void setText(DjVuText text) {
+			if (text == null)
+				text = new DjVuText();
+			this.text = text;
+			if (text.length() > 0)
+				textAvailable = true;
+		}
 	}
 
 	private final Djvu_html5 app;
@@ -62,6 +74,9 @@ public class PageCache implements DataSource {
 	private long filesMemoryUsage = 0;
 
 	private int downloadsInProgress = 0;
+
+	private boolean textDownloadInProgress = false;
+	private boolean textAvailable = false;
 
 	private List<PageItem> pages;
 	/** The most important pages are at the beginning. */
@@ -137,6 +152,64 @@ public class PageCache implements DataSource {
 		return decodePage(pageToDecode);
 	}
 
+	public boolean decodeTexts() {
+		PageItem firstMissing = null;
+		DjVmDir dir = document.getDjVmDir();
+		for (PageItem page : pagesByRank) {
+			if (page.text != null)
+				continue;
+			String url = Utils.url(dir.getInitURL(), dir.page_to_file(page.pageNum).get_load_name());
+			FileItem file = getCachedFile(url);
+			if (file.data != null) {
+				DjVuText text = extractText(file.data, page);
+				return text != null;
+			} else if (firstMissing == null) {
+				firstMissing = page;
+			}
+		}
+		if (firstMissing == null || downloadsInProgress > 0 || textDownloadInProgress || !textAvailable)
+			return false;
+
+		// download missing page specifically to extract text (bypass file cache)
+		final String url = Utils.url(dir.getInitURL(), dir.page_to_file(firstMissing.pageNum).get_load_name());
+		final PageItem page = firstMissing;
+		XMLHttpRequest request = XMLHttpRequest.create();
+		request.open("GET", url);
+		request.setResponseType(ResponseType.ArrayBuffer);
+		request.setOnReadyStateChange(new ReadyStateChangeHandler() {
+			@Override
+			public void onReadyStateChange(XMLHttpRequest xhr) {
+				if (xhr.getReadyState() != XMLHttpRequest.DONE)
+					return;
+				textDownloadInProgress = false;
+				if (xhr.getStatus() == 200) {
+					Uint8Array data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
+					extractText(data, page);
+					app.startProcessing();
+				} else {
+					GWT.log("Error downloading " + url);
+					GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
+				}
+			}
+		});
+		request.send();
+		textDownloadInProgress = true;
+		return true;
+	}
+
+	private DjVuText extractText(Uint8Array data, final PageItem page) {
+		try {
+			DjVuText text = new DjVuText();
+			text.init(new CachedInputStream().init(new URLInputStream().init(data)));
+			page.setText(text);
+			app.startProcessing();
+			return text;
+		} catch (IOException e) {
+			GWT.log("Error while decoding text in page " + page.pageNum, e);
+		}
+		return null;
+	}
+
 	/**
 	 * @param cutoffIndex
 	 *            pages in ranking from first to this index will not be removed.
@@ -167,6 +240,7 @@ public class PageCache implements DataSource {
 			}
 			if (page.decodeStep()) {
 				pageItem.isDecoded = true;
+				pageItem.setText(page.getText());
 				pageItem.memoryUsage = page.getMemoryUsage();
 				pagesMemoryUsage += pageItem.memoryUsage;
 				for (PageDownloadListener listener : listeners)
