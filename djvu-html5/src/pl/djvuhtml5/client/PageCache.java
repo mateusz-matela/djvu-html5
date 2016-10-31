@@ -158,13 +158,24 @@ public class PageCache implements DataSource {
 		for (PageItem page : pagesByRank) {
 			if (page.text != null)
 				continue;
-			String url = Utils.url(dir.getInitURL(), dir.page_to_file(page.pageNum).get_load_name());
-			FileItem file = getCachedFile(url);
-			if (file.data != null) {
-				DjVuText text = extractText(file.data, page);
-				return text != null;
-			} else if (firstMissing == null) {
-				firstMissing = page;
+			if (dir.is_bundled()) {
+				try {
+					CachedInputStream data = document.get_data(page.pageNum, null);
+					page.setText(new DjVuText().init(data));
+					return true;
+				} catch (IOException e) {
+					GWT.log("Error while decoding text in page " + page.pageNum, e);
+					return false;
+				}
+			} else {
+				String url = Utils.url(dir.getInitURL(), dir.page_to_file(page.pageNum).get_load_name());
+				FileItem file = getCachedFile(url);
+				if (file.data != null) {
+					DjVuText text = extractText(file.data, page);
+					return text != null;
+				} else if (firstMissing == null) {
+					firstMissing = page;
+				}
 			}
 		}
 		if (firstMissing == null || downloadsInProgress > 0 || textDownloadInProgress || !textAvailable)
