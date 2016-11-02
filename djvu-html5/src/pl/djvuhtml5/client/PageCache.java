@@ -17,8 +17,10 @@ import com.google.gwt.xhr.client.XMLHttpRequest.ResponseType;
 import com.lizardtech.djvu.CachedInputStream;
 import com.lizardtech.djvu.DataSource;
 import com.lizardtech.djvu.DjVmDir;
+import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
+import com.lizardtech.djvu.IFFEnumeration;
 import com.lizardtech.djvu.URLInputStream;
 import com.lizardtech.djvu.Utils;
 import com.lizardtech.djvu.text.DjVuText;
@@ -37,6 +39,7 @@ public class PageCache implements DataSource {
 	private class PageItem implements Comparable<PageItem> {
 		public final int pageNum;
 		public DjVuPage page;
+		public DjVuInfo info;
 		public DjVuText text;
 		public boolean isDecoded;
 		public int memoryUsage;
@@ -158,31 +161,31 @@ public class PageCache implements DataSource {
 		for (PageItem page : pagesByRank) {
 			if (page.text != null)
 				continue;
+			CachedInputStream stream;
 			if (dir.is_bundled()) {
 				try {
-					CachedInputStream data = document.get_data(page.pageNum, null);
-					page.setText(new DjVuText().init(data));
-					return true;
+					stream = document.get_data(page.pageNum, null);
 				} catch (IOException e) {
 					GWT.log("Error while decoding text in page " + page.pageNum, e);
 					return false;
 				}
 			} else {
-				String url = Utils.url(dir.getInitURL(), dir.page_to_file(page.pageNum).get_load_name());
-				FileItem file = getCachedFile(url);
+				FileItem file = getCachedFile(dir.page_to_url(page.pageNum));
 				if (file.data != null) {
-					DjVuText text = extractText(file.data, page);
-					return text != null;
-				} else if (firstMissing == null) {
-					firstMissing = page;
+					stream = new CachedInputStream().init(new URLInputStream().init(file.data));
+				} else {
+					if (firstMissing == null)
+						firstMissing = page;
+					continue;
 				}
 			}
+			extractInfoAndText(page, stream);
 		}
 		if (firstMissing == null || downloadsInProgress > 0 || textDownloadInProgress || !textAvailable)
 			return false;
 
 		// download missing page specifically to extract text (bypass file cache)
-		final String url = Utils.url(dir.getInitURL(), dir.page_to_file(firstMissing.pageNum).get_load_name());
+		final String url = dir.page_to_url(firstMissing.pageNum);
 		final PageItem page = firstMissing;
 		XMLHttpRequest request = XMLHttpRequest.create();
 		request.open("GET", url);
@@ -195,7 +198,7 @@ public class PageCache implements DataSource {
 				textDownloadInProgress = false;
 				if (xhr.getStatus() == 200) {
 					Uint8Array data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
-					extractText(data, page);
+					extractInfoAndText(page, new CachedInputStream().init(new URLInputStream().init(data)));
 					app.startProcessing();
 				} else {
 					GWT.log("Error downloading " + url);
@@ -208,17 +211,25 @@ public class PageCache implements DataSource {
 		return true;
 	}
 
-	private DjVuText extractText(Uint8Array data, final PageItem page) {
+	private void extractInfoAndText(PageItem page, CachedInputStream input) {
 		try {
-			DjVuText text = new DjVuText();
-			text.init(new CachedInputStream().init(new URLInputStream().init(data)));
-			page.setText(text);
-			app.startProcessing();
-			return text;
+			IFFEnumeration chunks = input.getIFFChunks();
+			while (chunks.hasMoreElements() && (page.info == null || page.text == null)) {
+				CachedInputStream chunk = chunks.nextElement();
+				String chunkName = chunk.getName();
+				if (chunkName.startsWith("FORM:")) {
+					extractInfoAndText(page, chunk);
+				} else if ("INFO".equals(chunkName)) {
+					page.info = new DjVuInfo();
+					page.info.decode(chunk);
+				} else if ("TXTa".equals(chunkName) || "TXTz".equals(chunkName)) {
+					page.setText(new DjVuText().init(chunk));
+				}
+			}
 		} catch (IOException e) {
 			GWT.log("Error while decoding text in page " + page.pageNum, e);
+			page.setText(null);
 		}
-		return null;
 	}
 
 	/**
@@ -252,6 +263,7 @@ public class PageCache implements DataSource {
 			if (page.decodeStep()) {
 				pageItem.isDecoded = true;
 				pageItem.setText(page.getText());
+				pageItem.info = page.getInfo();
 				pageItem.memoryUsage = page.getMemoryUsage();
 				pagesMemoryUsage += pageItem.memoryUsage;
 				for (PageDownloadListener listener : listeners)
@@ -309,6 +321,14 @@ public class PageCache implements DataSource {
 	public DjVuPage getPage(int number) {
 		PageItem pageItem = pages.get(number);
 		return pageItem.isDecoded ? pageItem.page : null;
+	}
+
+	public DjVuInfo getInfo(int pageNumber) {
+		return pages.get(pageNumber).info;
+	}
+
+	public DjVuText getText(int pageNumber) {
+		return pages.get(pageNumber).text;
 	}
 
 	@Override
@@ -382,7 +402,7 @@ public class PageCache implements DataSource {
 		if (downloadsInProgress > 0 || dir.is_bundled() || filesMemoryUsage > app.getFileCacheSize())
 			return;
 		for (PageItem page : pagesByRank) {
-			String url = Utils.url(dir.getInitURL(), dir.page_to_file(page.pageNum).get_load_name());
+			String url = dir.page_to_url(page.pageNum);
 			FileItem file = getCachedFile(url);
 			if (file.data == null && !file.downloadStarted) {
 				if (filesMemoryUsage + file.dataSize < app.getFileCacheSize()) {

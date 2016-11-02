@@ -630,6 +630,10 @@ public synchronized void decode(final CachedInputStream pool)
     : null;
   }
 
+  public String page_to_url(int page_num) {
+	  return Utils.url(initURL, page2file.elementAt(page_num).get_load_name());
+  }
+
   //~ Inner Classes ----------------------------------------------------------
 
   /**
