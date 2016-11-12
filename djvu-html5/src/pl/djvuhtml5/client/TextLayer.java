@@ -250,8 +250,13 @@ public class TextLayer extends FlowPanel implements DecodeListener, ScrollHandle
 		Element layerElement = getElement();
 		Element pageElement = page.getElement();
 		pageElement.getStyle().setMarginLeft(Math.max(left, 0), Unit.PX);
-		layerElement.setScrollLeft(Math.max(-left, 0));
-		layerElement.setScrollTop(pageElement.getOffsetTop() - top);
+
+		if (Math.abs(-left - layerElement.getScrollLeft()) > 0)
+			layerElement.setScrollLeft(Math.max(-left, 0));
+
+		int targetScrollTop = pageElement.getOffsetTop() - top;
+		if (Math.abs(targetScrollTop - layerElement.getScrollTop()) > 0)
+			layerElement.setScrollTop(targetScrollTop);
 	}
 
 	@Override
