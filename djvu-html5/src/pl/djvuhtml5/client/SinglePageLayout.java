@@ -23,12 +23,12 @@ import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
 
-import pl.djvuhtml5.client.PageCache.PageDownloadListener;
+import pl.djvuhtml5.client.PageCache.DecodeListener;
 import pl.djvuhtml5.client.Scrollbar.ScrollPanListener;
 import pl.djvuhtml5.client.TileCache.TileCacheListener;
 import pl.djvuhtml5.client.TileCache.TileInfo;
 
-public class SinglePageLayout implements PageDownloadListener, TileCacheListener {
+public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
 	interface ChangeListener {
 		void pageChanged(int currentPage);
@@ -74,7 +74,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		this.tileCache = app.getTileCache();
 		this.pageCache = app.getPageCache();
 
-		pageCache.addPageDownloadListener(this);
+		pageCache.addFullDecodeListener(this);
 		tileCache.addTileCacheListener(this);
 
 		this.canvas = app.getCanvas();
@@ -82,7 +82,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		this.background = app.getBackground();
 		this.pageMargin = app.getPageMargin();
 
-		new PanController(canvas);
+		new PanController();
 
 		try {
 			page = Integer.parseInt(Window.Location.getParameter("p")) - 1;
@@ -163,6 +163,10 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		return (int) (zoom / zoom100 * 100 + 0.5);
 	}
 
+	public double getPreciseZoom() {
+		return zoom;
+	}
+
 	private void doSetZoom(double zoom) {
 		centerX *= zoom / this.zoom;
 		centerY *= zoom / this.zoom;
@@ -228,6 +232,25 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 		double pw2 = pw + 2 * pageMargin, ph2 = ph + 2 * pageMargin;
 		app.getHorizontalScrollbar().setThumb((centerX + pageMargin) / pw2, w / pw2);
 		app.getVerticalScrollbar().setThumb((centerY + pageMargin) / ph2, h / ph2);
+		app.getTextLayer().setViewPosition(page, w / 2 - centerX, h / 2 - centerY, zoom);
+	}
+
+	/**
+	 * @param left position of page's left edge on the canvas
+	 * @param top position of page's top edge on the canvas
+	 */
+	public void externalScroll(int page, int left, int top) {
+		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
+		if (page == this.page && centerX == w / 2 - left && centerY == h / 2 - top)
+			return;
+		centerX = w / 2 - left;
+		centerY = h / 2 - top;
+		if (page != this.page) {
+			setPage(page);
+		} else {
+			viewChanged();
+			redraw();
+		}
 	}
 
 	public void setChangeListener(ChangeListener changeListener) {
@@ -271,7 +294,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 	}
 
 	@Override
-	public void pageAvailable(int pageNum) {
+	public void pageDecoded(int pageNum) {
 		if (pageNum == page) {
 			setPage(pageNum);
 		}
@@ -290,11 +313,15 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 
 		private static final int PAN_STEP = 100;
 
-		public PanController(Canvas canvas) {
+		public PanController() {
 			super(canvas);
 			canvas.addMouseWheelHandler(this);
 			canvas.addKeyDownHandler(this);
 			canvas.setFocus(true);
+
+			TextLayer textLayer = app.getTextLayer();
+			textLayer.addDomHandler(this, MouseWheelEvent.getType());
+			textLayer.addDomHandler(this, KeyDownEvent.getType());
 
 			app.getHorizontalScrollbar().addScrollPanListener(this);
 			app.getVerticalScrollbar().addScrollPanListener(this);
@@ -320,7 +347,7 @@ public class SinglePageLayout implements PageDownloadListener, TileCacheListener
 					app.getToolbar().zoomChangeClicked(key == KEY_PLUS ? 1 : -1);
 					event.preventDefault();
 				}
-			} else {
+			} else if (!event.isShiftKeyDown()) {
 				boolean handled = true;
 				switch (key) {
 				case KeyCodes.KEY_UP:

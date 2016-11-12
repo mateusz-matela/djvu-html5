@@ -22,7 +22,6 @@ import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.Document;
 import com.lizardtech.djvu.IFFEnumeration;
 import com.lizardtech.djvu.URLInputStream;
-import com.lizardtech.djvu.Utils;
 import com.lizardtech.djvu.text.DjVuText;
 
 import pl.djvuhtml5.client.Djvu_html5.Status;
@@ -63,6 +62,7 @@ public class PageCache implements DataSource {
 			this.text = text;
 			if (text.length() > 0)
 				textAvailable = true;
+			fireDecoded(pageNum, textDecodeListeners);
 		}
 	}
 
@@ -87,7 +87,8 @@ public class PageCache implements DataSource {
 
 	private int pagesMemoryUsage = 0;
 
-	private final ArrayList<PageDownloadListener> listeners = new ArrayList<>();
+	private final ArrayList<DecodeListener> fullDecodeListeners = new ArrayList<>();
+	private final ArrayList<DecodeListener> textDecodeListeners = new ArrayList<>();
 
 	private int lastRequestedPage = 0;
 
@@ -226,6 +227,8 @@ public class PageCache implements DataSource {
 					page.setText(new DjVuText().init(chunk));
 				}
 			}
+			if (page.text == null)
+				page.setText(new DjVuText());
 		} catch (IOException e) {
 			GWT.log("Error while decoding text in page " + page.pageNum, e);
 			page.setText(null);
@@ -262,12 +265,13 @@ public class PageCache implements DataSource {
 			}
 			if (page.decodeStep()) {
 				pageItem.isDecoded = true;
-				pageItem.setText(page.getText());
-				pageItem.info = page.getInfo();
+				if (pageItem.info == null) {
+					pageItem.info = page.getInfo();
+					pageItem.setText(page.getText());
+				}
 				pageItem.memoryUsage = page.getMemoryUsage();
 				pagesMemoryUsage += pageItem.memoryUsage;
-				for (PageDownloadListener listener : listeners)
-					listener.pageAvailable(pageItem.pageNum);
+				fireDecoded(pageItem.pageNum, fullDecodeListeners);
 			}
 			return true;
 		} catch (IOException e) {
@@ -420,11 +424,20 @@ public class PageCache implements DataSource {
 		return file;
 	}
 
-	public void addPageDownloadListener(PageDownloadListener listener) {
-		listeners.add(listener);
+	public void addFullDecodeListener(DecodeListener listener) {
+		fullDecodeListeners.add(listener);
 	}
 
-	public static interface PageDownloadListener {
-		void pageAvailable(int pageNum);
+	public void addTextDecodeListener(DecodeListener listener) {
+		textDecodeListeners.add(listener);
+	}
+
+	private void fireDecoded(int pageNum, List<DecodeListener> listeners) {
+		for (DecodeListener listener : listeners)
+			listener.pageDecoded(pageNum);
+	}
+
+	public static interface DecodeListener {
+		void pageDecoded(int pageNum);
 	}
 }

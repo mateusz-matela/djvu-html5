@@ -38,8 +38,11 @@ public class Djvu_html5 implements EntryPoint {
 	private Dictionary context;
 
 	private String url;
+	private RootPanel container;
+
 	private Canvas canvas;
 	private SinglePageLayout pageLayout;
+	private TextLayer textLayer;
 	private Toolbar toolbar;
 	private Scrollbar horizontalScrollbar;
 	private Scrollbar verticalScrollbar;
@@ -62,24 +65,7 @@ public class Djvu_html5 implements EntryPoint {
 			// no custom config
 		}
 
-		RootPanel container = RootPanel.get("djvuContainer");
-		container.add(prepareCanvas());
-		container.add(toolbar = new Toolbar(this));
-		container.add(horizontalScrollbar = new Scrollbar(true));
-		container.add(verticalScrollbar = new Scrollbar(false));
-
-		statusImage = new Label();
-		statusImage.setStyleName("statusImage");
-		container.add(statusImage);
-
-		int uiHideDelay = getUiHideDelay();
-		if (uiHideDelay > 0) {
-			UIHider uiHider = new UIHider(canvas, uiHideDelay);
-			uiHider.addUIElement(toolbar, "toolbarHidden");
-			uiHider.addUIElement(horizontalScrollbar, "scrollbarHidden");
-			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
-		}
-
+		container = RootPanel.get("djvuContainer");
 		url = Window.Location.getParameter("file");
 		if (url == null || url.isEmpty())
 			url = container.getElement().getAttribute("file");
@@ -93,9 +79,26 @@ public class Djvu_html5 implements EntryPoint {
 		pageCache = new PageCache(this, url);
 		URLInputStream.dataSource = pageCache;
 
-		backgroundProcessor = new BackgroundProcessor(this);
-		
+		container.add(textLayer = new TextLayer(this));
+		container.add(prepareCanvas());
+		container.add(toolbar = new Toolbar(this));
+		container.add(horizontalScrollbar = new Scrollbar(true));
+		container.add(verticalScrollbar = new Scrollbar(false));
+
+		container.add(statusImage = new Label());
+		statusImage.setStyleName("statusImage");
+
+		int uiHideDelay = getUiHideDelay();
+		if (uiHideDelay > 0) {
+			UIHider uiHider = new UIHider(canvas, uiHideDelay);
+			uiHider.addUIElement(toolbar, "toolbarHidden");
+			uiHider.addUIElement(horizontalScrollbar, "scrollbarHidden");
+			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
+		}
+
 		tileCache = new TileCache(this);
+		backgroundProcessor = new BackgroundProcessor(this);
+
 		pageLayout = new SinglePageLayout(this);
 		toolbar.setPageLayout(pageLayout);
 	}
@@ -140,6 +143,10 @@ public class Djvu_html5 implements EntryPoint {
 			pageLayout.canvasResized();
 	}
 
+	public RootPanel getContainer() {
+		return container;
+	}
+
 	public Canvas getCanvas() {
 		return canvas;
 	}
@@ -170,6 +177,14 @@ public class Djvu_html5 implements EntryPoint {
 		}
 		if (status == null || currentStatus != Status.ERROR)
 			currentStatus = status;
+	}
+
+	public SinglePageLayout getPageLayout() {
+		return pageLayout;
+	}
+
+	public TextLayer getTextLayer() {
+		return textLayer;
 	}
 
 	public Toolbar getToolbar() {

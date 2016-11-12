@@ -48,6 +48,7 @@ package com.lizardtech.djvu.text;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Vector;
 
 import com.lizardtech.djvu.BSInputStream;
@@ -1458,21 +1459,16 @@ public String toString()
      *
      * @param list vector to append zones to
      */
-    public void get_smallest(final Vector<GRect> list)
+    public void get_smallest(final List<? super Zone> list)
     {
       if(children.size() > 0)
       {
-        int pos = 0;
-
-        do
-        {
-          children.elementAt(pos++).get_smallest(list);
-        }
-        while(children.size() > pos);
+    	  for (Zone child : children)
+    		  child.get_smallest(list);
       }
       else
       {
-        list.addElement(this);
+        list.add(this);
       }
     }
 

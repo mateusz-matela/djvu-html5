@@ -215,13 +215,14 @@ public class TileCache {
 		if (lastPageNum < 0)
 			return false;
 		tempTI.subsample = MAX_SUBSAMPLE;
-		int i = all ? 0 : lastPageNum;
-		int limit = all ? pageCache.getPageCount() : lastPageNum + 1;
-		for (; i < limit; i++) {
-			DjVuPage page = pageCache.getPage(i);
+		for (int i = 0; i < (all ? pageCache.getPageCount() * 2 : 1); i++) {
+			int index = lastPageNum + (i % 2 == 0 ? -1 : 1) * (i / 2);
+			if (index < 0 || index >= pageCache.getPageCount())
+				continue;
+			DjVuPage page = pageCache.getPage(index);
 			if (page == null)
 				continue;
-			tempTI.page = i;
+			tempTI.page = index;
 			DjVuInfo info = page.getInfo();
 			int w = (info.width + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
 			int h = (info.height + MAX_SUBSAMPLE - 1) / MAX_SUBSAMPLE;
