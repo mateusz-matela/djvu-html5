@@ -14,7 +14,6 @@ import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
-import com.lizardtech.djvu.URLInputStream;
 
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
@@ -37,7 +36,6 @@ public class Djvu_html5 implements EntryPoint {
 
 	private Dictionary context;
 
-	private String url;
 	private RootPanel container;
 
 	private Canvas canvas;
@@ -66,7 +64,7 @@ public class Djvu_html5 implements EntryPoint {
 		}
 
 		container = RootPanel.get("djvuContainer");
-		url = Window.Location.getParameter("file");
+		String url = Window.Location.getParameter("file");
 		if (url == null || url.isEmpty())
 			url = container.getElement().getAttribute("file");
 		if (url == null || url.isEmpty())
@@ -77,7 +75,6 @@ public class Djvu_html5 implements EntryPoint {
 		}
 
 		pageCache = new PageCache(this, url);
-		URLInputStream.dataSource = pageCache;
 
 		container.add(textLayer = new TextLayer(this));
 		container.add(prepareCanvas());

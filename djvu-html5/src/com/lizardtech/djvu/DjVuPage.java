@@ -1279,7 +1279,7 @@ public class DjVuPage
   CachedInputStream createCachedInputStream(final String id)
     throws IOException
   {
-    return new CachedInputStream().init(Utils.url(url, id), null);
+    return new CachedInputStream().init(Utils.url(url, id));
   }
 
   /**

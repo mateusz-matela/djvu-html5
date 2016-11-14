@@ -95,6 +95,8 @@ public class PageCache implements DataSource {
 	public PageCache(final Djvu_html5 app, final String url) {
 		this.app = app;
 
+		URLInputStream.dataSource = this;
+
 		Uint8Array data = getData(url, new ReadyListener() {
 			
 			@Override
@@ -165,7 +167,7 @@ public class PageCache implements DataSource {
 			CachedInputStream stream;
 			if (dir.is_bundled()) {
 				try {
-					stream = document.get_data(page.pageNum, null);
+					stream = document.get_data(page.pageNum);
 				} catch (IOException e) {
 					GWT.log("Error while decoding text in page " + page.pageNum, e);
 					return false;

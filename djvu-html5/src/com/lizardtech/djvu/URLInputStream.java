@@ -107,7 +107,7 @@ public class URLInputStream extends InputStream
 	 * @return an initialized DataPool
 	 */
 	public URLInputStream init(final String url, final ReadyListener listener) {
-		data = dataSource.getData(url, listener);
+		data = dataSource.getData(url, null);
 		if (data == null) {
 			dataSource.getData(url, new ReadyListener() {
 				

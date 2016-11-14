@@ -154,7 +154,7 @@ public class Document
   {
     DjVuPage page = null;
 
-      CachedInputStream data=get_data(id, null);
+      CachedInputStream data=get_data(id);
       if(data.isReady())
       {
         String url=getDjVmDir().getInitURL();
@@ -192,13 +192,12 @@ public class Document
    * Query the data for the specified name.
    *
    * @param id name of the file
- * @param listener 
    *
    * @return the requested data
    *
    * @throws IOException if an error occurs
    */
-  public CachedInputStream get_data(final String id, final ReadyListener listener)
+  public CachedInputStream get_data(final String id)
     throws IOException
   {
     if(id == null)
@@ -221,21 +220,8 @@ public class Document
           throw new IOException("Requested data outside document");
         }
 
-        final String fileurl = Utils.url(initURL, id);
-        final CachedInputStream pool2 = pool = new CachedInputStream();
-        pool.init(fileurl, new ReadyListener() {
-			
-			@Override
-			public void dataReady() {
-				try {
-					insert_file(pool2, DjVmDir.File.INCLUDE, id);
-				} catch (IOException e) {
-					GWT.log("Could not init page", e);
-				}
-				if (listener != null)
-					listener.dataReady();
-			}
-		});
+        pool = new CachedInputStream();
+        pool.init(Utils.url(initURL, id));
         if (pool.isReady())
           insert_file(pool, DjVmDir.File.INCLUDE, id);
       }
@@ -248,7 +234,7 @@ public class Document
       }
       else if(initURL != null)
       {
-        pool = new CachedInputStream().init(Utils.url(initURL, id), listener);
+        pool = new CachedInputStream().init(Utils.url(initURL, id));
         cachedInputStreamMap.put(id, pool);
       }
     }
@@ -268,16 +254,15 @@ public class Document
    * Query the data for a page.
    *
    * @param page_num the page number to request
- * @param listener 
    *
    * @return the requested data
    *
    * @throws IOException if an error occurs
    */
-  public CachedInputStream get_data(final int page_num, ReadyListener listener)
+  public CachedInputStream get_data(final int page_num)
     throws IOException
   {
-    return get_data(getDjVmDir().page_to_file(page_num).get_load_name(), listener);
+    return get_data(getDjVmDir().page_to_file(page_num).get_load_name());
   }
 
   /**
@@ -342,7 +327,7 @@ public class Document
     final DjVmDir djvmDir = getDjVmDir();
     djvmDir.setInitURL(null);
 
-    final CachedInputStream pool = new CachedInputStream().init(url,null);
+    final CachedInputStream pool = new CachedInputStream().init(url);
     final Enumeration<CachedInputStream> iff = pool.getIFFChunks();
     if((iff == null)||!iff.hasMoreElements())
     {
@@ -535,7 +520,7 @@ public class Document
 	CachedInputStream createCachedInputStream(final String id)
       throws IOException
     {
-      return Document.this.get_data(id, null);
+      return Document.this.get_data(id);
     }    
   }
 }
