@@ -113,14 +113,18 @@ public class PageCache implements DataSource {
 			document = new Document();
 			document.read(url);
 			int pageCount = document.getDjVmDir().get_pages_num();
+
+			app.getToolbar().setPageCount(pageCount);
+
+			lastRequestedPage = Math.max(0, Math.min(pageCount - 1, lastRequestedPage));
+			app.getPageLayout().setPage(lastRequestedPage);
+
 			pages = new ArrayList<>(pageCount);
 			for (int i = 0; i < pageCount; i++)
 				pages.add(new PageItem(i));
 
 			pagesByRank = new ArrayList<>(pages);
 			Collections.sort(pagesByRank);
-
-			app.getToolbar().setPageCount(pageCount);
 
 			app.startProcessing();
 		} catch (IOException e) {

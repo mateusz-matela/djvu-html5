@@ -67,6 +67,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
 	private GRect range = new GRect();
 
+	private final boolean locationUpdateEnabled;
 	private Timer locationUpdater;
 
 	public SinglePageLayout(Djvu_html5 app) {
@@ -84,11 +85,14 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
 		new PanController();
 
+		boolean pageParam = false;
 		try {
 			page = Integer.parseInt(Window.Location.getParameter("p")) - 1;
+			pageParam = true;
 		} catch (Exception e) {
 			page = 0;
 		}
+		locationUpdateEnabled = pageParam || app.getLocationUpdateEnabled();
 		pageCache.fetchPage(page);
 	}
 
@@ -109,6 +113,8 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 	}
 
 	private void scheduleURLUpdate() {
+		if (!locationUpdateEnabled)
+			return;
 		if (locationUpdater == null) {
 			locationUpdater = new Timer() {
 				@Override

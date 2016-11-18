@@ -236,6 +236,10 @@ public class Djvu_html5 implements EntryPoint {
 		return getInt("maxZoom", 10000);
 	}
 
+	public boolean getLocationUpdateEnabled() {
+		return getBoolean("locationUpdateEnabled", true);
+	}
+
 	public String getString(String key, String defaultValue) {
 		if (instance.context == null || !instance.context.keySet().contains(key))
 			return defaultValue;
@@ -251,5 +255,12 @@ public class Djvu_html5 implements EntryPoint {
 		} catch (NumberFormatException e) {
 			return defaultValue;
 		}
+	}
+
+	private boolean getBoolean(String key, boolean defaultValue) {
+		if (instance.context == null || !instance.context.keySet().contains(key))
+			return defaultValue;
+		String value = instance.context.get(key);
+		return Boolean.valueOf(value);
 	}
 }
