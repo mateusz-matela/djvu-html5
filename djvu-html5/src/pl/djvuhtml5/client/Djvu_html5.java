@@ -30,6 +30,9 @@ public class Djvu_html5 implements EntryPoint {
 		}
 	}
 
+	private static final String WELCOME_MESSAGE =
+			"Starting djvu-html5 viewer v0.2.0-beta1 from https://github.com/mateusz-matela/djvu-html5";
+
 	private static final String CONTEXT_GLOBAL_VARIABLE = "DJVU_CONTEXT";
 
 	private static Djvu_html5 instance;
@@ -55,6 +58,8 @@ public class Djvu_html5 implements EntryPoint {
 	 */
 	@Override
 	public void onModuleLoad() {
+		GWT.log(WELCOME_MESSAGE);
+
 		Djvu_html5.instance = this;
 
 		try {
@@ -69,7 +74,7 @@ public class Djvu_html5 implements EntryPoint {
 			url = container.getElement().getAttribute("file");
 		if (url == null || url.isEmpty())
 			url = getIndexFile();
-		if (url ==  null || url.isEmpty()) {
+		if (url == null || url.isEmpty()) {
 			GWT.log("ERROR: No djvu file defined");
 			return;
 		}
@@ -114,14 +119,14 @@ public class Djvu_html5 implements EntryPoint {
 		panel.setStyleName("content");
 
 		Window.addResizeHandler(new ResizeHandler() {
-			
+
 			@Override
 			public void onResize(ResizeEvent event) {
 				resizeCanvas();
 			}
 		});
 		Scheduler.get().scheduleFinally(new Scheduler.ScheduledCommand() {
-			
+
 			@Override
 			public void execute() {
 				resizeCanvas();
