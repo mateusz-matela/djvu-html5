@@ -76,7 +76,9 @@ public class Djvu_html5 implements EntryPoint {
 
 		pageCache = new PageCache(this, url);
 
-		container.add(textLayer = new TextLayer(this));
+		if (getTextLayerEnabled())
+			container.add(textLayer = new TextLayer(this));
+
 		container.add(prepareCanvas());
 		container.add(toolbar = new Toolbar(this));
 		container.add(horizontalScrollbar = new Scrollbar(true));
@@ -180,6 +182,7 @@ public class Djvu_html5 implements EntryPoint {
 		return pageLayout;
 	}
 
+	/** @return current text layer or {@code null} if disabled. */
 	public TextLayer getTextLayer() {
 		return textLayer;
 	}
@@ -238,6 +241,10 @@ public class Djvu_html5 implements EntryPoint {
 
 	public boolean getLocationUpdateEnabled() {
 		return getBoolean("locationUpdateEnabled", true);
+	}
+
+	public boolean getTextLayerEnabled() {
+		return getBoolean("textLayerEnabled", true);
 	}
 
 	public String getString(String key, String defaultValue) {

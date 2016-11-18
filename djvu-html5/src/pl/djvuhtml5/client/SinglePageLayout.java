@@ -238,7 +238,8 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 		double pw2 = pw + 2 * pageMargin, ph2 = ph + 2 * pageMargin;
 		app.getHorizontalScrollbar().setThumb((centerX + pageMargin) / pw2, w / pw2);
 		app.getVerticalScrollbar().setThumb((centerY + pageMargin) / ph2, h / ph2);
-		app.getTextLayer().setViewPosition(page, w / 2 - centerX, h / 2 - centerY, zoom);
+		if (app.getTextLayer() != null)
+			app.getTextLayer().setViewPosition(page, w / 2 - centerX, h / 2 - centerY, zoom);
 	}
 
 	/**
@@ -326,8 +327,10 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 			canvas.setFocus(true);
 
 			TextLayer textLayer = app.getTextLayer();
-			textLayer.addDomHandler(this, MouseWheelEvent.getType());
-			textLayer.addDomHandler(this, KeyDownEvent.getType());
+			if (textLayer != null) {
+				textLayer.addDomHandler(this, MouseWheelEvent.getType());
+				textLayer.addDomHandler(this, KeyDownEvent.getType());
+			}
 
 			app.getHorizontalScrollbar().addScrollPanListener(this);
 			app.getVerticalScrollbar().addScrollPanListener(this);
