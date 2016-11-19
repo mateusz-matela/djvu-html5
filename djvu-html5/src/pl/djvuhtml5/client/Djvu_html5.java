@@ -58,7 +58,7 @@ public class Djvu_html5 implements EntryPoint {
 	 */
 	@Override
 	public void onModuleLoad() {
-		GWT.log(WELCOME_MESSAGE);
+		log(WELCOME_MESSAGE);
 
 		Djvu_html5.instance = this;
 
@@ -275,4 +275,8 @@ public class Djvu_html5 implements EntryPoint {
 		String value = instance.context.get(key);
 		return Boolean.valueOf(value);
 	}
+
+	public static native void log(String message) /*-{
+		console.log(message);
+	}-*/;
 }
