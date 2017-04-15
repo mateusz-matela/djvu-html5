@@ -314,11 +314,13 @@ public class TileCache {
 	
 		bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
 
-		bufferGMap.putData(bufferCanvas.getContext2d());
 		Context2d c = cachedItem.image.getContext2d();
 		c.setFillStyle("white");
 		c.fillRect(0, 0, tileSize, tileSize);
-		c.drawImage(bufferCanvas, 0, 0);
+		if (bufferGMap != null) {
+			bufferGMap.putData(bufferCanvas.getContext2d());
+			c.drawImage(bufferCanvas, 0, 0);
+		}
 		cachedItem.isFetched = true;
 		cachedItem.lastUsed = System.currentTimeMillis() - (isPrefetch ? PREFETCH_AGE : 0);
 		if (!isPrefetch) {
