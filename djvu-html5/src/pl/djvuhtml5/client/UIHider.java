@@ -70,14 +70,19 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 		widget.addDomHandler(this, TouchEndEvent.getType());
 	}
 
-	public UIHider(Canvas canvas, int uiHideDelay) {
+	public UIHider(int uiHideDelay, Widget... eventSources) {
 		this.uiHideDelay = uiHideDelay;
-		canvas.addMouseMoveHandler(this);
-		canvas.addTouchStartHandler(this);
-		canvas.addTouchEndHandler(this);
-		canvas.addKeyDownHandler(this);
-		canvas.addFocusHandler(this);
-		canvas.addBlurHandler(this);
+		for (Widget widget : eventSources)
+			registerHandlers(widget);
+	}
+
+	private void registerHandlers(Widget widget) {
+		widget.addDomHandler(this, MouseMoveEvent.getType());
+		widget.addDomHandler(this, TouchStartEvent.getType());
+		widget.addDomHandler(this, TouchEndEvent.getType());
+		widget.addDomHandler(this, KeyDownEvent.getType());
+		widget.addDomHandler(this, FocusEvent.getType());
+		widget.addDomHandler(this, BlurEvent.getType());
 	}
 
 	private void showUI() {

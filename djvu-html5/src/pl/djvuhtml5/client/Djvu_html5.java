@@ -94,7 +94,7 @@ public class Djvu_html5 implements EntryPoint {
 
 		int uiHideDelay = getUiHideDelay();
 		if (uiHideDelay > 0) {
-			UIHider uiHider = new UIHider(canvas, uiHideDelay);
+			UIHider uiHider = new UIHider(uiHideDelay, canvas, textLayer);
 			uiHider.addUIElement(toolbar, "toolbarHidden");
 			uiHider.addUIElement(horizontalScrollbar, "scrollbarHidden");
 			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
