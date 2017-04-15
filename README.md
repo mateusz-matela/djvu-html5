@@ -46,7 +46,7 @@ The project is prepared with Eclipse and Google Plugin. It can be imprted direct
 
 1. Dwonload Eclipse from https://www.eclipse.org/downloads/, recommended package is IDE for Jave EE Developers.
 2. Dwonload GWT SDK 2.7.0 from http://www.gwtproject.org/download.html
-3. In Eclipse, go to `Help` -> `Install New Software...`, enter update site https://dl.google.com/eclipse/plugin/4.4 and select Google Plugin for Eclipse (version for 4.4 works with Eclipse 4.5). Install and restart.
+3. In Eclipse, go to `Help` -> `Install New Software...`, enter update site https://dl.google.com/eclipse/plugin/4.6 (or other version, corresponding to the Eclipse version) and select `Google Plugin for Eclipse 4.4/4.5/4.6`. Install and restart.
 4. In `Preferences` -> `Google` -> `Web Toolkit` provide the location where GWT SDK was unpacked.
 5. Clone the GIT repository and import project `djvu-html5`.
 6. There's an error in the project: The GWT SDK JAR gwt-servlet.jar is missing in the WEB-INF/lib directory.
