@@ -55,6 +55,15 @@ public class Toolbar extends FlowPanel {
 			protected void changeValueClicked(int direction) {
 				zoomChangeClicked(direction);
 			}
+
+			@Override
+			protected boolean isButtonEnabled(int direction) {
+				if (direction == -1) {
+					return pageLayout != null && pageLayout.getZoom() > zoomOptions.get(zoomOptions.size() - 1);
+				} else {
+					return pageLayout != null && pageLayout.getZoom() < zoomOptions.get(0);
+				}
+			}
 		};
 		add(zoomPanel);
 		setZoomOptions(zoomOptions);
@@ -86,14 +95,17 @@ public class Toolbar extends FlowPanel {
 			@Override
 			public void zoomChanged(int currentZoom) {
 				zoomPanel.textBox.setText(currentZoom + "%");
+				zoomPanel.updateButtons();
 			}
 
 			@Override
 			public void pageChanged(int currentPage) {
 				pagePanel.textBox.setText((currentPage + 1) + "");
 				pagePanel.selection.setSelectedIndex(currentPage);
+				pagePanel.updateButtons();
 			}
 		});
+		zoomPanel.updateButtons();
 	}
 
 	public void setZoomOptions(List<Integer> newZoomOptions) {
@@ -122,6 +134,7 @@ public class Toolbar extends FlowPanel {
 				zoomOptions = newZoomOptions;
 			}
 		}
+		zoomPanel.updateButtons();
 	}
 
 	public void setPageCount(int pagesCount) {
@@ -131,6 +144,7 @@ public class Toolbar extends FlowPanel {
 		for (int i = 1; i <= pagesCount; i++) {
 			pageSelection.addItem(i + "");
 		}
+		pagePanel.updateButtons();
 	}
 
 	protected void zoomSelectionChanged() {
@@ -225,11 +239,12 @@ public class Toolbar extends FlowPanel {
 	private static abstract class SelectionPanel extends FlowPanel {
 		public final ListBox selection;
 		public final TextBox textBox;
+		private final Button leftButton, rightButton;
 
 		public SelectionPanel(String leftButtonStyle, String rightButtonStyle) {
 			setStyleName("toolbarItem");
 
-			Button leftButton = new Button();
+			leftButton = new Button();
 			leftButton.setStyleName("toolbarSquareButton");
 			leftButton.addStyleName(leftButtonStyle);
 			leftButton.addClickHandler(new ClickHandler() {
@@ -277,7 +292,7 @@ public class Toolbar extends FlowPanel {
 			});
 			comboPanel.add(textBox);
 
-			Button rightButton = new Button();
+			rightButton = new Button();
 			rightButton.setStyleName("toolbarSquareButton");
 			rightButton.addStyleName(rightButtonStyle);
 			rightButton.addClickHandler(new ClickHandler() {
@@ -289,10 +304,20 @@ public class Toolbar extends FlowPanel {
 			add(rightButton);
 		}
 
+		public void updateButtons() {
+			leftButton.setEnabled(isButtonEnabled(-1));
+			rightButton.setEnabled(isButtonEnabled(1));
+		}
+
 		protected abstract void valueTypedIn();
 
 		protected abstract void valueSelected();
 
 		protected abstract void changeValueClicked(int direction);
+
+		protected boolean isButtonEnabled(int direction) {
+			int newIndex = selection.getSelectedIndex() + direction;
+			return 0 <= newIndex && newIndex < selection.getItemCount();
+		}
 	}
 }
