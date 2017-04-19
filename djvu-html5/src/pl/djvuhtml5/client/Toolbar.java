@@ -11,6 +11,8 @@ import com.google.gwt.event.dom.client.ChangeHandler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.dom.client.KeyCodes;
+import com.google.gwt.event.dom.client.KeyDownEvent;
+import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.event.dom.client.KeyPressEvent;
 import com.google.gwt.event.dom.client.KeyPressHandler;
 import com.google.gwt.user.client.ui.Button;
@@ -86,6 +88,18 @@ public class Toolbar extends FlowPanel {
 			}
 		};
 		add(pagePanel);
+
+		addDomHandler(new KeyDownHandler() {
+			@Override
+			public void onKeyDown(KeyDownEvent event) {
+				final int KEY_PLUS = 187, KEY_MINUS = 189;
+				int key = event.getNativeKeyCode();
+				if (event.isControlKeyDown() && (key == KEY_PLUS || key == KEY_MINUS)) {
+					zoomChangeClicked(key == KEY_PLUS ? 1 : -1);
+					event.preventDefault();
+				}
+			}
+		}, KeyDownEvent.getType());
 	}
 
 	public void setPageLayout(SinglePageLayout pageLayout) {
