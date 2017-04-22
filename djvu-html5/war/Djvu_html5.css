@@ -36,7 +36,7 @@ body {
 	height: 40px;
 	background-image: url("img/toolbar-buttons.png");
 	background-repeat: no-repeat;
-	background-size: 500% 200%;
+	background-size: 500% 300%;
 }
 
 .scrollbar {
@@ -106,12 +106,18 @@ body {
 .buttonZoomIn {
 	background-position: 25% 0;
 }
+.buttonZoomIn:hover {
+	background-position: 25% 50%;
+}
 .buttonZoomIn:disabled {
 	background-position: 25% 100%;
 }
 
 .buttonZoomOut {
 	background-position: 0 0;
+}
+.buttonZoomOut:hover {
+	background-position: 0 50%;
 }
 .buttonZoomOut:disabled {
 	background-position: 0 100%;
@@ -120,12 +126,18 @@ body {
 .buttonPagePrev {
 	background-position: 50% 0;
 }
+.buttonPagePrev:hover {
+	background-position: 50% 50%;
+}
 .buttonPagePrev:disabled {
 	background-position: 50% 100%;
 }
 
 .buttonPageNext {
 	background-position: 75% 0;
+}
+.buttonPageNext:hover {
+	background-position: 75% 50%;
 }
 .buttonPageNext:disabled {
 	background-position: 75% 100%;
