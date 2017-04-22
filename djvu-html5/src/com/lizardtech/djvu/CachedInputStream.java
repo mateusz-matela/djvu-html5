@@ -302,7 +302,11 @@ public class CachedInputStream
     }
     final byte[] array = output.toByteArray();
     output.close();
-    return new String(array, 0, array.length, "UTF-8");
+	try {
+		return new String(array, 0, array.length, "UTF-8");
+	} catch (IllegalArgumentException e) {
+		return null;
+	}
   }
   
   /**
