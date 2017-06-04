@@ -2,7 +2,6 @@ package pl.djvuhtml5.client;
 
 import java.util.ArrayList;
 
-import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.event.dom.client.BlurEvent;
 import com.google.gwt.event.dom.client.BlurHandler;
 import com.google.gwt.event.dom.client.FocusEvent;
@@ -72,8 +71,10 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 
 	public UIHider(int uiHideDelay, Widget... eventSources) {
 		this.uiHideDelay = uiHideDelay;
-		for (Widget widget : eventSources)
-			registerHandlers(widget);
+		for (Widget widget : eventSources) {
+			if (widget != null)
+				registerHandlers(widget);
+		}
 	}
 
 	private void registerHandlers(Widget widget) {
