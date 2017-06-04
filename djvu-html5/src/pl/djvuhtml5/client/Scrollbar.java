@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import com.google.gwt.dom.client.Style;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.dom.client.Style.Visibility;
+import com.google.gwt.event.dom.client.MouseDownEvent;
+import com.google.gwt.event.dom.client.MouseUpEvent;
 import com.google.gwt.user.client.ui.FlowPanel;
 
 public class Scrollbar extends FlowPanel {
@@ -67,6 +69,19 @@ public class Scrollbar extends FlowPanel {
 			double newCenter = ((thumbStart + thumbWidth * 0.5) + (isHorizontal ? dx : dy)) / fullRange;
 			for (ScrollPanListener listener : panListeners)
 				listener.thumbDragged(newCenter, isHorizontal);
+		}
+
+		@Override
+		public void onMouseDown(MouseDownEvent event) {
+			super.onMouseDown(event);
+			if (isMouseDown)
+				addStyleName("scrollbarClicked");
+		}
+
+		@Override
+		public void onMouseUp(MouseUpEvent event) {
+			super.onMouseUp(event);
+			removeStyleName("scrollbarClicked");
 		}
 	}
 }

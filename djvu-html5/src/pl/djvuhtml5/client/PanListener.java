@@ -23,7 +23,7 @@ TouchStartHandler, TouchMoveHandler, TouchEndHandler {
 
 	private Widget widget;
 
-	private boolean isMouseDown = false;
+	protected boolean isMouseDown = false;
 	private Integer touchId = null;
 	protected int x, y;
 
