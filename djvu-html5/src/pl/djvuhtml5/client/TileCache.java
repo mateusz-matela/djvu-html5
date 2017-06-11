@@ -11,10 +11,12 @@ import java.util.Map.Entry;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.dom.client.CanvasElement;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.ImageElement;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.EventListener;
 import com.google.gwt.user.client.ui.Image;
+import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
@@ -67,6 +69,19 @@ public class TileCache {
 		GMap.imageDataFactory = app.getCanvas().getContext2d();
 	}
 
+	private String getBlankImageUrl() {
+		Element element = new Label().getElement().cast();
+		element.addClassName("blankImage");
+		RootPanel.get().getElement().appendChild(element);
+		try {
+			String url = Djvu_html5.getComputedStyleProperty(element, "background-image");
+			url = url.replaceAll("^url\\(['\"]?(.*)['\"]\\)$", "$1");
+			return url;
+		} finally {
+			RootPanel.get().getElement().removeChild(element);
+		}
+	}
+
 	private CanvasElement prepareMissingTileImage() {
 		CanvasElement canvas = new CachedItem(tileSize, tileSize).image;
 		Context2d context2d = canvas.getContext2d();
@@ -86,7 +101,7 @@ public class TileCache {
 			}
 		});
 		RootPanel.get().getElement().appendChild(imageElement);
-		image.setUrl("img/blank.jpg");
+		image.setUrl(getBlankImageUrl());
 		return canvas;
 	}
 

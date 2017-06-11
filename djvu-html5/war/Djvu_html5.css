@@ -186,3 +186,7 @@ body {
 	background-repeat: no-repeat;
 	z-index: 1;
 }
+
+.blankImage {
+	background-image: url("img/blank.jpg");
+}

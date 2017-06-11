@@ -6,6 +6,7 @@ import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.logical.shared.ResizeEvent;
 import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.i18n.client.Dictionary;
@@ -31,7 +32,7 @@ public class Djvu_html5 implements EntryPoint {
 	}
 
 	private static final String WELCOME_MESSAGE =
-			"Starting djvu-html5 viewer v0.2.2 from https://github.com/mateusz-matela/djvu-html5";
+			"Starting djvu-html5 viewer v0.2.3 from https://github.com/mateusz-matela/djvu-html5";
 
 	private static final String CONTEXT_GLOBAL_VARIABLE = "DJVU_CONTEXT";
 
@@ -278,5 +279,10 @@ public class Djvu_html5 implements EntryPoint {
 
 	public static native void log(String message) /*-{
 		console.log(message);
+	}-*/;
+
+	public static native String getComputedStyleProperty(Element element, String property) /*-{
+		var cs = $doc.defaultView.getComputedStyle(element, null);
+		return cs.getPropertyValue(property);
 	}-*/;
 }
