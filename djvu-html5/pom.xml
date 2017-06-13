@@ -6,7 +6,7 @@
   <name>djvu-html5</name>
   
   <properties>
-    <gwtVersion>2.7.0</gwtVersion>
+    <gwtVersion>2.8.1</gwtVersion>
     <webappDirectory>war</webappDirectory>
     <jetty-version>6.1.11</jetty-version>
   </properties>
@@ -37,6 +37,12 @@
     </dependency>
     
      <!-- JETTY -->
+     <dependency>
+       <groupId>org.mortbay.jetty</groupId>
+       <artifactId>jetty</artifactId>
+       <version>${jetty-version}</version>
+       <scope>provided</scope>
+    </dependency>
     <dependency>
 	   <groupId>org.mortbay.jetty</groupId>
 	   <artifactId>jetty-plus</artifactId>
