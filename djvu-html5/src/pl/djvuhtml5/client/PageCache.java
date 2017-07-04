@@ -142,7 +142,7 @@ public class PageCache implements DataSource {
 	}
 
 	public boolean decodePages() {
-		int memoryLimit = app.getPageCacheSize();
+		int memoryLimit = DjvuContext.getPageCacheSize();
 		int totalMemory = 0;
 		int fetchIndex = 0;
 		while (fetchIndex < pagesByRank.size() && totalMemory < memoryLimit) {
@@ -247,7 +247,7 @@ public class PageCache implements DataSource {
 	 *            Not inclusive (the page at this index can be removed).
 	 */
 	private void cleanCacheOverflow(int cutoffIndex) {
-		int memoryLimit = app.getPageCacheSize();
+		int memoryLimit = DjvuContext.getPageCacheSize();
 		for (int i = pagesByRank.size() - 1; pagesMemoryUsage > memoryLimit && i >= cutoffIndex; i--) {
 			PageItem pageItem = pagesByRank.get(i);
 			if (pageItem.pageNum == lastRequestedPage)
@@ -387,7 +387,7 @@ public class PageCache implements DataSource {
 	}
 
 	protected void checkFilesMemory() {
-		int limit = app.getFileCacheSize();
+		int limit = DjvuContext.getFileCacheSize();
 		for (int i = filesByMRU.size() - 1; filesMemoryUsage > limit && i > 4; i--) {
 			FileItem item = filesByMRU.remove(i);
 			if (item.data == null)
@@ -409,13 +409,13 @@ public class PageCache implements DataSource {
 
 	protected void continueDownload() {
 		DjVmDir dir = document.getDjVmDir();
-		if (downloadsInProgress > 0 || dir.is_bundled() || filesMemoryUsage > app.getFileCacheSize())
+		if (downloadsInProgress > 0 || dir.is_bundled() || filesMemoryUsage > DjvuContext.getFileCacheSize())
 			return;
 		for (PageItem page : pagesByRank) {
 			String url = dir.page_to_url(page.pageNum);
 			FileItem file = getCachedFile(url);
 			if (file.data == null && !file.downloadStarted) {
-				if (filesMemoryUsage + file.dataSize < app.getFileCacheSize()) {
+				if (filesMemoryUsage + file.dataSize < DjvuContext.getFileCacheSize()) {
 					downloadFile(url);
 				}
 				break;

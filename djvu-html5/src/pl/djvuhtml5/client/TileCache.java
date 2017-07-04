@@ -59,8 +59,8 @@ public class TileCache {
 	public TileCache(Djvu_html5 app) {
 		this.app = app;
 		this.pageCache = app.getPageCache();
-		this.tileCacheSize = app.getTileCacheSize();
-		this.tileSize = app.getTileSize();
+		this.tileCacheSize = DjvuContext.getTileCacheSize();
+		this.tileSize = DjvuContext.getTileSize();
 
 		missingTileImage = prepareMissingTileImage();
 

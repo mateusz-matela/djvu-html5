@@ -1,7 +1,5 @@
 package pl.djvuhtml5.client;
 
-import java.util.MissingResourceException;
-
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -67,20 +65,12 @@ public class Djvu_html5 implements EntryPoint {
 	public void onModuleLoad() {
 		log(WELCOME_MESSAGE);
 
-		Djvu_html5.instance = this;
-
-		try {
-			context = Dictionary.getDictionary(CONTEXT_GLOBAL_VARIABLE);
-		} catch (MissingResourceException e) {
-			// no custom config
-		}
-
 		container = RootPanel.get("djvuContainer");
 		String url = Window.Location.getParameter("file");
 		if (url == null || url.isEmpty())
 			url = container.getElement().getAttribute("file");
 		if (url == null || url.isEmpty())
-			url = getIndexFile();
+			url = DjvuContext.getIndexFile();
 		if (url == null || url.isEmpty()) {
 			GWT.log("ERROR: No djvu file defined");
 			return;
@@ -88,18 +78,18 @@ public class Djvu_html5 implements EntryPoint {
 
 		pageCache = new PageCache(this, url);
 
-		if (getTextLayerEnabled())
+		if (DjvuContext.getTextLayerEnabled())
 			container.add(textLayer = new TextLayer(this));
 
 		container.add(prepareCanvas());
-		container.add(toolbar = new Toolbar(this));
+		container.add(toolbar = new Toolbar());
 		container.add(horizontalScrollbar = new Scrollbar(true));
 		container.add(verticalScrollbar = new Scrollbar(false));
 
 		container.add(statusImage = new Label());
 		statusImage.setStyleName("statusImage");
 
-		int uiHideDelay = getUiHideDelay();
+		int uiHideDelay = DjvuContext.getUiHideDelay();
 		if (uiHideDelay > 0) {
 			UIHider uiHider = new UIHider(uiHideDelay, canvas, textLayer);
 			uiHider.addUIElement(toolbar, "toolbarHidden");
@@ -209,78 +199,6 @@ public class Djvu_html5 implements EntryPoint {
 
 	public Scrollbar getVerticalScrollbar() {
 		return verticalScrollbar;
-	}
-
-	public String getIndexFile() {
-		return getString("file", null);
-	}
-
-	public int getTileSize() {
-		return getInt("tileSize", 512);
-	}
-
-	public int getTileCacheSize() {
-		return getInt("tileCacheSize", 256);
-	}
-
-	public int getPageCacheSize() {
-		return getInt("pageCacheSize", 128 * 1024 * 1024);
-	}
-
-	public int getFileCacheSize() {
-		return getInt("fileCacheSize", 16 * 1024 * 1024);
-	}
-
-	public String getBackground() {
-		return getString("background", "#666");
-	}
-
-	private int getUiHideDelay() {
-		return getInt("uiHideDelay", 1500);
-	}
-
-	public int getPageMargin() {
-		return getInt("pageMargin", 8);
-	}
-
-	public int getScreenDPI() {
-		return getInt("screenDPI", 96);
-	}
-
-	public int getMaxZoom() {
-		return getInt("maxZoom", 10000);
-	}
-
-	public boolean getLocationUpdateEnabled() {
-		return getBoolean("locationUpdateEnabled", true);
-	}
-
-	public boolean getTextLayerEnabled() {
-		return getBoolean("textLayerEnabled", true);
-	}
-
-	public String getString(String key, String defaultValue) {
-		if (instance.context == null || !instance.context.keySet().contains(key))
-			return defaultValue;
-		return instance.context.get(key);
-	}
-
-	private int getInt(String key, int defaultValue) {
-		if (instance.context == null || !instance.context.keySet().contains(key))
-			return defaultValue;
-		String value = instance.context.get(key);
-		try {
-			return Integer.valueOf(value);
-		} catch (NumberFormatException e) {
-			return defaultValue;
-		}
-	}
-
-	private boolean getBoolean(String key, boolean defaultValue) {
-		if (instance.context == null || !instance.context.keySet().contains(key))
-			return defaultValue;
-		String value = instance.context.get(key);
-		return Boolean.valueOf(value);
 	}
 
 	public static native void log(String message) /*-{

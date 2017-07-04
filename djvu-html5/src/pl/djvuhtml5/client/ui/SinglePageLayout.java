@@ -23,6 +23,7 @@ import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
 
+import pl.djvuhtml5.client.DjvuContext;
 import pl.djvuhtml5.client.Djvu_html5;
 import pl.djvuhtml5.client.PageCache;
 import pl.djvuhtml5.client.TileCache;
@@ -83,8 +84,8 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
 		this.canvas = app.getCanvas();
 
-		this.background = app.getBackground();
-		this.pageMargin = app.getPageMargin();
+		this.background = DjvuContext.getBackground();
+		this.pageMargin = DjvuContext.getPageMargin();
 
 		new PanController();
 
@@ -95,7 +96,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 		} catch (Exception e) {
 			page = 0;
 		}
-		locationUpdateEnabled = pageParam || app.getLocationUpdateEnabled();
+		locationUpdateEnabled = pageParam || DjvuContext.getLocationUpdateEnabled();
 		pageCache.fetchPage(page);
 	}
 
@@ -189,7 +190,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 	private ArrayList<Integer> findZoomOptions() {
 		ArrayList<Integer> result = new ArrayList<>();
 		result.add(100);
-		final int screenDPI = app.getScreenDPI();
+		final int screenDPI = DjvuContext.getScreenDPI();
 		zoom100 = 1.0 * screenDPI / pageInfo.dpi;
 		int subsample = toSubsample(zoom100);
 		if (toZoom(subsample) / zoom100 > zoom100 / toZoom(subsample + 1))
