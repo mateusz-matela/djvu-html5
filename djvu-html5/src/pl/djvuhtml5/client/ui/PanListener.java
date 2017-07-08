@@ -1,4 +1,4 @@
-package pl.djvuhtml5.client;
+package pl.djvuhtml5.client.ui;
 
 import com.google.gwt.core.client.JsArray;
 import com.google.gwt.dom.client.NativeEvent;

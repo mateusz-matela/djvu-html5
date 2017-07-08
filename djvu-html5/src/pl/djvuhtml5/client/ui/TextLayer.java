@@ -1,4 +1,4 @@
-package pl.djvuhtml5.client;
+package pl.djvuhtml5.client.ui;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,6 +19,8 @@ import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.text.DjVuText;
 import com.lizardtech.djvu.text.DjVuText.Zone;
 
+import pl.djvuhtml5.client.Djvu_html5;
+import pl.djvuhtml5.client.PageCache;
 import pl.djvuhtml5.client.PageCache.DecodeListener;
 
 public class TextLayer extends FlowPanel implements DecodeListener, ScrollHandler {

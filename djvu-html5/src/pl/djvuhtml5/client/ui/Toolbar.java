@@ -1,4 +1,4 @@
-package pl.djvuhtml5.client;
+package pl.djvuhtml5.client.ui;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,7 +20,8 @@ import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.TextBox;
 
-import pl.djvuhtml5.client.SinglePageLayout.ChangeListener;
+import pl.djvuhtml5.client.Djvu_html5;
+import pl.djvuhtml5.client.ui.SinglePageLayout.ChangeListener;
 
 public class Toolbar extends FlowPanel {
 

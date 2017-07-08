@@ -16,6 +16,12 @@ import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
 
+import pl.djvuhtml5.client.ui.Scrollbar;
+import pl.djvuhtml5.client.ui.SinglePageLayout;
+import pl.djvuhtml5.client.ui.TextLayer;
+import pl.djvuhtml5.client.ui.Toolbar;
+import pl.djvuhtml5.client.ui.UIHider;
+
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
  */

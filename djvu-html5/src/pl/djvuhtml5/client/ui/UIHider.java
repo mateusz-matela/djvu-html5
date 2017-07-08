@@ -1,4 +1,4 @@
-package pl.djvuhtml5.client;
+package pl.djvuhtml5.client.ui;
 
 import java.util.ArrayList;
 

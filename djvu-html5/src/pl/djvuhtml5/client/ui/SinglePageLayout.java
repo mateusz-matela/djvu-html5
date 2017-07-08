@@ -1,4 +1,4 @@
-package pl.djvuhtml5.client;
+package pl.djvuhtml5.client.ui;
 
 import static pl.djvuhtml5.client.TileCache.MAX_SUBSAMPLE;
 import static pl.djvuhtml5.client.TileCache.toSubsample;
@@ -23,10 +23,13 @@ import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
 
+import pl.djvuhtml5.client.Djvu_html5;
+import pl.djvuhtml5.client.PageCache;
+import pl.djvuhtml5.client.TileCache;
 import pl.djvuhtml5.client.PageCache.DecodeListener;
-import pl.djvuhtml5.client.Scrollbar.ScrollPanListener;
 import pl.djvuhtml5.client.TileCache.TileCacheListener;
 import pl.djvuhtml5.client.TileCache.TileInfo;
+import pl.djvuhtml5.client.ui.Scrollbar.ScrollPanListener;
 
 public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
