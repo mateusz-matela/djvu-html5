@@ -1,0 +1,27 @@
+* text eol=lf
+
+*.css			text
+*.htm			text
+*.html			text
+*.java			text
+*.js			text
+*.json			text
+*.properties	text
+*.txt			text
+*.xml			text
+
+*.project		text
+*.classpath		text
+*.prefs			text
+*.gitignore		text
+*.gitattributes	text
+
+*.ear			binary
+*.gif			binary
+*.ico			binary
+*.jar			binary
+*.jpg			binary
+*.jpeg			binary
+*.png			binary
+*.war			binary
+*.djvu			binary
