@@ -102,6 +102,8 @@ public class Djvu_html5 implements EntryPoint {
 
 		pageLayout = new SinglePageLayout(this);
 		toolbar.setPageLayout(pageLayout);
+
+		BackgroundWorker.test();
 	}
 
 	private Widget prepareCanvas() {
