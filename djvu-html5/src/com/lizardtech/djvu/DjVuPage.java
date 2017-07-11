@@ -1186,7 +1186,7 @@ public class DjVuPage
 				canvas.getContext2d().drawImage(imageElement, 0, 0);
 
 				result.init(h, w, null);
-				result.setImageData(canvas.getContext2d().getImageData(0, 0, w, h));
+				//TODO result.setImageData(canvas.getContext2d().getImageData(0, 0, w, h));
 			}
 		}
 	});

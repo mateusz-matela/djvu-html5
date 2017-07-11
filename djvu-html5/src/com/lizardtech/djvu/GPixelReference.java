@@ -45,6 +45,7 @@
 //
 package com.lizardtech.djvu;
 
+import static com.lizardtech.djvu.GMap.BYTES_PER_PIXEL;
 
 /**
  * DOCUMENT ME!
@@ -62,7 +63,6 @@ public final class GPixelReference
   /** The current byte position in the data array. */
   private int offset;
   
-  private final int ncolors;
   private final int redOffset;
   private final int greenOffset;
   private final int blueOffset;
@@ -80,8 +80,7 @@ public final class GPixelReference
     final int  offset)
   {
     this.parent   = parent;
-    this.ncolors  = parent.getColorSize();
-    this.offset   = offset * ncolors;
+    this.offset   = offset * BYTES_PER_PIXEL;
     blueOffset=parent.getBlueOffset();
     greenOffset=parent.getGreenOffset();
     redOffset=parent.getRedOffset();
@@ -100,8 +99,7 @@ public final class GPixelReference
     final int  column)
   {
     this.parent   = parent;
-    this.ncolors  = parent.getColorSize();
-    this.offset   = (parent.rowOffset(row) + column) * ncolors;
+    this.offset   = (parent.rowOffset(row) + column) * BYTES_PER_PIXEL;
     blueOffset=parent.getBlueOffset();
     greenOffset=parent.getGreenOffset();
     redOffset=parent.getRedOffset();
@@ -116,24 +114,9 @@ public final class GPixelReference
    */
   public final void setPixels(final GPixelReference ref,int length)
   {
-    if(ref.ncolors != ncolors ||
-            ref.blueOffset != blueOffset ||
-            ref.greenOffset != greenOffset || 
-            ref.redOffset != redOffset)
-    {
-      while(length-- > 0)
-      {
-        set(ref);
-        ref.incOffset();
-        incOffset();
-      }
-    }
-    else
-    {
-      System.arraycopy(ref.parent.data,ref.offset,parent.data,offset,length*ncolors);
+      System.arraycopy(ref.parent.data,ref.offset,parent.data,offset,length*BYTES_PER_PIXEL);
       ref.incOffset(length);
       incOffset(length);
-    }
   }
 
   /**
@@ -143,7 +126,7 @@ public final class GPixelReference
    */
   public void setOffset(int offset)
   {
-    this.offset = offset * ncolors;
+    this.offset = offset * BYTES_PER_PIXEL;
   }
 
   /**
@@ -156,7 +139,7 @@ public final class GPixelReference
     int row,
     int column)
   {
-    this.offset = (parent.rowOffset(row) + column) * ncolors;
+    this.offset = (parent.rowOffset(row) + column) * BYTES_PER_PIXEL;
   }
 
   public int getOffset() {
@@ -191,7 +174,7 @@ public final class GPixelReference
       final int r0 = y + 128 + t2;
       parent.data.set(offset + redOffset, (r0 < 255) ? ((r0 > 0) ? r0 : 0) : 255);
 
-      offset += ncolors;
+      offset += BYTES_PER_PIXEL;
     }
   }
 
@@ -272,7 +255,7 @@ public byte greenByte()
    */
   public void incOffset()
   {
-    this.offset += ncolors;
+    this.offset += BYTES_PER_PIXEL;
   }
 
   /**
@@ -283,7 +266,7 @@ public byte greenByte()
    */
   public void incOffset(final int offset)
   {
-    this.offset += (ncolors * offset);
+    this.offset += (BYTES_PER_PIXEL * offset);
   }
 
   /**

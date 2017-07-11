@@ -10,9 +10,11 @@ import java.util.Map.Entry;
 
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
+import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.ImageElement;
+import com.google.gwt.typedarrays.shared.Uint8Array;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.EventListener;
 import com.google.gwt.user.client.ui.Image;
@@ -47,7 +49,7 @@ public class TileCache {
 	private final CanvasElement missingTileImage;
 
 	private CanvasElement bufferCanvas;
-
+	private ImageData bufferImageData;
 	private GMap bufferGMap;
 
 	private final GRect tempRect = new GRect();
@@ -65,8 +67,6 @@ public class TileCache {
 		missingTileImage = prepareMissingTileImage();
 
 		bufferCanvas = new CachedItem(tileSize, tileSize).image;
-
-		GMap.imageDataFactory = app.getCanvas().getContext2d();
 	}
 
 	private String getBlankImageUrl() {
@@ -328,12 +328,19 @@ public class TileCache {
 			return false;
 	
 		bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
-
-		Context2d c = cachedItem.image.getContext2d();
-		c.setFillStyle("white");
-		c.fillRect(0, 0, tileSize, tileSize);
 		if (bufferGMap != null) {
-			bufferGMap.putData(bufferCanvas.getContext2d());
+			if (bufferImageData == null || bufferImageData.getWidth() != bufferGMap.getDataWidth()
+					|| bufferImageData.getHeight() != bufferGMap.getDataHeight()) {
+				bufferImageData = bufferCanvas.getContext2d()
+						.createImageData(bufferGMap.getDataWidth(), bufferGMap.getDataHeight());
+			}
+			Uint8Array imageArray = bufferImageData.getData().cast();
+			imageArray.set(bufferGMap.getImageData());
+			bufferCanvas.getContext2d().putImageData(bufferImageData, -bufferGMap.getBorder(), 0);
+
+			Context2d c = cachedItem.image.getContext2d();
+			c.setFillStyle("white");
+			c.fillRect(0, 0, tileSize, tileSize);
 			c.drawImage(bufferCanvas, 0, 0);
 		}
 		cachedItem.isFetched = true;

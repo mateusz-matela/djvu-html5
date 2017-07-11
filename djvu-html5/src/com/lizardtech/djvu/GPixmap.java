@@ -47,7 +47,6 @@ package com.lizardtech.djvu;
 
 import java.io.IOException;
 
-import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.typedarrays.shared.Int32Array;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
@@ -95,15 +94,10 @@ public class GPixmap
    */
   public GPixmap() 
   {
-      super(BYTES_PER_PIXEL,0,1,2, false);
+      super(0,1,2, false);
   }
 
   //~ Methods ----------------------------------------------------------------
-
-  @Override
-  public void putData(Context2d target) {
-	  target.putImageData(imageData, 0, 0);
-  }
 
 /**
    * Fill the array with color correction constants.
@@ -673,10 +667,10 @@ public class GPixmap
     {
       if(data == null)
       {
-    	  setImageData(imageDataFactory.createImageData(ncolumns, nrows));
+    	  createImageData(ncolumns, nrows);
     	  if (filler == null) {
     		  for (int i = 0; i < npix; i++)
-    			  data.set(i * ncolors + 3, 0xFF);
+    			  data.set(i * BYTES_PER_PIXEL + 3, 0xFF);
     	  }
       }
 

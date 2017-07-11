@@ -47,8 +47,6 @@ package com.lizardtech.djvu;
 
 import java.util.HashMap;
 
-import com.google.gwt.canvas.dom.client.Context2d;
-import com.google.gwt.canvas.dom.client.ImageData;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
@@ -64,16 +62,12 @@ public abstract class GMap
 
 	protected static int BYTES_PER_PIXEL = 4;
 
-	public static Context2d imageDataFactory;
-
 	protected Uint8Array data;
-	protected ImageData imageData;
+	protected int dataWidth;
+	protected int dataHeight;
 
 /** properties associated with this image map */
   public final HashMap<String, Object> properties = new HashMap<>();
-
-  /** The number of bytes per pixel */
-  protected final int ncolors;
 
   /** The offset to the color red. */
   protected final int redOffset;
@@ -98,9 +92,8 @@ public abstract class GMap
   /**
    * Creates a new GMap object.
    */
-  public GMap(final int ncolors,final int redOffset,final int greenOffset,final int blueOffset,final boolean needRamp)
+  public GMap(final int redOffset,final int greenOffset,final int blueOffset,final boolean needRamp)
   {
-    this.ncolors=ncolors;
     this.needRamp=needRamp;
     this.redOffset=redOffset;
     this.greenOffset=greenOffset;
@@ -129,18 +122,26 @@ public abstract class GMap
       return nrows;
   }
 
-  /**
-   * Puts this bitmap's data on on given canvas context, at position {@code (0,0)}.
-   */
-  public abstract void putData(Context2d target);
-
-  protected void setImageData(ImageData imageData) {
-	  this.imageData = imageData;
-	  Uint8Array imageArray = (Uint8Array) imageData.getData();
-	  // image array is clamped by default, we need non-clamped
-	  data = TypedArrays.createUint8Array(imageArray.buffer());
+  public Uint8Array getImageData() {
+    return data;
+  }
+  public int getDataWidth() {
+	  return dataWidth;
+  }
+  public int getDataHeight() {
+	  return dataHeight;
   }
 
+
+  public int getBorder() {
+    return 0;
+  }
+
+  protected void createImageData(int columns, int rows) {
+    data = TypedArrays.createUint8Array(columns * rows * BYTES_PER_PIXEL);
+    dataWidth = columns;
+    dataHeight = rows;
+  }
   /**
    * Query the start offset of a row.
    *
@@ -161,16 +162,6 @@ public abstract class GMap
   public int getRowSize()
   {
     return columns();
-  }
-
-  /**
-   * Query the bytes per pixel.
-   * 
-   * @return the number of bytes per pixel
-   */
-  public final int getColorSize()
-  {
-    return ncolors;
   }
 
   /**

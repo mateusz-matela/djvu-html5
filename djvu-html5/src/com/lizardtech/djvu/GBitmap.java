@@ -45,7 +45,6 @@
 //
 package com.lizardtech.djvu;
 
-import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.typedarrays.shared.Uint8Array;
 
 /**
@@ -81,18 +80,16 @@ public class GBitmap
    */
   public GBitmap()
   {
-      super(BYTES_PER_PIXEL, PIXEL_OFFSET, PIXEL_OFFSET, PIXEL_OFFSET, true);
+      super(PIXEL_OFFSET, PIXEL_OFFSET, PIXEL_OFFSET, true);
   }
 
   //~ Methods ----------------------------------------------------------------
 
-	@Override
-	public void putData(Context2d target) {
-		target.putImageData(imageData, -border, 0);
-	}
-
-	
-
+  @Override
+  public int getBorder() {
+    return border;
+  }
+  
   /**
    * Query a pixel as boolean
    *
@@ -118,7 +115,7 @@ public class GBitmap
   {
     if((offset >= border) || (offset < maxRowOffset))
     {
-      data.set(offset * ncolors + PIXEL_OFFSET, 255 * value / (grays - 1));
+      data.set(offset * BYTES_PER_PIXEL + PIXEL_OFFSET, 255 * value / (grays - 1));
     }
   }
 
@@ -131,7 +128,7 @@ public class GBitmap
    */
   public final int getByteAt(final int offset)
   {
-	int value = offset >= 0 ? data.get(offset * ncolors + PIXEL_OFFSET) : 0;
+	int value = offset >= 0 ? data.get(offset * BYTES_PER_PIXEL + PIXEL_OFFSET) : 0;
     return ((value * (grays - 1) + (grays - 2))) / 255;
   }
 
@@ -351,7 +348,8 @@ public final int getRowSize()
         }
         else
         {
-          data.set(bit.data.subarray(refOffset * ncolors, (refOffset + w) * ncolors), offset * ncolors);
+          data.set(bit.data.subarray(refOffset * BYTES_PER_PIXEL, (refOffset + w) * BYTES_PER_PIXEL),
+              offset * BYTES_PER_PIXEL);
         }
       }
       while(--h > 0);
@@ -381,11 +379,11 @@ public final int getRowSize()
     border     = aborder;
     setRowSize(ncolumns + border);
 
-    int npixels = rowOffset(nrows) * ncolors;
+    int npixels = rowOffset(nrows) * BYTES_PER_PIXEL;
 
     if(npixels > 0)
     {
-		setImageData(imageDataFactory.createImageData(rowSize, nrows + 3));
+		createImageData(rowSize, nrows + 3);
     }
 
     return this;
@@ -413,9 +411,9 @@ public final int getRowSize()
 
       for(int i = 0; i < nrows; i++)
       {
-    	  Uint8Array refRow = ref.data.subarray(ref.rowOffset(i) * ncolors,
-    			  ref.rowOffset(i) + ncolumns * ncolors);
-    	  data.set(refRow, rowOffset(i) * ncolors);
+    	  Uint8Array refRow = ref.data.subarray(ref.rowOffset(i) * BYTES_PER_PIXEL,
+    			  ref.rowOffset(i) + ncolumns * BYTES_PER_PIXEL);
+    	  data.set(refRow, rowOffset(i) * BYTES_PER_PIXEL);
       }
     }
     else if(aborder > border)
