@@ -65,6 +65,9 @@ public abstract class GMap
 	protected Uint8Array data;
 	protected int dataWidth;
 	protected int dataHeight;
+	
+	/** number of border pixels */
+	protected int border = 0;
 
 /** properties associated with this image map */
   public final HashMap<String, Object> properties = new HashMap<>();
@@ -132,9 +135,8 @@ public abstract class GMap
 	  return dataHeight;
   }
 
-
   public int getBorder() {
-    return 0;
+    return border;
   }
 
   protected void createImageData(int columns, int rows) {

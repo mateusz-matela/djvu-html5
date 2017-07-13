@@ -56,17 +56,24 @@ public class PageCache implements DataSource {
 			return -result;
 		}
 
+		public void setInfo(DjVuInfo info) {
+			this.info = info;
+			dataStore.setPageInfo(pageNum, info);
+		}
+
 		public void setText(DjVuText text) {
 			if (text == null)
 				text = new DjVuText();
 			this.text = text;
 			if (text.length() > 0)
 				textAvailable = true;
-			fireDecoded(pageNum, textDecodeListeners);
+			dataStore.setText(pageNum, text);
 		}
 	}
 
 	private final Djvu_html5 app;
+
+	private final DataStore dataStore;
 
 	private Document document;
 	
@@ -87,23 +94,17 @@ public class PageCache implements DataSource {
 
 	private int pagesMemoryUsage = 0;
 
-	private final ArrayList<DecodeListener> fullDecodeListeners = new ArrayList<>();
-	private final ArrayList<DecodeListener> textDecodeListeners = new ArrayList<>();
-
 	private int lastRequestedPage = 0;
 
 	public PageCache(final Djvu_html5 app, final String url) {
 		this.app = app;
+		this.dataStore = app.getDataStore();
+
+		DjvuContext.addViewChangeListener(this::pageChanged);
 
 		URLInputStream.dataSource = this;
 
-		Uint8Array data = getData(url, new ReadyListener() {
-			
-			@Override
-			public void dataReady() {
-				init(url);
-			}
-		});
+		Uint8Array data = getData(url, () -> init(url));
 		if (data != null)
 			init(url);
 	}
@@ -114,10 +115,7 @@ public class PageCache implements DataSource {
 			document.read(url);
 			int pageCount = document.getDjVmDir().get_pages_num();
 
-			app.getToolbar().setPageCount(pageCount);
-
-			lastRequestedPage = Math.max(0, Math.min(pageCount - 1, lastRequestedPage));
-			app.getPageLayout().setPage(lastRequestedPage);
+			dataStore.setPageCount(pageCount);
 
 			pages = new ArrayList<>(pageCount);
 			for (int i = 0; i < pageCount; i++)
@@ -197,20 +195,17 @@ public class PageCache implements DataSource {
 		XMLHttpRequest request = XMLHttpRequest.create();
 		request.open("GET", url);
 		request.setResponseType(ResponseType.ArrayBuffer);
-		request.setOnReadyStateChange(new ReadyStateChangeHandler() {
-			@Override
-			public void onReadyStateChange(XMLHttpRequest xhr) {
-				if (xhr.getReadyState() != XMLHttpRequest.DONE)
-					return;
-				textDownloadInProgress = false;
-				if (xhr.getStatus() == 200) {
-					Uint8Array data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
-					extractInfoAndText(page, new CachedInputStream().init(new URLInputStream().init(data)));
-					app.startProcessing();
-				} else {
-					GWT.log("Error downloading " + url);
-					GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
-				}
+		request.setOnReadyStateChange(xhr -> {
+			if (xhr.getReadyState() != XMLHttpRequest.DONE)
+				return;
+			textDownloadInProgress = false;
+			if (xhr.getStatus() == 200) {
+				Uint8Array data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
+				extractInfoAndText(page, new CachedInputStream().init(new URLInputStream().init(data)));
+				app.startProcessing();
+			} else {
+				GWT.log("Error downloading " + url);
+				GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
 			}
 		});
 		request.send();
@@ -227,8 +222,9 @@ public class PageCache implements DataSource {
 				if (chunkName.startsWith("FORM:")) {
 					extractInfoAndText(page, chunk);
 				} else if ("INFO".equals(chunkName)) {
-					page.info = new DjVuInfo();
-					page.info.decode(chunk);
+					DjVuInfo info = new DjVuInfo();
+					info.decode(chunk);
+					page.setInfo(info);
 				} else if ("TXTa".equals(chunkName) || "TXTz".equals(chunkName)) {
 					page.setText(new DjVuText().init(chunk));
 				}
@@ -272,12 +268,11 @@ public class PageCache implements DataSource {
 			if (page.decodeStep()) {
 				pageItem.isDecoded = true;
 				if (pageItem.info == null) {
-					pageItem.info = page.getInfo();
+					pageItem.setInfo(page.getInfo());
 					pageItem.setText(page.getText());
 				}
 				pageItem.memoryUsage = page.getMemoryUsage();
 				pagesMemoryUsage += pageItem.memoryUsage;
-				fireDecoded(pageItem.pageNum, fullDecodeListeners);
 			}
 			return true;
 		} catch (IOException e) {
@@ -290,10 +285,11 @@ public class PageCache implements DataSource {
 		return pages.size();
 	}
 
-	public DjVuPage fetchPage(int number) {
+	private void pageChanged() {
+		int number = DjvuContext.getPage();
 		if (pages == null) {
 			lastRequestedPage = number;
-			return null;
+			return;
 		}
 		if (lastRequestedPage != number) {
 			lastRequestedPage = number;
@@ -301,7 +297,6 @@ public class PageCache implements DataSource {
 			Collections.sort(pagesByRank);
 		}
 		app.startProcessing();
-		return getPage(number);
 	}
 
 	private void updateRanks() {
@@ -331,14 +326,6 @@ public class PageCache implements DataSource {
 	public DjVuPage getPage(int number) {
 		PageItem pageItem = pages.get(number);
 		return pageItem.isDecoded ? pageItem.page : null;
-	}
-
-	public DjVuInfo getInfo(int pageNumber) {
-		return pages.get(pageNumber).info;
-	}
-
-	public DjVuText getText(int pageNumber) {
-		return pages.get(pageNumber).text;
 	}
 
 	@Override
@@ -428,22 +415,5 @@ public class PageCache implements DataSource {
 		if (file == null)
 			fileCache.put(url, file = new FileItem());
 		return file;
-	}
-
-	public void addFullDecodeListener(DecodeListener listener) {
-		fullDecodeListeners.add(listener);
-	}
-
-	public void addTextDecodeListener(DecodeListener listener) {
-		textDecodeListeners.add(listener);
-	}
-
-	private void fireDecoded(int pageNum, List<DecodeListener> listeners) {
-		for (DecodeListener listener : listeners)
-			listener.pageDecoded(pageNum);
-	}
-
-	public static interface DecodeListener {
-		void pageDecoded(int pageNum);
 	}
 }

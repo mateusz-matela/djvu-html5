@@ -64,9 +64,6 @@ public class GBitmap
   /** Color depth */
   protected int grays = 0;
 
-  /** number of border pixels */
-  private int border = 0;
-
   /** number of bytes in each row */
   private int rowSize = 0;
 
@@ -85,11 +82,6 @@ public class GBitmap
 
   //~ Methods ----------------------------------------------------------------
 
-  @Override
-  public int getBorder() {
-    return border;
-  }
-  
   /**
    * Query a pixel as boolean
    *

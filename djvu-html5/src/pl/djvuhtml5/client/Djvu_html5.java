@@ -5,8 +5,6 @@ import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.event.logical.shared.ResizeEvent;
-import com.google.gwt.event.logical.shared.ResizeHandler;
 import com.google.gwt.i18n.client.Dictionary;
 import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.Label;
@@ -52,8 +50,7 @@ public class Djvu_html5 implements EntryPoint {
 	private Toolbar toolbar;
 	private Scrollbar horizontalScrollbar;
 	private Scrollbar verticalScrollbar;
-	private TileCache tileCache;
-	private PageCache pageCache;
+	private DataStore dataStore;
 	private BackgroundProcessor backgroundProcessor;
 	private Label statusImage;
 	private Status currentStatus;
@@ -75,8 +72,9 @@ public class Djvu_html5 implements EntryPoint {
 			GWT.log("ERROR: No djvu file defined");
 			return;
 		}
+		DjvuContext.setUrl(url);
 
-		pageCache = new PageCache(this, url);
+		dataStore = new DataStore();
 
 		if (DjvuContext.getTextLayerEnabled())
 			container.add(textLayer = new TextLayer(this));
@@ -97,7 +95,6 @@ public class Djvu_html5 implements EntryPoint {
 			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
 		}
 
-		tileCache = new TileCache(this);
 		backgroundProcessor = new BackgroundProcessor(this);
 
 		pageLayout = new SinglePageLayout(this);
@@ -117,20 +114,8 @@ public class Djvu_html5 implements EntryPoint {
 		final SimplePanel panel = new SimplePanel(canvas);
 		panel.setStyleName("content");
 
-		Window.addResizeHandler(new ResizeHandler() {
-
-			@Override
-			public void onResize(ResizeEvent event) {
-				resizeCanvas();
-			}
-		});
-		Scheduler.get().scheduleFinally(new Scheduler.ScheduledCommand() {
-
-			@Override
-			public void execute() {
-				resizeCanvas();
-			}
-		});
+		Window.addResizeHandler(e -> resizeCanvas());
+		Scheduler.get().scheduleFinally(() -> resizeCanvas());
 		return panel;
 	}
 
@@ -154,12 +139,8 @@ public class Djvu_html5 implements EntryPoint {
 		return canvas;
 	}
 
-	public TileCache getTileCache() {
-		return tileCache;
-	}
-
-	public PageCache getPageCache() {
-		return pageCache;
+	public DataStore getDataStore() {
+		return dataStore;
 	}
 
 	public void startProcessing() {

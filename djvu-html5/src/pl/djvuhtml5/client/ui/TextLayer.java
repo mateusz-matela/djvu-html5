@@ -19,11 +19,10 @@ import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.text.DjVuText;
 import com.lizardtech.djvu.text.DjVuText.Zone;
 
+import pl.djvuhtml5.client.DataStore;
 import pl.djvuhtml5.client.Djvu_html5;
-import pl.djvuhtml5.client.PageCache;
-import pl.djvuhtml5.client.PageCache.DecodeListener;
 
-public class TextLayer extends FlowPanel implements DecodeListener, ScrollHandler {
+public class TextLayer extends FlowPanel implements ScrollHandler {
 
 	private class TextPage extends FlowPanel {
 
@@ -175,16 +174,15 @@ public class TextLayer extends FlowPanel implements DecodeListener, ScrollHandle
 
 		addDomHandler(this, ScrollEvent.getType());
 
-		app.getPageCache().addTextDecodeListener(this);
+		app.getDataStore().addTextListener(this::textAvailable);
 
 		fontMeasure = Canvas.createIfSupported().getContext2d();
 	}
 
-	@Override
-	public void pageDecoded(int pageNum) {
-		PageCache pageCache = app.getPageCache();
-		DjVuInfo info = pageCache.getInfo(pageNum);
-		DjVuText text = pageCache.getText(pageNum);
+	private void textAvailable(int pageNum) {
+		DataStore dataStore = app.getDataStore();
+		DjVuInfo info = dataStore.getPageInfo(pageNum);
+		DjVuText text = dataStore.getText(pageNum);
 		int scrollPosition = currentPage >= pages.size() ? 0
 				: getElement().getScrollTop() - pages.get(currentPage).getElement().getOffsetTop();
 

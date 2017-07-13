@@ -20,19 +20,14 @@ import com.google.gwt.http.client.UrlBuilder;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
 import com.lizardtech.djvu.DjVuInfo;
-import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GRect;
 
+import pl.djvuhtml5.client.DataStore;
 import pl.djvuhtml5.client.DjvuContext;
 import pl.djvuhtml5.client.Djvu_html5;
-import pl.djvuhtml5.client.PageCache;
-import pl.djvuhtml5.client.TileCache;
-import pl.djvuhtml5.client.PageCache.DecodeListener;
-import pl.djvuhtml5.client.TileCache.TileCacheListener;
-import pl.djvuhtml5.client.TileCache.TileInfo;
 import pl.djvuhtml5.client.ui.Scrollbar.ScrollPanListener;
 
-public class SinglePageLayout implements DecodeListener, TileCacheListener {
+public class SinglePageLayout {
 
 	interface ChangeListener {
 		void pageChanged(int currentPage);
@@ -47,9 +42,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
 	private int page;
 
-	private final TileCache tileCache;
-
-	private final PageCache pageCache;
+	private final DataStore dataStore;
 
 	private DjVuInfo pageInfo;
 
@@ -76,11 +69,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
 	public SinglePageLayout(Djvu_html5 app) {
 		this.app = app;
-		this.tileCache = app.getTileCache();
-		this.pageCache = app.getPageCache();
-
-		pageCache.addFullDecodeListener(this);
-		tileCache.addTileCacheListener(this);
+		this.dataStore = app.getDataStore();
 
 		this.canvas = app.getCanvas();
 
@@ -97,20 +86,34 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 			page = 0;
 		}
 		locationUpdateEnabled = pageParam || DjvuContext.getLocationUpdateEnabled();
-		pageCache.fetchPage(page);
+		DjvuContext.setPage(page);
+
+		dataStore.addPageCountListener(pageCount -> {
+			app.getToolbar().setPageCount(pageCount);
+			int newPage = Math.max(0, Math.min(pageCount - 1, page));
+			setPage(newPage);
+		});
+		dataStore.addInfoListener(pageNum -> {
+			if (pageNum == page)
+				setPage(pageNum);
+		});
+		dataStore.addTileListener(pageNum -> {
+			if (pageNum == page)
+				redraw();
+		});
 	}
 
 	public void setPage(int pageNum) {
 		page = pageNum;
-		DjVuPage newPage = app.getPageCache().fetchPage(pageNum);
-		if (newPage != null) {
-			pageInfo = newPage.getInfo();
+		DjVuInfo newInfo = app.getDataStore().getPageInfo(pageNum);
+		if (newInfo != null) {
+			pageInfo = newInfo;
 			app.getToolbar().setZoomOptions(findZoomOptions());
-			viewChanged();
 		} else {
 			pageInfo = null;
 		}
-		redraw();
+		viewChanged();
+		DjvuContext.setPage(pageNum);
 		if (changeListener != null)
 			changeListener.pageChanged(pageNum);
 		scheduleURLUpdate();
@@ -147,7 +150,6 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 
 	public void canvasResized() {
 		viewChanged();
-		redraw();
 	}
 
 	public void zoomToFitPage() {
@@ -178,11 +180,12 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 	}
 
 	private void doSetZoom(double zoom) {
+		if (this.zoom == zoom)
+			return;
 		centerX *= zoom / this.zoom;
 		centerY *= zoom / this.zoom;
 		this.zoom = zoom;
 		viewChanged();
-		redraw();
 		if (changeListener != null)
 			changeListener.zoomChanged(getZoom());
 	}
@@ -221,8 +224,10 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 	}
 
 	private void viewChanged() {
-		if (pageInfo == null)
+		if (pageInfo == null) {
+			redraw();
 			return;
+		}
 		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
 		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
 		if (pw < w) {
@@ -244,6 +249,8 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 		app.getVerticalScrollbar().setThumb((centerY + pageMargin) / ph2, h / ph2);
 		if (app.getTextLayer() != null)
 			app.getTextLayer().setViewPosition(page, w / 2 - centerX, h / 2 - centerY, zoom);
+
+		redraw();
 	}
 
 	/**
@@ -260,7 +267,6 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 			setPage(page);
 		} else {
 			viewChanged();
-			redraw();
 		}
 	}
 
@@ -285,13 +291,13 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 		graphics2d.translate(-startX, -startY);
 		graphics2d.scale(1, -1); // DjVu images have y-axis inverted 
 
-		int tileSize = tileCache.tileSize;
+		int tileSize = DjvuContext.getTileSize();
 		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
 		range.xmin = (int) (Math.max(0, centerX - w * 0.5) / tileSize / scale);
 		range.xmax = (int) Math.ceil(Math.min(pw, centerX + w * 0.5) / tileSize / scale);
 		range.ymin = (int) (Math.max(0, centerY - h * 0.5) / tileSize / scale);
 		range.ymax = (int) Math.ceil(Math.min(ph, centerY + h * 0.5) / tileSize / scale);
-		imagesArray = tileCache.getTileImages(page, subsample, range , imagesArray);
+		imagesArray = dataStore.getTileImages(page, subsample, range , imagesArray);
 		for (int y = range.ymin; y <= range.ymax; y++)
 			for (int x = range.xmin; x <= range.xmax; x++) {
 				CanvasElement canvasElement = imagesArray[y - range.ymin][x - range.xmin];
@@ -302,19 +308,8 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 		// missing tile graphics may exceed the page boundary
 		graphics2d.fillRect(startX + pw, 0, w, h);
 		graphics2d.fillRect(0, startY + ph, w, h);
-	}
 
-	@Override
-	public void pageDecoded(int pageNum) {
-		if (pageNum == page) {
-			setPage(pageNum);
-		}
-	}
-
-	@Override
-	public void tileAvailable(TileInfo tileInfo) {
-		if (tileInfo.page == page)
-			redraw();
+		DjvuContext.setTileRange(range, subsample);
 	}
 
 	private class PanController extends PanListener implements MouseWheelHandler, KeyDownHandler, ScrollPanListener {
@@ -392,7 +387,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 					changePage(0, -1, -1);
 					break;
 				case KeyCodes.KEY_END:
-					changePage(app.getPageCache().getPageCount() - 1, 1, 1);
+					changePage(dataStore.getPageCount() - 1, 1, 1);
 					break;
 				default:
 					handled = false;
@@ -437,7 +432,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 			int oldY = centerY;
 			centerX += dx;
 			centerY += dy;
-			viewChanged();
+			viewChanged(); // applies constraints to x,y
 			if (centerX != oldX || centerY != oldY) {
 				redraw();
 				return true;
@@ -446,7 +441,7 @@ public class SinglePageLayout implements DecodeListener, TileCacheListener {
 		}
 
 		private void changePage(int targetPage, int horizontalPosition, int verticalPosition) {
-			if (targetPage >= 0 && targetPage < app.getPageCache().getPageCount()) {
+			if (targetPage >= 0 && targetPage < dataStore.getPageCount()) {
 				if (horizontalPosition < 0)
 					centerX = 0;
 				else if (horizontalPosition > 0)

@@ -1,9 +1,66 @@
 package pl.djvuhtml5.client;
 
+import java.util.ArrayList;
+
+import com.lizardtech.djvu.GRect;
+
 public class DjvuContext {
 
 	private DjvuContext() {
 		// no instances
+	}
+
+	private static String url;
+	private static int page = -1;
+	private static int subsample = 1;
+	private static GRect tileRange = new GRect();
+	private static ArrayList<Runnable> viewChangeListeners = new ArrayList<>();
+
+	public static void setUrl(String url) {
+		DjvuContext.url = url;
+		fireViewChanged();
+	}
+
+	public static String getUrl() {
+		return url;
+	}
+
+	public static void setPage(int page) {
+		if (DjvuContext.page != page) {
+			DjvuContext.page = page;
+			fireViewChanged();
+		}
+	}
+
+	public static int getPage() {
+		return page;
+	}
+
+	public static void setTileRange(GRect tileRange, int subsample) {
+		if (!DjvuContext.tileRange.equals(tileRange) || DjvuContext.subsample != subsample) {
+			DjvuContext.tileRange.clear();
+			DjvuContext.tileRange.recthull(DjvuContext.tileRange, tileRange);
+			DjvuContext.subsample = subsample;
+			fireViewChanged();
+		}
+	}
+
+	public static void getTileRange(GRect result) {
+		result.clear();
+		result.recthull(result, tileRange);
+	}
+
+	public static int getSubsample() {
+		return subsample;
+	}
+
+	public static void addViewChangeListener(Runnable listener) {
+		viewChangeListeners.add(listener);
+	}
+
+	private static void fireViewChanged() {
+		for (Runnable listener : viewChangeListeners)
+			listener.run();
 	}
 
 	public static String getIndexFile() {
@@ -69,7 +126,7 @@ public class DjvuContext {
 	
 	private static boolean getBoolean(String key, boolean defaultValue) {
 		String value = get(key);
-		return Boolean.valueOf(value);
+		return value == null ? defaultValue : Boolean.valueOf(value);
 	}
 
 	private static native String get(String key) /*-{
