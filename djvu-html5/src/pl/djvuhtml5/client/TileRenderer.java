@@ -10,19 +10,19 @@ import com.lizardtech.djvu.DjVuPage;
 import com.lizardtech.djvu.GMap;
 import com.lizardtech.djvu.GRect;
 
-public class TileCache {
+public class TileRenderer {
 
 	public static final int MAX_SUBSAMPLE = 12;
 
 	private static final int PREFETCH_AGE = 500;
 
-	private final Djvu_html5 app;
+	private final ProcessingContext context;
 
 	private final int tileSize;
 
 	private final int tileCacheSize;
 
-	private final PageCache pageCache;
+	private final PageDecoder pageDecoder;
 
 	private final HashMap<TileInfo, CachedItem> cache = new HashMap<>();
 
@@ -37,9 +37,9 @@ public class TileCache {
 	private int lastPageNum = -1, lastSubsample;
 	private final GRect lastRange = new GRect();
 
-	public TileCache(Djvu_html5 app, PageCache pageCache) {
-		this.app = app;
-		this.pageCache = pageCache;
+	public TileRenderer(ProcessingContext context, PageDecoder pageDecoder) {
+		this.context = context;
+		this.pageDecoder = pageDecoder;
 		this.tileCacheSize = DjvuContext.getTileCacheSize();
 		this.tileSize = DjvuContext.getTileSize();
 
@@ -71,7 +71,7 @@ public class TileCache {
 					item.lastUsed = System.currentTimeMillis();
 			}
 		}
-		app.startProcessing();
+		context.startProcessing();
 	}
 
 	private void putItem(TileInfo tileInfo, CachedItem cachedItem) {
@@ -104,18 +104,18 @@ public class TileCache {
 			cache.remove(tile);
 			tilesToRemove.add(tile);
 		}
-		app.getDataStore().releaseTileImages(tilesToRemove);
+		context.releaseTileImages(tilesToRemove);
 	}
 
 	boolean prefetchPreviews(boolean all) {
 		if (lastPageNum < 0)
 			return false;
 		tempTI.subsample = MAX_SUBSAMPLE;
-		for (int i = 0; i < (all ? pageCache.getPageCount() * 2 : 1); i++) {
+		for (int i = 0; i < (all ? pageDecoder.getPageCount() * 2 : 1); i++) {
 			int index = lastPageNum + (i % 2 == 0 ? -1 : 1) * (i / 2);
-			if (index < 0 || index >= pageCache.getPageCount())
+			if (index < 0 || index >= pageDecoder.getPageCount())
 				continue;
-			DjVuPage page = pageCache.getPage(index);
+			DjVuPage page = pageDecoder.getPage(index);
 			if (page == null)
 				continue;
 			tempTI.page = index;
@@ -134,9 +134,9 @@ public class TileCache {
 
 	boolean prefetchCurrentView(int pageDelta) {
 		int pageNum = lastPageNum + pageDelta;
-		if (pageNum < 0 || pageNum >= pageCache.getPageCount())
+		if (pageNum < 0 || pageNum >= pageDecoder.getPageCount())
 			return false;
-		final DjVuPage page = pageCache.getPage(pageNum);
+		final DjVuPage page = pageDecoder.getPage(pageNum);
 		if (page == null)
 			return false;
 
@@ -154,9 +154,9 @@ public class TileCache {
 
 	boolean prefetchAdjacent(int pageDelta) {
 		int pageNum = lastPageNum + pageDelta;
-		if (pageNum < 0 || pageNum >= pageCache.getPageCount())
+		if (pageNum < 0 || pageNum >= pageDecoder.getPageCount())
 			return false;
-		final DjVuPage page = pageCache.getPage(pageNum);
+		final DjVuPage page = pageDecoder.getPage(pageNum);
 		if (page == null)
 			return false;
 
@@ -210,12 +210,12 @@ public class TileCache {
 	
 		bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
 		if (bufferGMap != null) {
-			app.getDataStore().setTile(tileInfo, bufferGMap);
+			context.setTile(tileInfo, bufferGMap);
 		}
 		cachedItem.isFetched = true;
 		cachedItem.lastUsed = System.currentTimeMillis() - (isPrefetch ? PREFETCH_AGE : 0);
 		if (!isPrefetch) {
-			app.interruptProcessing();
+			context.interruptProcessing();
 		}
 		return true;
 	}

@@ -1,6 +1,6 @@
 package pl.djvuhtml5.client;
 
-import static pl.djvuhtml5.client.TileCache.toZoom;
+import static pl.djvuhtml5.client.TileRenderer.toZoom;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +27,7 @@ import com.lizardtech.djvu.GMap;
 import com.lizardtech.djvu.GRect;
 import com.lizardtech.djvu.text.DjVuText;
 
-import pl.djvuhtml5.client.TileCache.TileInfo;
+import pl.djvuhtml5.client.TileRenderer.TileInfo;
 
 public class DataStore {
 

@@ -1,5 +1,9 @@
 package pl.djvuhtml5.client;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.core.client.EntryPoint;
 import com.google.gwt.core.client.GWT;
@@ -11,7 +15,11 @@ import com.google.gwt.user.client.ui.Label;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
+import com.lizardtech.djvu.DjVuInfo;
+import com.lizardtech.djvu.GMap;
+import com.lizardtech.djvu.text.DjVuText;
 
+import pl.djvuhtml5.client.TileRenderer.TileInfo;
 import pl.djvuhtml5.client.ui.Scrollbar;
 import pl.djvuhtml5.client.ui.SinglePageLayout;
 import pl.djvuhtml5.client.ui.TextLayer;
@@ -23,20 +31,13 @@ import pl.djvuhtml5.client.ui.UIHider;
  */
 public class Djvu_html5 implements EntryPoint {
 
-	public static enum Status {
-		LOADING(0), ERROR(1);
-
-		public final int imagePosition;
-
-		Status(int imagePosition) {
-			this.imagePosition = imagePosition;
-		}
-	}
-
 	private static final String WELCOME_MESSAGE =
 			"Starting djvu-html5 viewer v0.2.3 from https://github.com/mateusz-matela/djvu-html5";
 
 	private static final String CONTEXT_GLOBAL_VARIABLE = "DJVU_CONTEXT";
+
+	private static final List<String> STATUS_IMAGE_ORDER = Arrays.asList(ProcessingContext.STATUS_LOADING,
+			ProcessingContext.STATUS_ERROR);
 
 	private static Djvu_html5 instance;
 
@@ -53,7 +54,7 @@ public class Djvu_html5 implements EntryPoint {
 	private DataStore dataStore;
 	private BackgroundProcessor backgroundProcessor;
 	private Label statusImage;
-	private Status currentStatus;
+	private String currentStatus;
 
 	/**
 	 * This is the entry point method.
@@ -95,7 +96,7 @@ public class Djvu_html5 implements EntryPoint {
 			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
 		}
 
-		backgroundProcessor = new BackgroundProcessor(this);
+		backgroundProcessor = new BackgroundProcessor(new MainProcessingContext());
 
 		pageLayout = new SinglePageLayout(this);
 		toolbar.setPageLayout(pageLayout);
@@ -143,23 +144,16 @@ public class Djvu_html5 implements EntryPoint {
 		return dataStore;
 	}
 
-	public void startProcessing() {
-		backgroundProcessor.start();
-	}
-
-	public void interruptProcessing() {
-		backgroundProcessor.interrupt();
-	}
-
-	public void setStatus(Status status) {
+	private void setStatus(String status) {
 		if (status == currentStatus)
 			return;
 		statusImage.setVisible(status != null);
-		if (status != null && currentStatus != Status.ERROR) {
+		if (status != null && !ProcessingContext.STATUS_ERROR.equals(currentStatus)) {
+			int imagePosition = STATUS_IMAGE_ORDER.indexOf(status);
 			statusImage.getElement().getStyle().setProperty("backgroundPosition",
-					-status.imagePosition * statusImage.getOffsetHeight() + "px 0px");
+					-imagePosition * statusImage.getOffsetHeight() + "px 0px");
 		}
-		if (status == null || currentStatus != Status.ERROR)
+		if (status == null || !ProcessingContext.STATUS_ERROR.equals(currentStatus))
 			currentStatus = status;
 	}
 
@@ -192,4 +186,46 @@ public class Djvu_html5 implements EntryPoint {
 		var cs = $doc.defaultView.getComputedStyle(element, null);
 		return cs.getPropertyValue(property);
 	}-*/;
+
+	private class MainProcessingContext implements ProcessingContext {
+		@Override
+		public void setStatus(String status) {
+			Djvu_html5.this.setStatus(status);
+		}
+
+		@Override
+		public void startProcessing() {
+			backgroundProcessor.start();
+		}
+
+		@Override
+		public void interruptProcessing() {
+			backgroundProcessor.interrupt();
+		}
+
+		@Override
+		public void setPageCount(int pageCount) {
+			dataStore.setPageCount(pageCount);
+		}
+
+		@Override
+		public void setPageInfo(int pageNum, DjVuInfo info) {
+			dataStore.setPageInfo(pageNum, info);
+		}
+
+		@Override
+		public void setText(int pageNum, DjVuText text) {
+			dataStore.setText(pageNum, text);
+		}
+
+		@Override
+		public void setTile(TileInfo tileInfo, GMap bufferGMap) {
+			dataStore.setTile(tileInfo, bufferGMap);
+		}
+
+		@Override
+		public void releaseTileImages(ArrayList<TileInfo> tiles) {
+			dataStore.releaseTileImages(tiles);
+		}
+	}
 }

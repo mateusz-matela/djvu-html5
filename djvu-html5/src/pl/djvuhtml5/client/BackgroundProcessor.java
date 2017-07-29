@@ -5,14 +5,12 @@ import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
 import com.google.gwt.user.client.Window;
 
-import pl.djvuhtml5.client.Djvu_html5.Status;
-
 public class BackgroundProcessor implements RepeatingCommand {
 
 	private final static int LAZY_MODE_INTERVAL = 400;
 
-	private final PageCache pageCache;
-	private final TileCache tileCache;
+	private final PageDecoder pageDecoder;
+	private final TileRenderer tileRenderer;
 
 	private boolean isRunning;
 
@@ -20,7 +18,7 @@ public class BackgroundProcessor implements RepeatingCommand {
 
 	private long lastInterrupt;
 
-	private final Djvu_html5 app;
+	private final ProcessingContext context;
 
 	/**
 	 * IE hangs while RepeatingCommand execution runs, so this mode interrupts from time to time
@@ -28,17 +26,19 @@ public class BackgroundProcessor implements RepeatingCommand {
 	 */
 	private final boolean lazyMode;
 
-	public BackgroundProcessor(Djvu_html5 app) {
-		this.app = app;
+	public BackgroundProcessor(ProcessingContext context) {
+		this.context = context;
 
-		pageCache = new PageCache(app, DjvuContext.getUrl());
-		tileCache = new TileCache(app, pageCache);
+		pageDecoder = new PageDecoder(context, DjvuContext.getUrl());
+		tileRenderer = new TileRenderer(context, pageDecoder);
 
 		String userAgent = Window.Navigator.getUserAgent();
 		lazyMode = userAgent.contains("msie") || userAgent.contains("trident");
 	}
 
 	public void start() {
+		if (pageDecoder.getPageCount() == 0)
+			return;
 		if (!isRunning) {
 			Scheduler.get().scheduleIncremental(this);
 			lastInterrupt = System.currentTimeMillis();
@@ -52,24 +52,24 @@ public class BackgroundProcessor implements RepeatingCommand {
 		try {
 			return doExecute();
 		} catch (Exception e) {
-			app.setStatus(Status.ERROR);
+			context.setStatus(ProcessingContext.STATUS_ERROR);
 			GWT.log("background processing failed", e);
 			return isRunning = false;
 		}
 	}
 
 	private boolean doExecute() {
-		boolean didSomething = pageCache.decodeCurrentPage()
-				|| tileCache.prefetchPreviews(false)
-				|| tileCache.prefetchCurrentView(0)
-				|| pageCache.decodeTexts()
-				|| tileCache.prefetchPreviews(true)
-				|| pageCache.decodePages()
-				|| tileCache.prefetchAdjacent(0)
-				|| tileCache.prefetchCurrentView(1)
-				|| tileCache.prefetchCurrentView(-1)
-				|| tileCache.prefetchAdjacent(1)
-				|| tileCache.prefetchAdjacent(-1);
+		boolean didSomething = pageDecoder.decodeCurrentPage()
+				|| tileRenderer.prefetchPreviews(false)
+				|| tileRenderer.prefetchCurrentView(0)
+				|| pageDecoder.decodeTexts()
+				|| tileRenderer.prefetchPreviews(true)
+				|| pageDecoder.decodePages()
+				|| tileRenderer.prefetchAdjacent(0)
+				|| tileRenderer.prefetchCurrentView(1)
+				|| tileRenderer.prefetchCurrentView(-1)
+				|| tileRenderer.prefetchAdjacent(1)
+				|| tileRenderer.prefetchAdjacent(-1);
 		if (didSomething) {
 			if (lazyMode && lastInterrupt + LAZY_MODE_INTERVAL < System.currentTimeMillis()) {
 				isInterruptScheduled = true;

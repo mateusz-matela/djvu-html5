@@ -1,8 +1,8 @@
 package pl.djvuhtml5.client.ui;
 
-import static pl.djvuhtml5.client.TileCache.MAX_SUBSAMPLE;
-import static pl.djvuhtml5.client.TileCache.toSubsample;
-import static pl.djvuhtml5.client.TileCache.toZoom;
+import static pl.djvuhtml5.client.TileRenderer.MAX_SUBSAMPLE;
+import static pl.djvuhtml5.client.TileRenderer.toSubsample;
+import static pl.djvuhtml5.client.TileRenderer.toZoom;
 
 import java.util.ArrayList;
 

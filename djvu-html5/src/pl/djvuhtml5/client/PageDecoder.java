@@ -24,9 +24,7 @@ import com.lizardtech.djvu.IFFEnumeration;
 import com.lizardtech.djvu.URLInputStream;
 import com.lizardtech.djvu.text.DjVuText;
 
-import pl.djvuhtml5.client.Djvu_html5.Status;
-
-public class PageCache implements DataSource {
+public class PageDecoder implements DataSource {
 
 	private static class FileItem {
 		public Uint8Array data;
@@ -58,7 +56,7 @@ public class PageCache implements DataSource {
 
 		public void setInfo(DjVuInfo info) {
 			this.info = info;
-			dataStore.setPageInfo(pageNum, info);
+			context.setPageInfo(pageNum, info);
 		}
 
 		public void setText(DjVuText text) {
@@ -67,13 +65,11 @@ public class PageCache implements DataSource {
 			this.text = text;
 			if (text.length() > 0)
 				textAvailable = true;
-			dataStore.setText(pageNum, text);
+			context.setText(pageNum, text);
 		}
 	}
 
-	private final Djvu_html5 app;
-
-	private final DataStore dataStore;
+	private final ProcessingContext context;
 
 	private Document document;
 	
@@ -96,9 +92,8 @@ public class PageCache implements DataSource {
 
 	private int lastRequestedPage = 0;
 
-	public PageCache(final Djvu_html5 app, final String url) {
-		this.app = app;
-		this.dataStore = app.getDataStore();
+	public PageDecoder(final ProcessingContext context, final String url) {
+		this.context = context;
 
 		DjvuContext.addViewChangeListener(this::pageChanged);
 
@@ -115,7 +110,7 @@ public class PageCache implements DataSource {
 			document.read(url);
 			int pageCount = document.getDjVmDir().get_pages_num();
 
-			dataStore.setPageCount(pageCount);
+			context.setPageCount(pageCount);
 
 			pages = new ArrayList<>(pageCount);
 			for (int i = 0; i < pageCount; i++)
@@ -124,7 +119,7 @@ public class PageCache implements DataSource {
 			pagesByRank = new ArrayList<>(pages);
 			Collections.sort(pagesByRank);
 
-			app.startProcessing();
+			context.startProcessing();
 		} catch (IOException e) {
 			Logger.getGlobal().log(Level.SEVERE, "Could not parse document", e);
 		}
@@ -132,7 +127,7 @@ public class PageCache implements DataSource {
 
 	public boolean decodeCurrentPage() {
 		PageItem currentPageItem = pages.get(lastRequestedPage);
-		app.setStatus(currentPageItem.isDecoded ? null : Status.LOADING);
+		context.setStatus(currentPageItem.isDecoded ? null : ProcessingContext.STATUS_LOADING);
 		if (currentPageItem.isDecoded)
 			return false;
 		cleanCacheOverflow(0);
@@ -202,7 +197,7 @@ public class PageCache implements DataSource {
 			if (xhr.getStatus() == 200) {
 				Uint8Array data = TypedArrays.createUint8Array(xhr.getResponseArrayBuffer());
 				extractInfoAndText(page, new CachedInputStream().init(new URLInputStream().init(data)));
-				app.startProcessing();
+				context.startProcessing();
 			} else {
 				GWT.log("Error downloading " + url);
 				GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
@@ -282,7 +277,7 @@ public class PageCache implements DataSource {
 	}
 
 	public int getPageCount() {
-		return pages.size();
+		return pages == null ? 0 : pages.size();
 	}
 
 	private void pageChanged() {
@@ -296,7 +291,7 @@ public class PageCache implements DataSource {
 			updateRanks();
 			Collections.sort(pagesByRank);
 		}
-		app.startProcessing();
+		context.startProcessing();
 	}
 
 	private void updateRanks() {
@@ -356,13 +351,13 @@ public class PageCache implements DataSource {
 						entry.dataSize = entry.data.byteLength();
 						filesMemoryUsage += entry.dataSize;
 						checkFilesMemory();
-						app.startProcessing();
+						context.startProcessing();
 						fireReady(url);
 						continueDownload();
 					} else {
 						GWT.log("Error downloading " + url);
 						GWT.log("response status: " + xhr.getStatus() + " " + xhr.getStatusText());
-						app.setStatus(Status.ERROR);
+						context.setStatus(ProcessingContext.STATUS_ERROR);
 						fileCache.get(url).downloadStarted = false;
 					}
 				}
