@@ -132,4 +132,12 @@ public class DjvuContext {
 	private static native String get(String key) /*-{
 		return $wnd ? $wnd.DJVU_CONTEXT ? $wnd.DJVU_CONTEXT[key] : null : null;
 	}-*/;
+
+	public static native Object exportConfig() /*-{
+		return $wnd.DJVU_CONTEXT;
+	}-*/;
+
+	public static native void importConfig(Object data) /*-{
+		$wnd.DJVU_CONTEXT = data;
+	}-*/;
 }

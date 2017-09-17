@@ -45,6 +45,8 @@
 //
 package com.lizardtech.djvu;
 
+import jsinterop.annotations.JsProperty;
+
 /**
  * A general class for rectange shapes.  By convention DjVu images are in bottom up
  * coordinates.  Thus, ymax corresponds to the top of a rectangle and ymin to the bottom.
@@ -57,15 +59,19 @@ public class GRect
   //~ Instance fields --------------------------------------------------------
 
   /** Left edge */
+  @JsProperty
   public int xmax;
 
   /** Right edge */
+  @JsProperty
   public int xmin;
 
   /** Top edge. */
+  @JsProperty
   public int ymax;
 
   /** Bottom edge. */
+  @JsProperty
   public int ymin;
 
   //~ Constructors -----------------------------------------------------------
