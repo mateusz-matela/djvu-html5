@@ -47,17 +47,20 @@ package com.lizardtech.djvu.text;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Vector;
 
 import com.google.gwt.regexp.shared.RegExp;
+import com.google.gwt.typedarrays.shared.ArrayBuffer;
+import com.google.gwt.typedarrays.shared.TypedArrays;
+import com.google.gwt.typedarrays.shared.Uint8Array;
 import com.lizardtech.djvu.BSInputStream;
-import com.lizardtech.djvu.ByteArrayOutputStream;
 import com.lizardtech.djvu.CachedInputStream;
 import com.lizardtech.djvu.Codec;
 import com.lizardtech.djvu.GRect;
 import com.lizardtech.djvu.InputStream;
+import com.lizardtech.djvu.JsArrayList;
 import com.lizardtech.djvu.NumContext;
 
 
@@ -184,14 +187,20 @@ public class DjVuText
    * <tr><td>DjVuText.end_of_line</td><td>012</td><td>LF: Line Feed</td></tr>
    * </table>
    */
-  protected byte[] textByteArray = new byte[0];
+  private Uint8Array textByteArray;
+  private ArrayBuffer textByteBuffer;
 
   //~ Constructors -----------------------------------------------------------
 
-  /**
-   * Creates a new DjVuText object.
-   */
-  public DjVuText() {}
+	public DjVuText() {
+		setTextByteArray(new byte[0]);
+	}
+
+	public DjVuText(DjVuText toCopy) {
+		this.textByteBuffer = toCopy.textByteBuffer;
+		this.textByteArray = toCopy.textByteArray;
+		this.page_zone = new Zone(toCopy.page_zone);
+	}
 
   //~ Methods ----------------------------------------------------------------
 
@@ -221,7 +230,7 @@ public boolean isImageData()
     int pos    = from;
     int retval = 0;
 
-    for(; (pos < end) && (pos < textByteArray.length); retval++)
+    for(; (pos < end) && (pos < textByteArray.length()); retval++)
     {
       pos = nextChar(textByteArray, pos);
     }
@@ -243,7 +252,10 @@ public boolean isImageData()
   {
       try
       {
-        String result = new String(textByteArray, start, end - start, "UTF-8");
+        byte[] array = new byte[end - start];
+        for (int i = 0; i < array.length; i++)
+          array[i] = (byte) textByteArray.get(i + start);
+        String result = new String(array, "UTF-8");
         result = SOFT_HYPHEN.replace(result, "\u2010" /* hard hyphen */);
         result = NON_PRINTABLE.replace(result, "?");
         return result;
@@ -255,7 +267,7 @@ public boolean isImageData()
       catch(IllegalArgumentException e) {
         char[] chars = new char[end - start];
         for (int i = 0; i < end - start; i++) {
-            chars[i] = (char) (textByteArray[start + i] & 0xFF);
+            chars[i] = (char) (textByteArray.get(start + i) & 0xFF);
             if (chars[i] < 32 || chars[i] > 126)
                 chars[i] = '?';
         }
@@ -270,8 +282,16 @@ public boolean isImageData()
    */
   public void setTextByteArray(final byte[] textByteArray)
   {
-    this.textByteArray = textByteArray;
+    this.textByteArray = convertArray(textByteArray);
+    this.textByteBuffer = this.textByteArray.buffer();
   }
+
+	private Uint8Array convertArray(byte[] bytes) {
+		Uint8Array result = TypedArrays.createUint8Array(bytes.length);
+		for (int i = 0; i < bytes.length; i++)
+			result.set(i, bytes[i]);
+		return result;
+	}
 
   /**
    * Decodes the hidden text layer TXT into internal representation. NOTE:
@@ -352,19 +372,19 @@ public void decode(CachedInputStream input)
    *
    * @return a vector of the smallest level rectangles representing the text found
    */
-  public Vector<GRect> find_text_with_rect(
+  public ArrayList<GRect> find_text_with_rect(
     GRect        box,
     StringBuffer text,
     int          padding)
   {
-    Vector<GRect>     retval     = new Vector<>();
+    ArrayList<GRect>     retval     = new ArrayList<>();
     NumContext text_start = new NumContext(0);
     NumContext text_end   = new NumContext(0);
     page_zone.get_text_with_rect(box, text_start, text_end);
 
     if(text_start.intValue() != text_end.intValue())
     {
-      Vector<Zone> zones = new Vector<>();
+      ArrayList<Zone> zones = new ArrayList<>();
       page_zone.append_zones(
         zones,
         text_start.intValue(),
@@ -378,11 +398,11 @@ public void decode(CachedInputStream input)
         {
           if(padding >= 0)
           {
-            zones.elementAt(pos).get_smallest(retval, padding);
+            zones.get(pos).get_smallest(retval, padding);
           }
           else
           {
-            zones.elementAt(pos).get_smallest(retval);
+            zones.get(pos).get_smallest(retval);
           }
         }
         while((++pos) < zones.size());
@@ -405,7 +425,7 @@ public void decode(CachedInputStream input)
    *
    * @return a vector of the smallest level rectangles representing the text found
    */
-  public Vector<GRect> find_text_with_rect(
+  public ArrayList<GRect> find_text_with_rect(
     GRect        box,
     StringBuffer text)
   {
@@ -423,7 +443,7 @@ public void decode(CachedInputStream input)
   public void get_zones(
     int    zone_type,
     Zone   parent,
-    Vector<Zone> zone_list)
+    ArrayList<Zone> zone_list)
   {
     // search all branches under parent
     Zone zone = parent;
@@ -432,18 +452,18 @@ public void decode(CachedInputStream input)
     {
       for(int pos = 0; pos < zone.children.size(); ++pos)
       {
-        Zone zcur = zone.children.elementAt(pos);
+        Zone zcur = zone.children.get(pos);
 
         if(zcur.ztype == zone_type)
         {
           if(!zone_list.contains(zcur))
           {
-            zone_list.addElement(zcur);
+            zone_list.add(zcur);
           }
         }
-        else if(zone.children.elementAt(pos).ztype < zone_type)
+        else if(zone.children.get(pos).ztype < zone_type)
         {
-          get_zones(zone_type, zone.children.elementAt(pos), zone_list);
+          get_zones(zone_type, zone.children.get(pos), zone_list);
         }
       }
     }
@@ -456,7 +476,7 @@ public void decode(CachedInputStream input)
    */
   public boolean has_valid_zones()
   {
-    return !((textByteArray.length == 0) || !page_zone.children.isEmpty()
+    return !((textByteArray.length() == 0) || !page_zone.children.isEmpty()
     || page_zone.isEmpty());
   }
 
@@ -519,22 +539,7 @@ public void decode(CachedInputStream input)
    */
   public int length()
   {
-    return textByteArray.length;
-  }
-
-  /**
-   * Normalize textual data.  Assuming that a zone hierarchy has been built
-   * and represents the reading order.  This function reorganizes the
-   * byteArray textByteArray by gathering the highest level text available
-   * in the zone hierarchy.  The text offsets and lengths are recomputed for
-   * all the zones in the hierarchy. Separators are inserted where
-   * appropriate.
-   */
-  public void normalize_text()
-  {
-    ByteVector newTextUTF8 = new ByteVector();
-    page_zone.normtext(textByteArray, newTextUTF8);
-    textByteArray = newTextUTF8.toByteArray();
+    return textByteArray.length();
   }
 
   /**
@@ -546,7 +551,7 @@ public void decode(CachedInputStream input)
    * @param string String to be found. May contain spaces as word separators.
    * @param from Position returned by last search.  If from is out of bounds
    *        of textByteArray it will be set to -1 for searching forward and
-   *        textByteArray.length for searching backwards.
+   *        textByteArray.length() for searching backwards.
    * @param search_fwd TRUE means to search forward. FALSE - backward.
    * @param match_case If set to FALSE the search will be case-insensitive.
    * @param whole_word If set to TRUE the function will try to find a whole
@@ -560,14 +565,14 @@ public void decode(CachedInputStream input)
    * @throws IllegalArgumentException if no none-white spaces are specified in the search string
    */
   public int search_string(
-    final Vector<Zone>  zone_list,
+    final ArrayList<Zone>  zone_list,
     final String  string,
     int           from,
     final boolean search_fwd,
     final boolean match_case,
     final boolean whole_word)
   {
-    zone_list.setSize(0);
+    zone_list.clear();
 
     byte[] byteArray = null;
 
@@ -595,15 +600,15 @@ public void decode(CachedInputStream input)
     }
 
     if(
-      (textByteArray.length == 0)
-      || (byteArray.length > textByteArray.length))
+      (textByteArray.length() == 0)
+      || (byteArray.length > textByteArray.length()))
     {
       return -1;
     }
 
     if(search_fwd)
     {
-      if((from < 0) || (from >= textByteArray.length))
+      if((from < 0) || (from >= textByteArray.length()))
       {
         from = -1;
       }
@@ -612,12 +617,12 @@ public void decode(CachedInputStream input)
       {
         do
         {
-          if(++from >= textByteArray.length)
+          if(++from >= textByteArray.length())
           {
             return -1;
           }
         }
-        while((textByteArray[from] & 0xc0) == 0x80);
+        while((textByteArray.get(from) & 0xc0) == 0x80);
 
         find_zones(zone_list, byteArray, from, whole_word, match_case);
       }
@@ -625,14 +630,14 @@ public void decode(CachedInputStream input)
     }
     else // search backward
     {
-      if((from < 0) || (from >= textByteArray.length))
+      if((from < 0) || (from >= textByteArray.length()))
       {
-        from = textByteArray.length;
+        from = textByteArray.length();
       }
 
       while(--from >= 0)
       {
-        if((textByteArray[from] & 0xc0) != 0x80)
+        if((textByteArray.get(from) & 0xc0) != 0x80)
         {
           find_zones(zone_list, byteArray, from, whole_word, match_case);
 
@@ -657,7 +662,7 @@ public void decode(CachedInputStream input)
    * @param string String to be found. May contain spaces as word separators.
    * @param from Position returned by last search.  If from is out of bounds
    *        of textByteArray it will be set to -1 for searching forward and
-   *        textByteArray.length for searching backwards.
+   *        textByteArray.length() for searching backwards.
    * @param search_fwd TRUE means to search forward. FALSE - backward.
    * @param match_case If set to FALSE the search will be case-insensitive.
    *
@@ -666,7 +671,7 @@ public void decode(CachedInputStream input)
    * @throws IllegalArgumentException if no none-white spaces are specified in the search string
    */
   public int search_string(
-    final Vector<Zone>  zone_list,
+    final ArrayList<Zone>  zone_list,
     final String  string,
     final int     from,
     final boolean search_fwd,
@@ -729,15 +734,19 @@ public void decode(CachedInputStream input)
   @Override
 public String toString()
   {
-    return getString(0, textByteArray.length);
+    return getString(0, textByteArray.length());
   }
+
+	public Object getTransferable() {
+		return textByteBuffer;
+	}
 
   // extract a utf8 encoded character from an array of bytes
   private int getChar(
-    byte[] byteArray,
+    Uint8Array byteArray,
     int    pos)
   {
-    int value = byteArray[pos++];
+    int value = byteArray.get(pos++);
     if (value > 0 && (value >> 7) == 0)
       return value;
 
@@ -748,35 +757,35 @@ public String toString()
       case 0x40 :
         return value;
       default :
-        value = (value << 6) | (byteArray[pos++] & 0x7f);
+        value = (value << 6) | (byteArray.get(pos++) & 0x7f);
 
         if((value & 0x800) == 0)
         {
           return value & 0x7ff;
         }
 
-        value = (value << 6) | (byteArray[pos++] & 0x7f);
+        value = (value << 6) | (byteArray.get(pos++) & 0x7f);
 
         if((value & 0x10000) == 0)
         {
           return value & 0xffff;
         }
 
-        value = (value << 6) | (byteArray[pos++] & 0x7f);
+        value = (value << 6) | (byteArray.get(pos++) & 0x7f);
 
         if((value & 0x200000) == 0)
         {
           return value & 0x1fffff;
         }
 
-        value = (value << 6) | (byteArray[pos++] & 0x7f);
+        value = (value << 6) | (byteArray.get(pos++) & 0x7f);
 
         if((value & 0x4000000) == 0)
         {
           return value & 0x3ffffff;
         }
 
-        return (value << 6) | (byteArray[pos++] & 0x7f);
+        return (value << 6) | (byteArray.get(pos++) & 0x7f);
     }
   }
 
@@ -800,10 +809,10 @@ public String toString()
   private static boolean char_equal(
     byte[] first,
     int    firstPos,
-    byte[] second,
+    Uint8Array second,
     int    secondPos)
   {    
-    if(first[firstPos] != second[secondPos++])
+    if(first[firstPos] != second.get(secondPos++))
     {
       return false;
     }
@@ -816,10 +825,10 @@ public String toString()
     // skip the first bytes (assumed to be equal)
     while(
       ((first[firstPos] & 0xc0) == 0x80)
-      && ((second[secondPos] & 0xc0) == 0x80))
+      && ((second.get(secondPos) & 0xc0) == 0x80))
     {
       // both bytes are UTF8 continuation bytes
-      if(first[firstPos++] != second[secondPos++])
+      if(first[firstPos++] != second.get(secondPos++))
       {
         return false;
       }
@@ -830,7 +839,7 @@ public String toString()
     // The characters are equal if the current bytes are not
     // continuation bytes.
     return (((first[firstPos] & 0xc0) != 0x80)
-    && ((second[secondPos] & 0xc0) != 0x80));
+    && ((second.get(secondPos) & 0xc0) != 0x80));
   }
 
   // test if the given value represents a white space character
@@ -842,14 +851,14 @@ public String toString()
 
   // Find the next character in a utf8 encoded byte array
   private static int nextChar(
-    byte[] byteArray,
+    Uint8Array byteArray,
     int    pos)
   {
-    if(pos < byteArray.length)
+    if(pos < byteArray.length())
     {
-      while(++pos < byteArray.length)
+      while(++pos < byteArray.length())
       {
-        if((byteArray[pos] & 0xc0) != 0x80)
+        if((byteArray.get(pos) & 0xc0) != 0x80)
         {
           return pos;
         }
@@ -867,13 +876,13 @@ public String toString()
   // empty list.
   ///
   private void find_zones(
-    final Vector<Zone> zone_list,
+    final ArrayList<Zone> zone_list,
     final byte[] substring,
     int          from,
     boolean      whole_word,
     boolean      match_case)
   {
-    zone_list.setSize(0);
+    zone_list.clear();
 
     // startsWith() will return true if the substring beginning at "from" begins
     // with punctuation. This can result in a false match, so we first check
@@ -882,7 +891,7 @@ public String toString()
     {
       if(!match_case)
       {
-        final int c0 = getChar(substring, 0);
+        final int c0 = getChar(convertArray(substring), 0);
         final int c1 = getChar(textByteArray, from);
         if(((c0 & 0xffff) != c0) 
             || ((c1 & 0xffff) != c1)
@@ -914,7 +923,7 @@ public String toString()
 
       // It's a whole word search and the zone isn't empty
       // Get the WORD zone that contains the beginning of the substring
-      Zone first = zone_list.elementAt(0);
+      Zone first = zone_list.get(0);
 
       if(first == null)
       {
@@ -951,7 +960,7 @@ public String toString()
       // go on to check the end.
       {
         // Get the last WORD zone covering the substring
-        Zone last = zone_list.elementAt(zone_list.size() - 1);
+        Zone last = zone_list.get(zone_list.size() - 1);
 
         if((last != null) && (last.ztype > WORD))
         {
@@ -966,7 +975,7 @@ public String toString()
         }
       }
 
-      zone_list.setSize(0);
+      zone_list.clear();
     }
 
     return;
@@ -974,14 +983,14 @@ public String toString()
 
   // Find the character after the first non-white place character.
   private int firstEndSpace(
-    final byte[] byteArray,
+    final Uint8Array byteArray,
     int          start,
     final int    length)
   {
     for(int pos = start + length; --pos >= start;)
     {
       if(
-        ((byteArray[pos] & 0xc0) != 0x80)
+        ((byteArray.get(pos) & 0xc0) != 0x80)
         && !isspace(getChar(byteArray, pos)))
       {
         return nextChar(byteArray, pos);
@@ -993,14 +1002,14 @@ public String toString()
 
   // find the start of the previous character
   private static int prevChar(
-    byte[] byteArray,
+    Uint8Array byteArray,
     int    pos)
   {
     if(pos >= 0)
     {
       while(--pos >= 0)
       {
-        if((byteArray[pos] & 0xc0) != 0x80)
+        if((byteArray.get(pos) & 0xc0) != 0x80)
         {
           return pos;
         }
@@ -1016,18 +1025,18 @@ public String toString()
   // same type that covers the byteArray and will return it.
   // The list of zones in order.
   ///
-  private Vector<Zone> find_smallest_zones(
-    Vector<Zone> zone_list,
+  private ArrayList<Zone> find_smallest_zones(
+    ArrayList<Zone> zone_list,
     int    start,
     int    length)
   {
     if(zone_list == null)
     {
-      zone_list = new Vector<>();
+      zone_list = new ArrayList<>();
     }
     else
     {
-      zone_list.setSize(0);
+      zone_list.clear();
     }
 
     int end = start + length;
@@ -1063,14 +1072,14 @@ public String toString()
           // We didn't find one. Move up the type hierarchy and try
           // again. Empty the zone list, first, though.
           zone_type--;
-          zone_list.setSize(0);
+          zone_list.clear();
 
           break;
         }
 
         // We found one. Append it to the list and update the
         // the description.
-        zone_list.addElement(zone);
+        zone_list.add(zone);
         xstart = zone.text_start + zone.text_length;
       }
 
@@ -1100,11 +1109,11 @@ public String toString()
     while(zone.ztype < max_type)
     {
       int          pos      = 0;
-      final Vector<Zone> children = zone.children;
+      final List<Zone> children = zone.children;
 
       for(; pos < children.size(); ++pos)
       {
-        if(search_zone(children.elementAt(pos), start) > start)
+        if(search_zone(children.get(pos), start) > start)
         {
           break;
         }
@@ -1115,7 +1124,7 @@ public String toString()
         break;
       }
 
-      zone = children.elementAt(pos);
+      zone = children.get(pos);
     }
 
     return zone;
@@ -1123,11 +1132,11 @@ public String toString()
 
   // Find the next java identifier character
   private int nextJavaIdentifier(
-    final byte[] byteArray,
+    final Uint8Array byteArray,
     int          pos)
   {
     while(
-      (pos < byteArray.length)
+      (pos < byteArray.length())
       && !isJavaIdentifier(getChar(byteArray, pos)))
     {
       pos = nextChar(byteArray, pos);
@@ -1154,7 +1163,7 @@ public String toString()
 
   // find the next non-space
   private int skipSpaces(
-    final byte[] byteArray,
+    final Uint8Array byteArray,
     int          pos,
     final int    length)
   {
@@ -1168,28 +1177,29 @@ public String toString()
 
   // find the next non-space
   private int skipSpaces(
-    final byte[] byteArray,
+    final Uint8Array byteArray,
     int          pos)
   {
-    return skipSpaces(byteArray, pos, byteArray.length);
+    return skipSpaces(byteArray, pos, byteArray.length());
   }
 
   // This is a more efficient internal version of startsWith, as it
   // takes as input the string already converted to a byte array.
   private int startsWith(
-    byte[]        substring,
+    byte[]        substringArray,
     final int     from,
     final boolean match_case)
   {
-    if(substring.length == 0)
+    if(substringArray.length == 0)
     {
       return from;
     }
 
     int end = from;
     int pos = 0;
+    Uint8Array substring = convertArray(substringArray);
 
-    for(int c0 = getChar(substring, 0); end < textByteArray.length;)
+    for(int c0 = getChar(substring, 0); end < textByteArray.length();)
     {
       int c1 = getChar(textByteArray, end);
 
@@ -1206,7 +1216,7 @@ public String toString()
       pos   = nextChar(substring, pos);
       end   = nextChar(textByteArray, end);
 
-      if(pos >= substring.length)
+      if(pos >= substring.length())
       {
         return end;
       }
@@ -1226,7 +1236,7 @@ public String toString()
         {
           pos = skipSpaces(substring, pos);
 
-          if(pos >= substring.length)
+          if(pos >= substring.length())
           {
             return end;
           }
@@ -1265,8 +1275,8 @@ public String toString()
     //~ Instance fields ------------------------------------------------------
 
     /** List of children zone. */
-    public Vector<Zone> children = new Vector<>();
-
+    public JsArrayList<Zone> children = new JsArrayList<>();
+    
     /**
      * Controls whether separators are added between lexical elements. This
      * is included to handle differences in languages. In English, for
@@ -1294,7 +1304,24 @@ public String toString()
      */
     public Zone() {}
 
-    //~ Methods --------------------------------------------------------------
+	public Zone(Zone toCopy) {
+		super(toCopy);
+		this.add_separators = toCopy.add_separators;
+		this.text_length = toCopy.text_length;
+		this.text_start = toCopy.text_start;
+		this.ztype = toCopy.ztype;
+		this.children = new JsArrayList<Zone>(toCopy.children);
+		for (int i = 0; i < children.size(); i++) {
+			Zone child = new Zone(cast(children.get(i)));
+			child.zone_parent = this;
+			children.set(i, child);
+		}
+	}
+
+		private static native Zone cast(Object o) /*-{
+			return o;
+		}-*/;
+	//~ Methods --------------------------------------------------------------
 
     /**
      * Appends another subzone inside this zone.  The new zone is initialized
@@ -1309,7 +1336,7 @@ public String toString()
       empty.ztype            = ztype;
       empty.add_separators   = add_separators; // This level's value is the next's default
       empty.zone_parent      = this;
-      children.addElement(empty);
+      children.add(empty);
 
       return empty;
     }
@@ -1323,7 +1350,7 @@ public String toString()
      * @param end byte position to list
      */
     public void append_zones(
-      final Vector<Zone> list,
+      final ArrayList<Zone> list,
       final int    start,
       final int    end)
     {
@@ -1333,7 +1360,7 @@ public String toString()
       {
         if(text_end <= end)
         {
-          list.addElement(this);
+          list.add(this);
         }
         else if(text_start < end)
         {
@@ -1343,7 +1370,7 @@ public String toString()
 
             do
             {
-              children.elementAt(pos++).append_zones(
+              children.get(pos++).append_zones(
                 list,
                 start,
                 end);
@@ -1352,7 +1379,7 @@ public String toString()
           }
           else
           {
-            list.addElement(this);
+            list.add(this);
           }
         }
       }
@@ -1360,7 +1387,7 @@ public String toString()
       {
         for(int pos = 0; pos < children.size();)
         {
-          children.elementAt(pos++).append_zones(list, start, end);
+          children.get(pos++).append_zones(list, start, end);
         }
       }
     }
@@ -1402,7 +1429,7 @@ public String toString()
      * @param padding number of pixels to expand each zone by
      */
     public void get_smallest(
-      Vector<GRect>    list,
+      ArrayList<GRect>    list,
       final int padding)
     {
       if(children.size() > 0)
@@ -1411,7 +1438,7 @@ public String toString()
 
         do
         {
-          children.elementAt(pos++).get_smallest(list, padding);
+          children.get(pos++).get_smallest(list, padding);
         }
         while(children.size() > pos);
       }
@@ -1421,7 +1448,7 @@ public String toString()
 
         if(xrect.height() < xrect.width())
         {
-          list.addElement(
+          list.add(
             new GRect(
               xmin - padding,
               xrect.ymin - padding,
@@ -1430,7 +1457,7 @@ public String toString()
         }
         else
         {
-          list.addElement(
+          list.add(
             new GRect(
               xrect.xmin - padding,
               ymin - padding,
@@ -1440,7 +1467,7 @@ public String toString()
       }
       else
       {
-        list.addElement(
+        list.add(
           new GRect(
             xmin - padding,
             ymin - padding,
@@ -1493,7 +1520,7 @@ public String toString()
 
         do
         {
-          children.elementAt(pos).get_text_with_rect(
+          children.get(pos).get_text_with_rect(
             box,
             byteArray_start,
             byteArray_end);
@@ -1513,18 +1540,6 @@ public String toString()
       && ((box.ymin < zone.ymin)
       ? (box.ymax >= zone.ymin)
       : (box.ymin <= zone.ymax));
-    }
-
-    // Clear all the text in this zone
-    private void cleartext()
-    {
-      text_start    = 0;
-      text_length   = 0;
-
-      for(int i = 0; i < children.size(); ++i)
-      {
-        children.elementAt(i).cleartext();
-      }
     }
 
     // decode this zone from the text data
@@ -1611,7 +1626,7 @@ public String toString()
 
       // Process children
       Zone prev_child = null;
-      children.setSize(0);
+      children.clear();
 
       while(size-- > 0)
       {
@@ -1629,92 +1644,6 @@ public String toString()
     {
       decode(bs, maxtext, null, null);
     }
-
-    // convert text to use standard separators
-    private void normtext(
-      final byte[]     instr,
-      final ByteVector outstr)
-    {
-      if(text_length == 0)
-      {
-        // Descend collecting text below
-        text_start = outstr.size();
-
-        for(int i = 0; i < children.size(); ++i)
-        {
-          children.elementAt(i).normtext(instr, outstr);
-        }
-
-        text_length = outstr.size() - text_start;
-
-        // Ignore empty zones
-        if(text_length == 0)
-        {
-          return;
-        }
-      }
-      else
-      {
-        final int outLength = outstr.size();
-
-        for(int i = 0, j = text_start; (i++) < text_length;)
-        {
-//          outstr.addByte(instr[j++]);
-          outstr.write(instr[j++]);
-        }
-
-        text_start = outLength;
-
-        // Clear textual information on lower level nodes
-        for(int i = 0; i < children.size(); ++i)
-        {
-          children.elementAt(i).cleartext();
-        }
-      }
-
-      // Determine standard separator
-      int sep;
-
-      switch(ztype)
-      {
-        case COLUMN :
-          sep = end_of_column;
-
-          break;
-        case REGION :
-          sep = end_of_region;
-
-          break;
-        case PARAGRAPH :
-          sep = end_of_paragraph;
-
-          break;
-        case LINE :
-          sep = end_of_line;
-
-          break;
-        case WORD :
-          sep = ' ';
-
-          break;
-        case CHARACTER :default :
-          return;
-      }
-
-      // Add separator if not present yet.
-      if(outstr.getByte(outstr.size() - 1) != sep)
-      {
-        outstr.write((byte)sep);
-        text_length++;
-      }
-    }
-  }
-  
-  private class ByteVector extends ByteArrayOutputStream
-  {
-    @Override
-	public int size() { return count; }
-    public int getByte(int loc) { return buf[loc]; }
   }
 }
 

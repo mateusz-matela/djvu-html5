@@ -87,7 +87,10 @@ public final class Utils
    * Primitive replacement for {@code new java.net.URL(URL context, String spec)}
    */
   public static String url(String context, String spec) {
-	  String base = context.replaceFirst("/[^/]+$", "/");
-	  return base + spec;
+		if (spec.matches("\\w+://.*"))
+			return spec;
+		if (spec.startsWith("/"))
+			return context.replaceFirst("//([^/]+).*", "//$1" + spec);
+		return context.replaceFirst("/[^/]+$", "/") + spec;
   }
 }

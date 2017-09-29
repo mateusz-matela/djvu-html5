@@ -18,7 +18,6 @@ public class DjvuContext {
 
 	public static void setUrl(String url) {
 		DjvuContext.url = url;
-		fireViewChanged();
 	}
 
 	public static String getUrl() {

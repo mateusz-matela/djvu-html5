@@ -270,19 +270,6 @@ public class GBitmap
   }
 
   /**
-   * Query the start offset of a row.
-   *
-   * @param row the row to query
-   *
-   * @return the offset to the pixel data
-   */
-  @Override
-public final int rowOffset(final int row)
-  {
-    return (row * rowSize) + border;
-  }
-
-  /**
    * Query the number of bytes per row.
    *
    * @return bytes per row
@@ -431,11 +418,6 @@ public final int getRowSize()
         setRowSize(tmp.getRowSize());
         data       = tmp.data;
         tmp.data   = null;
-
-        if(DjVuOptions.COLLECT_GARBAGE)
-        {
-          System.gc();
-        }
       }
 
       setBorder(minimum);

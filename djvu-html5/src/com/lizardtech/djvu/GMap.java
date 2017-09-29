@@ -47,8 +47,11 @@ package com.lizardtech.djvu;
 
 import java.util.HashMap;
 
+import com.google.gwt.typedarrays.shared.ArrayBuffer;
 import com.google.gwt.typedarrays.shared.TypedArrays;
 import com.google.gwt.typedarrays.shared.Uint8Array;
+
+import jsinterop.annotations.JsProperty;
 
 /**
  * This is an abstract class for representing pixel maps.
@@ -56,17 +59,21 @@ import com.google.gwt.typedarrays.shared.Uint8Array;
  * @author Bill C. Riemers
  * @version $Revision: 1.9 $
  */
-public abstract class GMap
+public class GMap
 {
   //~ Instance fields --------------------------------------------------------
 
 	protected static int BYTES_PER_PIXEL = 4;
 
 	protected Uint8Array data;
+	private ArrayBuffer dataBuffer;
+	@JsProperty
 	protected int dataWidth;
+	@JsProperty
 	protected int dataHeight;
 	
 	/** number of border pixels */
+	@JsProperty
 	protected int border = 0;
 
 /** properties associated with this image map */
@@ -102,7 +109,16 @@ public abstract class GMap
     this.greenOffset=greenOffset;
     this.blueOffset=blueOffset;
   }
-  
+
+	public GMap(GMap toCopy) {
+		this(toCopy.redOffset, toCopy.greenOffset, toCopy.blueOffset, toCopy.needRamp);
+		this.dataBuffer = toCopy.dataBuffer;
+		this.data = toCopy.data;
+		this.dataWidth = toCopy.dataWidth;
+		this.dataHeight = toCopy.dataHeight;
+		this.border = toCopy.border;
+	}
+
   //~ Methods ----------------------------------------------------------------
 
   /**
@@ -141,6 +157,7 @@ public abstract class GMap
 
   protected void createImageData(int columns, int rows) {
     data = TypedArrays.createUint8Array(columns * rows * BYTES_PER_PIXEL);
+    dataBuffer = data.buffer();
     dataWidth = columns;
     dataHeight = rows;
   }
@@ -153,7 +170,7 @@ public abstract class GMap
    */
   public int rowOffset(final int row)
   {
-    return row * getRowSize();
+    return row * getRowSize() + border;
   }
 
   /**
@@ -219,5 +236,9 @@ public abstract class GMap
   
 	public int getMemoryUsage() {
 		return data.byteLength();
+	}
+
+	public Object getTransferable() {
+		return dataBuffer;
 	}
 }

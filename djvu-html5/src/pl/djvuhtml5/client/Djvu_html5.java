@@ -17,6 +17,7 @@ import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.GMap;
+import com.lizardtech.djvu.Utils;
 import com.lizardtech.djvu.text.DjVuText;
 
 import pl.djvuhtml5.client.TileRenderer.TileInfo;
@@ -70,10 +71,10 @@ public class Djvu_html5 implements EntryPoint {
 		if (url == null || url.isEmpty())
 			url = DjvuContext.getIndexFile();
 		if (url == null || url.isEmpty()) {
-			GWT.log("ERROR: No djvu file defined");
+			log("ERROR: No djvu file defined");
 			return;
 		}
-		DjvuContext.setUrl(url);
+		DjvuContext.setUrl(Utils.url(GWT.getHostPageBaseURL(), url));
 
 		dataStore = new DataStore();
 
@@ -96,12 +97,11 @@ public class Djvu_html5 implements EntryPoint {
 			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
 		}
 
-		backgroundProcessor = new BackgroundProcessor(new MainProcessingContext());
+//		backgroundProcessor = new BackgroundProcessor(new MainProcessingContext());
+		BackgroundWorker.init(new MainProcessingContext());
 
 		pageLayout = new SinglePageLayout(this);
 		toolbar.setPageLayout(pageLayout);
-
-		BackgroundWorker.test();
 	}
 
 	private Widget prepareCanvas() {

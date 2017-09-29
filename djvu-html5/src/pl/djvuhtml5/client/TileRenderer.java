@@ -29,8 +29,6 @@ public class TileRenderer {
 	/** All tiles of max subsample are stored here and will never be thrown away */
 	private final HashMap<TileInfo, CachedItem> smallCache = new HashMap<>();
 
-	private GMap bufferGMap;
-
 	private final GRect tempRect = new GRect();
 	private final TileInfo tempTI = new TileInfo();
 
@@ -208,7 +206,7 @@ public class TileRenderer {
 		if (cachedItem.isFetched)
 			return false;
 	
-		bufferGMap = page.getMap(tempRect, tileInfo.subsample, bufferGMap);
+		GMap bufferGMap = page.getMap(tempRect, tileInfo.subsample, null);
 		if (bufferGMap != null) {
 			context.setTile(tileInfo, bufferGMap);
 		}
