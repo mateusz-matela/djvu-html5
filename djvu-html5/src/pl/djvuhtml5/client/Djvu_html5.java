@@ -1,6 +1,5 @@
 package pl.djvuhtml5.client;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -224,7 +223,7 @@ public class Djvu_html5 implements EntryPoint {
 		}
 
 		@Override
-		public void releaseTileImages(ArrayList<TileInfo> tiles) {
+		public void releaseTileImages(List<TileInfo> tiles) {
 			dataStore.releaseTileImages(tiles);
 		}
 	}

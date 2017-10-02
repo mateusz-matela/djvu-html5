@@ -1,6 +1,6 @@
 package pl.djvuhtml5.client;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.GMap;
@@ -27,5 +27,5 @@ public interface ProcessingContext {
 
 	void setTile(TileInfo tileInfo, GMap bufferGMap);
 
-	void releaseTileImages(ArrayList<TileInfo> tilesToRemove);
+	void releaseTileImages(List<TileInfo> tilesToRemove);
 }

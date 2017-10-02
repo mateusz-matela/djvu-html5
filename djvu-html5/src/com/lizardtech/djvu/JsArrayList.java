@@ -1,6 +1,7 @@
 package com.lizardtech.djvu;
 
 import java.util.AbstractList;
+import java.util.List;
 
 public class JsArrayList<T> extends AbstractList<T> {
 
@@ -10,6 +11,12 @@ public class JsArrayList<T> extends AbstractList<T> {
 
 	public JsArrayList(JsArrayList<T> toCopy) {
 		init(toCopy);
+	}
+
+	public JsArrayList(List<T> toCopy) {
+		init(null);
+		for (T t : toCopy)
+			add(t);
 	}
 
 	private native void init(JsArrayList<T> toCopy) /*-{

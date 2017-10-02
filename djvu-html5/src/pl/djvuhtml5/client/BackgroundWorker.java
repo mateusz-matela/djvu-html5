@@ -1,12 +1,12 @@
 package pl.djvuhtml5.client;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gwt.core.client.EntryPoint;
-import com.google.gwt.typedarrays.shared.Uint8Array;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.GMap;
 import com.lizardtech.djvu.GRect;
+import com.lizardtech.djvu.JsArrayList;
 import com.lizardtech.djvu.text.DjVuText;
 
 import jsinterop.annotations.JsProperty;
@@ -94,6 +94,11 @@ public class BackgroundWorker implements EntryPoint {
 			case "tile-data":
 				context.setTile(new TileInfo(toTileInfo(message.data)), new GMap(toGMap(message.data2)));
 				break;
+			case "tiles-release":
+				JsArrayList<TileInfo> tiles = new JsArrayList<>();
+				for (Object t : new JsArrayList<>(toJsArrayList(message.data)))
+					tiles.add(new TileInfo(toTileInfo(t)));
+				context.releaseTileImages(tiles);
 			}
 		}
 
@@ -115,6 +120,10 @@ public class BackgroundWorker implements EntryPoint {
 
 		native GMap toGMap(Object o) /*-{
 			if (!o.border) o.border = 0;
+			return o;
+		}-*/;
+
+		native JsArrayList<?> toJsArrayList(Object o) /*-{
 			return o;
 		}-*/;
 	}
@@ -195,9 +204,8 @@ public class BackgroundWorker implements EntryPoint {
 		}
 
 		@Override
-		public void releaseTileImages(ArrayList<TileInfo> tilesToRemove) {
-			// TODO Auto-generated method stub
-			
+		public void releaseTileImages(List<TileInfo> tilesToRemove) {
+			postMessage(new WorkerMessage("tiles-release", new JsArrayList<>(tilesToRemove)));
 		}
 	}
 
