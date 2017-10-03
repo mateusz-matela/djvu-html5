@@ -96,8 +96,11 @@ public class Djvu_html5 implements EntryPoint {
 			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");
 		}
 
-//		backgroundProcessor = new BackgroundProcessor(new MainProcessingContext());
-		BackgroundWorker.init(new MainProcessingContext());
+		if (DjvuContext.getUseWebWorkers() && BackgroundWorker.isAvailable()) {
+			BackgroundWorker.init(new MainProcessingContext());
+		} else {
+			backgroundProcessor = new BackgroundProcessor(new MainProcessingContext());
+		}
 
 		pageLayout = new SinglePageLayout(this);
 		toolbar.setPageLayout(pageLayout);

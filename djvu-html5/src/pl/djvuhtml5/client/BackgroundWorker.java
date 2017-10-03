@@ -217,4 +217,8 @@ public class BackgroundWorker implements EntryPoint {
 	public void onModuleLoad() {
 		new Slave();
 	}
+
+	public static native boolean isAvailable() /*-{
+		return !!window.Worker;
+	}-*/;
 }

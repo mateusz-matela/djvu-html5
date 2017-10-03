@@ -109,7 +109,11 @@ public class DjvuContext {
 	public static boolean getTextLayerEnabled() {
 		return getBoolean("textLayerEnabled", true);
 	}
-	
+
+	public static boolean getUseWebWorkers() {
+		return getBoolean("useWebWorkers", true);
+	}
+
 	public static String getString(String key, String defaultValue) {
 		String value = get(key);
 		return value != null ? value : defaultValue;
