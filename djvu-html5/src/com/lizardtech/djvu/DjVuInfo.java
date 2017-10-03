@@ -47,6 +47,8 @@ package com.lizardtech.djvu;
 
 import java.io.*;
 
+import jsinterop.annotations.JsProperty;
+
 
 /**
  * This codec represents global information about a page.
@@ -63,18 +65,21 @@ public class DjVuInfo
   public double gamma = 2.2D;
 
   /** The scanned resolution. */
+  @JsProperty
   public int dpi = 300;
 
   /** Flags with addition details. */
   public int flags = 0;
 
   /** The height of the page in pixels at scanned resolution. */
+  @JsProperty
   public int height = 0;
 
   /** The version of the format specification this page complies with. */
   public int version = 20;
 
   /** The width of the page in pixels at scanned resolution. */
+  @JsProperty
   public int width = 0;
 
   //~ Constructors -----------------------------------------------------------
