@@ -24,6 +24,8 @@ import pl.djvuhtml5.client.Djvu_html5;
 
 public class TextLayer extends FlowPanel implements ScrollHandler {
 
+	private static final String PAGE_STYLE_VISIBLE = "visibleTextPage";
+
 	private class TextPage extends FlowPanel {
 
 		final List<TextLine> textLines = new ArrayList<>();
@@ -60,17 +62,20 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 	private class TextLine extends FlowPanel {
 		final List<Token> tokens = new ArrayList<>();
 
-		TextLine(int minY, int maxY, TextPage parent, List<Zone> lineTokens) {
-			int pageHeight = parent.height;
+		TextLine(int minY, int maxY, int prevY, TextPage parent, List<Zone> lineTokens) {
 			Style style = getElement().getStyle();
-			double top = (pageHeight - maxY) * 100.0 / pageHeight;
-			style.setTop(round(top, PCT_ACCURACY), Unit.PCT);
-			double height = (maxY - minY) * 100.0 / pageHeight;
-			style.setHeight(round(height, PCT_ACCURACY), Unit.PCT);
-
+			double marginTop = round((prevY - maxY) * 100.0 / parent.width, PCT_ACCURACY);
+			if (parent.getWidgetCount() == 0) {
+				style.setPaddingTop(marginTop, Unit.PCT);
+			} else {
+				style.setMarginTop(marginTop, Unit.PCT);
+			}
+			style.setHeight(round((maxY - minY) * 100.0 / parent.height, PCT_ACCURACY), Unit.PCT);
+			
 			Token lastToken = null;
+			int prevXmax = 0;
 			for (Zone zone : lineTokens) {
-				Token token = new Token(zone, parent);
+				Token token = new Token(zone, prevXmax, parent);
 				if (token.text.isEmpty()) {
 					if (lastToken != null)
 						lastToken.setText(lastToken.getText() + token.getText());
@@ -81,6 +86,7 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 				if (token.text.length() > 1 || lineTokens.size() == 1) {
 					tokens.add(token);
 				}
+				prevXmax = zone.xmax;
 			}
 
 			parent.textLines.add(this);
@@ -103,7 +109,7 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 		final String text;
 		final double fullWidth;
 
-		Token(Zone zone, TextPage page) {
+		Token(Zone zone, int prevXmax, TextPage page) {
 			super(Document.get().createSpanElement());
 			String text = page.getText(zone);
 			setText(text);
@@ -111,8 +117,8 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 			this.text = text.trim().replaceAll("\\s+", "");
 
 			Style s = getElement().getStyle();
-			double left = zone.xmin * 100.0 / page.width;
-			s.setLeft(round(left, PCT_ACCURACY), Unit.PCT);
+			double marginLeft = (zone.xmin - prevXmax) * 100.0 / page.width;
+			s.setMarginLeft(round(marginLeft, PCT_ACCURACY), Unit.PCT);
 			double width = fullWidth * 100.0 / page.width;
 			s.setWidth(round(width, PCT_ACCURACY), Unit.PCT);
 		}
@@ -183,8 +189,6 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 		DataStore dataStore = app.getDataStore();
 		DjVuInfo info = dataStore.getPageInfo(pageNum);
 		DjVuText text = dataStore.getText(pageNum);
-		int scrollPosition = currentPage >= pages.size() ? 0
-				: getElement().getScrollTop() - pages.get(currentPage).getElement().getOffsetTop();
 
 		TextPage page = getPage(pageNum);
 		page.setData(info, text);
@@ -192,13 +196,13 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 			List<Zone> tokens = new ArrayList<>();
 			text.page_zone.get_smallest(tokens);
 			createTextLines(page, tokens);
+			if (pageNum == currentPage)
+				app.getPageLayout().setPage(pageNum);
 		}
-
-		if (currentPage < pages.size())
-			getElement().setScrollTop(pages.get(currentPage).getElement().getOffsetTop() + scrollPosition);
 	}
 
 	private void createTextLines(TextPage page, List<Zone> tokens) {
+		int prevY = page.height;
 		while (!tokens.isEmpty()) {
 			List<Zone> lineTokens = new ArrayList<>();
 			Zone lastToken = null;
@@ -229,10 +233,12 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 				}
 			}
 			if (lastToken != null) {
-				new TextLine(minY, maxY, page, lineTokens);
+				new TextLine(minY, maxY, prevY, page, lineTokens);
+				prevY = minY;
 			} else {
 				for (Zone lineToken : lineTokens) {
-					new TextLine(lineToken.ymin, lineToken.ymax, page, Arrays.asList(lineToken));
+					new TextLine(lineToken.ymin, lineToken.ymax, prevY, page, Arrays.asList(lineToken));
+					prevY = lineToken.ymin;
 				}
 			}
 		}
@@ -243,19 +249,24 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 	 * @param top position of page's top edge on the canvas
 	 */
 	public void setViewPosition(int pageNum, int left, int top, double zoom) {
-		currentPage = pageNum;
+		boolean pageChanged = currentPage != pageNum;
 		TextPage page = getPage(pageNum);
-		page.resize(zoom, false);
+		if (pageChanged) {
+			getPage(currentPage).removeStyleName(PAGE_STYLE_VISIBLE);
+			page.addStyleName(PAGE_STYLE_VISIBLE);
+		}
+		page.resize(zoom, pageChanged);
+		currentPage = pageNum;
 
 		Element layerElement = getElement();
 		Element pageElement = page.getElement();
 		pageElement.getStyle().setMarginLeft(Math.max(left, 0), Unit.PX);
 
-		if (Math.abs(-left - layerElement.getScrollLeft()) > 0)
+		if (layerElement.getScrollLeft() != -left)
 			layerElement.setScrollLeft(Math.max(-left, 0));
 
 		int targetScrollTop = pageElement.getOffsetTop() - top;
-		if (Math.abs(targetScrollTop - layerElement.getScrollTop()) > 0)
+		if (layerElement.getScrollTop() != targetScrollTop)
 			layerElement.setScrollTop(targetScrollTop);
 	}
 
@@ -278,6 +289,8 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 	private TextPage getPage(int pageNum) {
 		while (pageNum >= pages.size()) {
 			TextPage page = new TextPage();
+			if (pages.size() == currentPage)
+				page.addStyleName(PAGE_STYLE_VISIBLE);
 			add(page);
 			pages.add(page);
 		}

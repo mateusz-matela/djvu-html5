@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.dom.client.CanvasElement;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyDownEvent;
 import com.google.gwt.event.dom.client.KeyDownHandler;
@@ -19,6 +20,7 @@ import com.google.gwt.event.dom.client.TouchStartEvent;
 import com.google.gwt.http.client.UrlBuilder;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
+import com.google.gwt.user.client.ui.Widget;
 import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.GRect;
 
@@ -76,7 +78,7 @@ public class SinglePageLayout {
 		this.background = DjvuContext.getBackground();
 		this.pageMargin = DjvuContext.getPageMargin();
 
-		new PanController();
+		new PanController(app.getTextLayer() != null ? app.getTextLayer() : canvas);
 
 		boolean pageParam = false;
 		try {
@@ -298,12 +300,13 @@ public class SinglePageLayout {
 		range.ymin = (int) (Math.max(0, centerY - h * 0.5) / tileSize / scale);
 		range.ymax = (int) Math.ceil(Math.min(ph, centerY + h * 0.5) / tileSize / scale);
 		imagesArray = dataStore.getTileImages(page, subsample, range , imagesArray);
-		for (int y = range.ymin; y <= range.ymax; y++)
+		for (int y = range.ymin; y <= range.ymax; y++) {
 			for (int x = range.xmin; x <= range.xmax; x++) {
 				CanvasElement canvasElement = imagesArray[y - range.ymin][x - range.xmin];
 				graphics2d.drawImage(canvasElement, startX + x * tileSize,
 						-startY - y * tileSize - canvasElement.getHeight());
 			}
+		}
 		graphics2d.restore();
 		// missing tile graphics may exceed the page boundary
 		graphics2d.fillRect(startX + pw, 0, w, h);
@@ -319,18 +322,16 @@ public class SinglePageLayout {
 
 		private static final int PAN_STEP = 100;
 
-		public PanController() {
-			super(canvas);
-			canvas.addMouseWheelHandler(this);
-			canvas.addKeyDownHandler(this);
+		public PanController(Widget widget) {
+			super(widget);
+			canvas.addDomHandler(this, MouseWheelEvent.getType());
+			canvas.addDomHandler(this, KeyDownEvent.getType());
 			canvas.setFocus(true);
-
-			TextLayer textLayer = app.getTextLayer();
-			if (textLayer != null) {
-				textLayer.addDomHandler(this, MouseWheelEvent.getType());
-				textLayer.addDomHandler(this, KeyDownEvent.getType());
+			if (widget != canvas) {
+				widget.addDomHandler(this, MouseWheelEvent.getType());
+				widget.addDomHandler(this, KeyDownEvent.getType());
 			}
-
+			
 			app.getHorizontalScrollbar().addScrollPanListener(this);
 			app.getVerticalScrollbar().addScrollPanListener(this);
 		}
@@ -338,7 +339,9 @@ public class SinglePageLayout {
 		@Override
 		public void onMouseDown(MouseDownEvent event) {
 			canvas.setFocus(true);
-			super.onMouseDown(event);
+			boolean isOnText = "SPAN".equals(Element.as(event.getNativeEvent().getEventTarget()).getNodeName());
+			if (!isOnText)
+				super.onMouseDown(event);
 		}
 
 		@Override
