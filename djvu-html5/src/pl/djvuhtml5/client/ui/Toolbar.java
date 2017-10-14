@@ -281,10 +281,10 @@ public class Toolbar extends FlowPanel {
 
 			textBox = new TextBox();
 			textBox.setStyleName("comboBoxText");
-			textBox.addKeyPressHandler(new KeyPressHandler() {
+			textBox.addKeyDownHandler(new KeyDownHandler() {
 				@Override
-				public void onKeyPress(KeyPressEvent event) {
-					if (event.getCharCode() == KeyCodes.KEY_ENTER) {
+				public void onKeyDown(KeyDownEvent event) {
+					if (event.getNativeKeyCode() == KeyCodes.KEY_ENTER) {
 						valueTypedIn();
 					}
 				}
