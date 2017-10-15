@@ -303,8 +303,10 @@ public class SinglePageLayout {
 		for (int y = range.ymin; y <= range.ymax; y++) {
 			for (int x = range.xmin; x <= range.xmax; x++) {
 				CanvasElement canvasElement = imagesArray[y - range.ymin][x - range.xmin];
-				graphics2d.drawImage(canvasElement, startX + x * tileSize,
-						-startY - y * tileSize - canvasElement.getHeight());
+				for (int repeats = scale == 1 ? 1 : 3; repeats > 0; repeats--) {
+					graphics2d.drawImage(canvasElement, startX + x * tileSize,
+							-startY - y * tileSize - canvasElement.getHeight());
+				}
 			}
 		}
 		graphics2d.restore();
