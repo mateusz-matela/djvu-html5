@@ -87,6 +87,7 @@ body {
 .textPage {
 	margin-top: 100vh;
 	margin-bottom: 100vh;
+	padding-right: 20%;
 }
 .textPage span {
 	font-family: sans-serif;
