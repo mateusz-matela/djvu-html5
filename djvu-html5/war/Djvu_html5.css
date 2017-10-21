@@ -6,6 +6,7 @@ body {
 	position: absolute;
 	width: 100%;
 	height: 100%;
+	max-width: 100%;
 	text-align: center;
 	overflow: hidden;
 }
@@ -74,7 +75,6 @@ body {
 	position: absolute;
 	height: 100%;
 	width: 100%;
-	z-index: -1;
 }
 
 .textLayer {
@@ -82,12 +82,17 @@ body {
 	height: 120%;
 	width: 120%;
 	overflow: scroll;
-	text-align: initial;
+	text-align: left;
+}
+_:-ms-lang(x), .textLayer {
+	height: 100%;
+	width: 100%;
+	-ms-overflow-style: none;
 }
 .textPage {
 	margin-top: 100vh;
 	margin-bottom: 100vh;
-	padding-right: 20%;
+	padding-right: 100vw;
 }
 .textPage span {
 	font-family: sans-serif;

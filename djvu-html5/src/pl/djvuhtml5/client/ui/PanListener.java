@@ -21,7 +21,7 @@ import com.google.gwt.user.client.ui.Widget;
 public abstract class PanListener implements MouseDownHandler, MouseUpHandler, MouseMoveHandler,
 TouchStartHandler, TouchMoveHandler, TouchEndHandler {
 
-	private Widget widget;
+	protected Widget widget;
 
 	protected boolean isMouseDown = false;
 	private Integer touchId = null;

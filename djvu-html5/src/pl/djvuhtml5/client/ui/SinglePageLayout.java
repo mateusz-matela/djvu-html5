@@ -10,6 +10,7 @@ import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.Element;
+import com.google.gwt.event.dom.client.DomEvent;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyDownEvent;
 import com.google.gwt.event.dom.client.KeyDownHandler;
@@ -69,6 +70,8 @@ public class SinglePageLayout {
 	private final boolean locationUpdateEnabled;
 	private Timer locationUpdater;
 
+	private boolean enableScrollPageJump = true;
+
 	public SinglePageLayout(Djvu_html5 app) {
 		this.app = app;
 		this.dataStore = app.getDataStore();
@@ -78,7 +81,7 @@ public class SinglePageLayout {
 		this.background = DjvuContext.getBackground();
 		this.pageMargin = DjvuContext.getPageMargin();
 
-		new PanController(app.getTextLayer() != null ? app.getTextLayer() : canvas);
+		new PanController(app.getTextLayer());
 
 		boolean pageParam = false;
 		try {
@@ -255,6 +258,20 @@ public class SinglePageLayout {
 		redraw();
 	}
 
+	private void changePage(int targetPage, int horizontalPosition, int verticalPosition) {
+		if (targetPage >= 0 && targetPage < dataStore.getPageCount()) {
+			if (horizontalPosition < 0)
+				centerX = 0;
+			else if (horizontalPosition > 0)
+				centerX = Integer.MAX_VALUE;
+			if (verticalPosition < 0)
+				centerY = 0;
+			else if (verticalPosition > 0)
+				centerY = Integer.MAX_VALUE;
+			setPage(targetPage);
+		}
+	}
+
 	/**
 	 * @param left position of page's left edge on the canvas
 	 * @param top position of page's top edge on the canvas
@@ -263,12 +280,26 @@ public class SinglePageLayout {
 		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
 		if (page == this.page && centerX == w / 2 - left && centerY == h / 2 - top)
 			return;
-		centerX = w / 2 - left;
-		centerY = h / 2 - top;
+		int oldX = centerX, oldY = centerY;
+		int newX = w / 2 - left;
+		int newY = h / 2 - top;
+		centerX = newX;
+		centerY = newY;
 		if (page != this.page) {
 			setPage(page);
 		} else {
 			viewChanged();
+			if (oldX == centerX && oldY == centerY && enableScrollPageJump) {
+				if (newY < oldY) {
+					changePage(page - 1, 0, 1);
+				} else if (newY > oldY) {
+					changePage(page + 1, 0, -1);
+				} else if (newX < oldX) {
+					changePage(page - 1, 1, 0);
+				} else if (newX > oldX) {
+					changePage(page + 1, -1, 0);
+				}
+			}
 		}
 	}
 
@@ -322,17 +353,10 @@ public class SinglePageLayout {
 		private static final int KEY_PLUS = 187;
 		private static final int KEY_MINUS = 189;
 
-		private static final int PAN_STEP = 100;
-
 		public PanController(Widget widget) {
 			super(widget);
-			canvas.addDomHandler(this, MouseWheelEvent.getType());
-			canvas.addDomHandler(this, KeyDownEvent.getType());
-			canvas.setFocus(true);
-			if (widget != canvas) {
-				widget.addDomHandler(this, MouseWheelEvent.getType());
-				widget.addDomHandler(this, KeyDownEvent.getType());
-			}
+			widget.addDomHandler(this, MouseWheelEvent.getType());
+			widget.addDomHandler(this, KeyDownEvent.getType());
 			
 			app.getHorizontalScrollbar().addScrollPanListener(this);
 			app.getVerticalScrollbar().addScrollPanListener(this);
@@ -340,16 +364,19 @@ public class SinglePageLayout {
 
 		@Override
 		public void onMouseDown(MouseDownEvent event) {
-			canvas.setFocus(true);
-			boolean isOnText = "SPAN".equals(Element.as(event.getNativeEvent().getEventTarget()).getNodeName());
-			if (!isOnText)
+			widget.getElement().focus();
+			if (!isOnText(event))
 				super.onMouseDown(event);
 		}
 
 		@Override
 		public void onTouchStart(TouchStartEvent event) {
-			canvas.setFocus(true);
-			super.onTouchStart(event);
+			if (isOnText(event)) {
+				enableScrollPageJump = false;
+			} else {
+				widget.getElement().focus();
+				super.onTouchStart(event);
+			}
 		}
 
 		@Override
@@ -363,31 +390,6 @@ public class SinglePageLayout {
 			} else if (!event.isShiftKeyDown()) {
 				boolean handled = true;
 				switch (key) {
-				case KeyCodes.KEY_UP:
-					if (!tryPan(0, -PAN_STEP))
-						changePage(page - 1, 0, 1);
-					break;
-				case KeyCodes.KEY_DOWN:
-					if (!tryPan(0, PAN_STEP))
-						changePage(page + 1, 0, -1);
-					break;
-				case KeyCodes.KEY_LEFT:
-					if (!tryPan(-PAN_STEP, 0))
-						changePage(page - 1, 1, 0);
-					break;
-				case KeyCodes.KEY_RIGHT:
-					if (!tryPan(PAN_STEP, 0))
-						changePage(page + 1, -1, 0);
-					break;
-				case KeyCodes.KEY_PAGEUP:
-					if (!tryPan(0, -canvas.getCoordinateSpaceHeight() + PAN_STEP))
-						changePage(page - 1, 0, 1);
-					break;
-				case KeyCodes.KEY_PAGEDOWN:
-				case KeyCodes.KEY_SPACE:
-					if (!tryPan(0, canvas.getCoordinateSpaceHeight() - PAN_STEP))
-						changePage(page + 1, 0, -1);
-					break;
 				case KeyCodes.KEY_HOME:
 					changePage(0, -1, -1);
 					break;
@@ -404,14 +406,11 @@ public class SinglePageLayout {
 
 		@Override
 		public void onMouseWheel(MouseWheelEvent event) {
-			int delta = event.getDeltaY();
 			if (event.isControlKeyDown()) {
+				int delta = event.getDeltaY();
 				app.getToolbar().zoomChangeClicked(Integer.signum(-delta));
-			} else {
-				if (!tryPan(0, delta * PAN_STEP / 2))
-					changePage(page + Integer.signum(delta), 0, -delta);
+				event.preventDefault();
 			}
-			event.preventDefault();
 		}
 
 		@Override
@@ -432,6 +431,10 @@ public class SinglePageLayout {
 			tryPan(-dx, -dy);
 		}
 
+		private boolean isOnText(DomEvent<?> event) {
+			return "SPAN".equals(Element.as(event.getNativeEvent().getEventTarget()).getNodeName());
+		}
+
 		private boolean tryPan(int dx, int dy) {
 			int oldX = centerX;
 			int oldY = centerY;
@@ -443,20 +446,6 @@ public class SinglePageLayout {
 				return true;
 			}
 			return false;
-		}
-
-		private void changePage(int targetPage, int horizontalPosition, int verticalPosition) {
-			if (targetPage >= 0 && targetPage < dataStore.getPageCount()) {
-				if (horizontalPosition < 0)
-					centerX = 0;
-				else if (horizontalPosition > 0)
-					centerX = Integer.MAX_VALUE;
-				if (verticalPosition < 0)
-					centerY = 0;
-				else if (verticalPosition > 0)
-					centerY = Integer.MAX_VALUE;
-				setPage(targetPage);
-			}
 		}
 	}
 }

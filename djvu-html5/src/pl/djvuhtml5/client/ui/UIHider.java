@@ -2,31 +2,24 @@ package pl.djvuhtml5.client.ui;
 
 import java.util.ArrayList;
 
-import com.google.gwt.event.dom.client.BlurEvent;
-import com.google.gwt.event.dom.client.BlurHandler;
-import com.google.gwt.event.dom.client.FocusEvent;
-import com.google.gwt.event.dom.client.FocusHandler;
 import com.google.gwt.event.dom.client.KeyDownEvent;
 import com.google.gwt.event.dom.client.KeyDownHandler;
-import com.google.gwt.event.dom.client.MouseDownEvent;
-import com.google.gwt.event.dom.client.MouseDownHandler;
 import com.google.gwt.event.dom.client.MouseMoveEvent;
 import com.google.gwt.event.dom.client.MouseMoveHandler;
 import com.google.gwt.event.dom.client.MouseOutEvent;
 import com.google.gwt.event.dom.client.MouseOutHandler;
 import com.google.gwt.event.dom.client.MouseOverEvent;
 import com.google.gwt.event.dom.client.MouseOverHandler;
-import com.google.gwt.event.dom.client.MouseUpEvent;
-import com.google.gwt.event.dom.client.MouseUpHandler;
-import com.google.gwt.event.dom.client.TouchEndEvent;
-import com.google.gwt.event.dom.client.TouchEndHandler;
+import com.google.gwt.event.dom.client.ScrollEvent;
+import com.google.gwt.event.dom.client.ScrollHandler;
 import com.google.gwt.event.dom.client.TouchStartEvent;
 import com.google.gwt.event.dom.client.TouchStartHandler;
+import com.google.gwt.dom.client.Element;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.Widget;
 
-public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHandler, MouseOverHandler, MouseOutHandler,
-		MouseDownHandler, MouseUpHandler, KeyDownHandler, FocusHandler, BlurHandler {
+public class UIHider implements MouseMoveHandler, MouseOverHandler, MouseOutHandler, KeyDownHandler, TouchStartHandler,
+		ScrollHandler {
 
 	private static class UIElement {
 		public final Widget widget;
@@ -44,46 +37,26 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 
 	private int previousX, previousY;
 	private boolean isMouseOverUI = false;
-	private boolean isMouseDown = false;
-	private boolean isTouchDown = false;
-	private boolean hasCanvasFocus = false;
 
 	private final Timer timer = new Timer() {
-
 		@Override
 		public void run() {
-			if (!isMouseOverUI && !isMouseDown && !isTouchDown && hasCanvasFocus) {
-				for (UIElement element : uiElements)
-					element.widget.addStyleName(element.hiddenStyleName);
-			}
+			hideUI();
 		}
 	};
+
+	public UIHider(int uiHideDelay, Widget textLayer) {
+		this.uiHideDelay = uiHideDelay;
+		textLayer.addDomHandler(this, MouseMoveEvent.getType());
+		textLayer.addDomHandler(this, KeyDownEvent.getType());
+		textLayer.addDomHandler(this, ScrollEvent.getType());
+		textLayer.addDomHandler(this, TouchStartEvent.getType());
+	}
 
 	public void addUIElement(Widget widget, String hiddenStyleName) {
 		uiElements.add(new UIElement(widget, hiddenStyleName));
 		widget.addDomHandler(this, MouseOverEvent.getType());
 		widget.addDomHandler(this, MouseOutEvent.getType());
-		widget.addDomHandler(this, MouseDownEvent.getType());
-		widget.addDomHandler(this, MouseUpEvent.getType());
-		widget.addDomHandler(this, TouchStartEvent.getType());
-		widget.addDomHandler(this, TouchEndEvent.getType());
-	}
-
-	public UIHider(int uiHideDelay, Widget... eventSources) {
-		this.uiHideDelay = uiHideDelay;
-		for (Widget widget : eventSources) {
-			if (widget != null)
-				registerHandlers(widget);
-		}
-	}
-
-	private void registerHandlers(Widget widget) {
-		widget.addDomHandler(this, MouseMoveEvent.getType());
-		widget.addDomHandler(this, TouchStartEvent.getType());
-		widget.addDomHandler(this, TouchEndEvent.getType());
-		widget.addDomHandler(this, KeyDownEvent.getType());
-		widget.addDomHandler(this, FocusEvent.getType());
-		widget.addDomHandler(this, BlurEvent.getType());
 	}
 
 	private void showUI() {
@@ -92,6 +65,29 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 		timer.cancel();
 		timer.schedule(uiHideDelay);
 	}
+
+	private void hideUI() {
+		if (isMouseOverUI || isUIFocused())
+			return;
+		for (UIElement element : uiElements)
+			element.widget.addStyleName(element.hiddenStyleName);
+	}
+
+	private boolean isUIFocused() {
+		Element focusedElement = getFocusedElement();
+		while (focusedElement != null) {
+			for (UIElement element : uiElements) {
+				if (element.widget.getElement() == focusedElement)
+					return true;
+			}
+			focusedElement = focusedElement.getParentElement();
+		}
+		return false;
+	}
+
+	private native final static Element getFocusedElement() /*-{
+		return $doc.activeElement;
+	}-*/;
 
 	@Override
 	public void onMouseMove(MouseMoveEvent event) {
@@ -104,16 +100,10 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 
 	@Override
 	public void onTouchStart(TouchStartEvent event) {
-		isTouchDown = true;
+		isMouseOverUI = false;
 		showUI();
 	}
 
-	@Override
-	public void onTouchEnd(TouchEndEvent event) {
-		if (event.getTouches().length() == 0)
-			isTouchDown = false;
-		showUI();
-	}
 
 	@Override
 	public void onMouseOver(MouseOverEvent event) {
@@ -126,27 +116,12 @@ public class UIHider implements MouseMoveHandler, TouchStartHandler, TouchEndHan
 	}
 
 	@Override
-	public void onMouseDown(MouseDownEvent event) {
-		isMouseDown = true;
-	}
-
-	@Override
-	public void onMouseUp(MouseUpEvent event) {
-		isMouseDown = false;
-	}
-
-	@Override
 	public void onKeyDown(KeyDownEvent event) {
 		showUI();
 	}
 
 	@Override
-	public void onFocus(FocusEvent event) {
-		hasCanvasFocus = true;
-	}
-
-	@Override
-	public void onBlur(BlurEvent event) {
-		hasCanvasFocus = false;
+	public void onScroll(ScrollEvent event) {
+		showUI();
 	}
 }

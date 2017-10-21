@@ -32,7 +32,7 @@ import pl.djvuhtml5.client.ui.UIHider;
 public class Djvu_html5 implements EntryPoint {
 
 	private static final String WELCOME_MESSAGE =
-			"Starting djvu-html5 viewer v0.2.3 from https://github.com/mateusz-matela/djvu-html5";
+			"Starting djvu-html5 viewer v0.3.0-beta1 from https://github.com/mateusz-matela/djvu-html5";
 
 	private static final String CONTEXT_GLOBAL_VARIABLE = "DJVU_CONTEXT";
 
@@ -77,10 +77,8 @@ public class Djvu_html5 implements EntryPoint {
 
 		dataStore = new DataStore();
 
-		if (DjvuContext.getTextLayerEnabled())
-			container.add(textLayer = new TextLayer(this));
-
 		container.add(prepareCanvas());
+		container.add(textLayer = new TextLayer(this));
 		container.add(toolbar = new Toolbar());
 		container.add(horizontalScrollbar = new Scrollbar(true));
 		container.add(verticalScrollbar = new Scrollbar(false));
@@ -90,7 +88,7 @@ public class Djvu_html5 implements EntryPoint {
 
 		int uiHideDelay = DjvuContext.getUiHideDelay();
 		if (uiHideDelay > 0) {
-			UIHider uiHider = new UIHider(uiHideDelay, canvas, textLayer);
+			UIHider uiHider = new UIHider(uiHideDelay, textLayer);
 			uiHider.addUIElement(toolbar, "toolbarHidden");
 			uiHider.addUIElement(horizontalScrollbar, "scrollbarHidden");
 			uiHider.addUIElement(verticalScrollbar, "scrollbarHidden");

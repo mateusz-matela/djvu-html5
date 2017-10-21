@@ -19,12 +19,18 @@ import com.lizardtech.djvu.DjVuInfo;
 import com.lizardtech.djvu.text.DjVuText;
 import com.lizardtech.djvu.text.DjVuText.Zone;
 
-import pl.djvuhtml5.client.DataStore;
+import pl.djvuhtml5.client.DjvuContext;
 import pl.djvuhtml5.client.Djvu_html5;
 
 public class TextLayer extends FlowPanel implements ScrollHandler {
 
 	private static final String PAGE_STYLE_VISIBLE = "visibleTextPage";
+
+	/**
+	 * Extra space to the left so that user can scroll over the left edge and go to
+	 * the previous page.
+	 */
+	private static final int EXTRA_PAGE_MARGIN = 500;
 
 	private class TextPage extends FlowPanel {
 
@@ -37,10 +43,9 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 			setPixelSize(1, 1);
 		}
 
-		void setData(DjVuInfo info, DjVuText text) {
-			this.text = text;
-			width = info.width;
-			height = info.height;
+		void setSize(int width, int height) {
+			this.width = width;
+			this.height = height;
 			setPixelSize(width, height);
 		}
 
@@ -180,18 +185,22 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 
 		addDomHandler(this, ScrollEvent.getType());
 
-		app.getDataStore().addTextListener(this::textAvailable);
+		app.getDataStore().addInfoListener(this::pageInfoAvailable);
+		if (DjvuContext.getTextLayerEnabled())
+			app.getDataStore().addTextListener(this::textAvailable);
 
 		fontMeasure = Canvas.createIfSupported().getContext2d();
 	}
 
-	private void textAvailable(int pageNum) {
-		DataStore dataStore = app.getDataStore();
-		DjVuInfo info = dataStore.getPageInfo(pageNum);
-		DjVuText text = dataStore.getText(pageNum);
+	private void pageInfoAvailable(int pageNum) {
+		DjVuInfo pageInfo = app.getDataStore().getPageInfo(pageNum);
+		getPage(pageNum).setSize(pageInfo.width, pageInfo.height);
+	}
 
+	private void textAvailable(int pageNum) {
+		DjVuText text = app.getDataStore().getText(pageNum);
 		TextPage page = getPage(pageNum);
-		page.setData(info, text);
+		page.text = text;
 		if (text.length() > 0) {
 			List<Zone> tokens = new ArrayList<>();
 			text.page_zone.get_smallest(tokens);
@@ -260,10 +269,11 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 
 		Element layerElement = getElement();
 		Element pageElement = page.getElement();
-		pageElement.getStyle().setMarginLeft(Math.max(left, 0), Unit.PX);
+		pageElement.getStyle().setMarginLeft(Math.max(left, 0) + EXTRA_PAGE_MARGIN, Unit.PX);
 
-		if (layerElement.getScrollLeft() != -left)
-			layerElement.setScrollLeft(Math.max(-left, 0));
+		int targetScrollLeft = Math.max(-left, 0) + EXTRA_PAGE_MARGIN;
+		if (layerElement.getScrollLeft() != targetScrollLeft)
+			layerElement.setScrollLeft(targetScrollLeft);
 
 		int targetScrollTop = pageElement.getOffsetTop() - top;
 		if (layerElement.getScrollTop() != targetScrollTop)
