@@ -71,7 +71,16 @@ public class BackgroundWorker implements EntryPoint {
 
 		native void initWorker() /*-{
 			var that = this;
-			this.djvuWorker = new Worker('djvu_worker/djvu_worker.nocache.js');
+			var workerScriptLocation = 'djvu_worker/djvu_worker.nocache.js';
+			var scripts = $doc.getElementsByTagName("script");
+			for (var i = 0, len = scripts.length; i < len; i++) {
+				var src = scripts[i].src;
+				if (src.match(/.*\/djvu_html5\/.*cache\.js$/)) {
+					workerScriptLocation = src.replace(/\/djvu_html5\/[^\/]*cache\.js$/, '/') + workerScriptLocation;
+					break;
+				}
+			}
+			this.djvuWorker = new Worker(workerScriptLocation);
 			this.djvuWorker.addEventListener('message', function(e) {
 				that.@pl.djvuhtml5.client.BackgroundWorker$Master::onMessage(Lpl/djvuhtml5/client/BackgroundWorker$WorkerMessage;)(e.data);
 			}, false);
