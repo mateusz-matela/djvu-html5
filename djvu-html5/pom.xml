@@ -23,6 +23,12 @@
       	<artifactId>gwt-user</artifactId>
       	<version>${gwtVersion}</version>
       	<scope>provided</scope>
+    </dependency>
+    <dependency>
+    	<groupId>com.google.gwt</groupId>
+      	<artifactId>gwt-dev</artifactId>
+      	<version>${gwtVersion}</version>
+      	<scope>provided</scope>
     </dependency> 
     <dependency>
 	   <groupId>com.google.gwt</groupId>
@@ -92,8 +98,9 @@
           </execution>
         </executions>
         <configuration>
-          <extraJvmArgs>-Xmx512M -XX:MaxPermSize=196m -Xss1024k -Djava.naming.factory.initial=org.mortbay.naming.InitialContextFactory
-          </extraJvmArgs>
+          <generateJsInteropExports>true</generateJsInteropExports>
+          <failOnError>true</failOnError>
+          <extraJvmArgs>-Xmx512M -Xss1024k</extraJvmArgs>
           <runTarget>Djvu_html5.html</runTarget>
           <hostedWebapp>${webappDirectory}</hostedWebapp>
         </configuration>
@@ -119,8 +126,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.2</version>
         <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
+          <source>1.8</source>
+          <target>1.8</target>
           <encoding>UTF-8</encoding>
         </configuration>
      </plugin>
