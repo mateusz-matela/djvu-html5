@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import com.google.gwt.animation.client.AnimationScheduler;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.core.client.JavaScriptObject;
@@ -22,7 +23,7 @@ import com.lizardtech.djvu.text.DjVuText.Zone;
 import pl.djvuhtml5.client.DjvuContext;
 import pl.djvuhtml5.client.Djvu_html5;
 
-public class TextLayer extends FlowPanel implements ScrollHandler {
+public class TextLayer extends FlowPanel {
 
 	private static final String PAGE_STYLE_VISIBLE = "visibleTextPage";
 
@@ -165,6 +166,61 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 		}-*/;
 	}
 
+	/*
+	 * Workaround for smooth scrolling to previous/next page causing multiple jumps
+	 * or text layer jerking. After changing the page, blocks the reaction to
+	 * external scroll and uses the animation frames mechanism to detect when the
+	 * scrolling ends or enough time passes to unblock it.
+	 */
+	private class TLScrollHandler implements ScrollHandler {
+		private double blockedScrollStartTime = 0;
+		private int prevTop;
+		private int prevLeft;
+		private int noChangeTicks;
+
+		@Override
+		public void onScroll(ScrollEvent event) {
+			int scrollTop = getScrollTop(getElement());
+			int scrollLeft = getScrollLeft(getElement());
+			if (scrollTop != prevTop || scrollLeft != prevLeft) {
+				prevTop = scrollTop;
+				prevLeft = scrollLeft;
+				noChangeTicks = 0;
+			}
+			if (blockedScrollStartTime != 0) {
+				app.getPageLayout().canvasResized(); // force scroll position reset
+				return;
+			}
+
+			int page = currentPage;
+			Element pageElement = pages.get(page).getElement();
+			while (page > 0 && pageElement.getOffsetTop() > scrollTop) {
+				pageElement = pages.get(--page).getElement();
+			}
+			while (page + 1 < pages.size() && pageElement.getOffsetTop() + pageElement.getOffsetHeight() < scrollTop) {
+				pageElement = pages.get(++page).getElement();
+			}
+			int left = pageElement.getOffsetLeft() - scrollLeft;
+			int top = pageElement.getOffsetTop() - scrollTop;
+			app.getPageLayout().externalScroll(page, left, top);
+
+			if (page != currentPage) {
+				blockedScrollStartTime = System.currentTimeMillis();
+				noChangeTicks = 0;
+				AnimationScheduler.get().requestAnimationFrame(this::animationTick);
+			}
+		}
+
+		private void animationTick(double timestamp) {
+			if (noChangeTicks > 2 || timestamp - blockedScrollStartTime > 750) {
+				blockedScrollStartTime = 0;
+			} else {
+				AnimationScheduler.get().requestAnimationFrame(this::animationTick);
+			}
+			noChangeTicks++;
+		}
+	}
+
 	private static final double PCT_ACCURACY = 0.0001;
 	private static final double FONT_ACCURACY = 0.5;
 
@@ -183,7 +239,7 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 		setStyleName("textLayer");
 		getElement().setAttribute("tabindex", "-1");
 
-		addDomHandler(this, ScrollEvent.getType());
+		addDomHandler(new TLScrollHandler(), ScrollEvent.getType());
 
 		app.getDataStore().addInfoListener(this::pageInfoAvailable);
 		if (DjvuContext.getTextLayerEnabled())
@@ -278,22 +334,6 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 		int targetScrollTop = pageElement.getOffsetTop() - top;
 		if (getScrollTop(layerElement) != targetScrollTop)
 			layerElement.setScrollTop(targetScrollTop);
-	}
-
-	@Override
-	public void onScroll(ScrollEvent event) {
-		int scrollTop = getScrollTop(getElement());
-		int page = currentPage;
-		Element pageElement = pages.get(page).getElement();
-		while (page > 0 && pageElement.getOffsetTop() > scrollTop) {
-			pageElement = pages.get(--page).getElement();
-		}
-		while (page + 1 < pages.size() && pageElement.getOffsetTop() + pageElement.getOffsetHeight() < scrollTop) {
-			pageElement = pages.get(++page).getElement();
-		}
-		int left = pageElement.getOffsetLeft() - getScrollLeft(getElement());
-		int top = pageElement.getOffsetTop() - scrollTop;
-		app.getPageLayout().externalScroll(page, left, top);
 	}
 
 	private native int getScrollTop(JavaScriptObject element) /*-{
