@@ -272,17 +272,17 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 		pageElement.getStyle().setMarginLeft(Math.max(left, 0) + EXTRA_PAGE_MARGIN, Unit.PX);
 
 		int targetScrollLeft = Math.max(-left, 0) + EXTRA_PAGE_MARGIN;
-		if (layerElement.getScrollLeft() != targetScrollLeft)
+		if (getScrollLeft(layerElement) != targetScrollLeft)
 			layerElement.setScrollLeft(targetScrollLeft);
 
 		int targetScrollTop = pageElement.getOffsetTop() - top;
-		if (layerElement.getScrollTop() != targetScrollTop)
+		if (getScrollTop(layerElement) != targetScrollTop)
 			layerElement.setScrollTop(targetScrollTop);
 	}
 
 	@Override
 	public void onScroll(ScrollEvent event) {
-		int scrollTop = getElement().getScrollTop();
+		int scrollTop = getScrollTop(getElement());
 		int page = currentPage;
 		Element pageElement = pages.get(page).getElement();
 		while (page > 0 && pageElement.getOffsetTop() > scrollTop) {
@@ -291,10 +291,18 @@ public class TextLayer extends FlowPanel implements ScrollHandler {
 		while (page + 1 < pages.size() && pageElement.getOffsetTop() + pageElement.getOffsetHeight() < scrollTop) {
 			pageElement = pages.get(++page).getElement();
 		}
-		int left = pageElement.getOffsetLeft() - getElement().getScrollLeft();
+		int left = pageElement.getOffsetLeft() - getScrollLeft(getElement());
 		int top = pageElement.getOffsetTop() - scrollTop;
 		app.getPageLayout().externalScroll(page, left, top);
 	}
+
+	private native int getScrollTop(JavaScriptObject element) /*-{
+		return Math.round(element.scrollTop);
+	}-*/;
+
+	private native int getScrollLeft(JavaScriptObject element) /*-{
+		return Math.round(element.scrollLeft);
+	}-*/;
 
 	private TextPage getPage(int pageNum) {
 		while (pageNum >= pages.size()) {
