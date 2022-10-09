@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import com.google.gwt.animation.client.AnimationScheduler;
 import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.core.client.JavaScriptObject;
@@ -168,56 +167,65 @@ public class TextLayer extends FlowPanel {
 
 	/*
 	 * Workaround for smooth scrolling to previous/next page causing multiple jumps
-	 * or text layer jerking. After changing the page, blocks the reaction to
-	 * external scroll and uses the animation frames mechanism to detect when the
-	 * scrolling ends or enough time passes to unblock it.
+	 * or text layer jerking. After changing the page, blocks further page jumps
+	 * until smooth scroll fades out.
 	 */
 	private class TLScrollHandler implements ScrollHandler {
-		private double blockedScrollStartTime = 0;
+		private double pageJumpTime = 0;
+		private double prevTime = 0;
+		private double prevSpeedX;
+		private double prevSpeedY;
 		private int prevTop;
 		private int prevLeft;
-		private int noChangeTicks;
 
 		@Override
 		public void onScroll(ScrollEvent event) {
+			double time = System.currentTimeMillis();
 			int scrollTop = getScrollTop(getElement());
 			int scrollLeft = getScrollLeft(getElement());
-			if (scrollTop != prevTop || scrollLeft != prevLeft) {
-				prevTop = scrollTop;
-				prevLeft = scrollLeft;
-				noChangeTicks = 0;
-			}
-			if (blockedScrollStartTime != 0) {
-				app.getPageLayout().canvasResized(); // force scroll position reset
+			if (scrollLeft == prevLeft && scrollTop == prevTop)
 				return;
+			double speedX = 0, speedY = 0;
+			if (time - prevTime > 0 && time - prevTime < 200) {
+				speedX = 1.0 * (scrollLeft - prevLeft) / (time - prevTime);
+				speedY = 1.0 * (scrollTop - prevTop) / (time - prevTime);
+			}
+			if (time - pageJumpTime > 300
+					&& (isGreater(speedX, prevSpeedX) || isGreater(speedY, prevSpeedY) || time - pageJumpTime > 2000)) {
+				pageJumpTime = 0;
 			}
 
 			int page = currentPage;
 			Element pageElement = pages.get(page).getElement();
-			while (page > 0 && pageElement.getOffsetTop() > scrollTop) {
+			while (page > 0 && pageJumpTime == 0
+					&& pageElement.getOffsetTop() > scrollTop + EXTRA_PAGE_MARGIN) {
 				pageElement = pages.get(--page).getElement();
 			}
-			while (page + 1 < pages.size() && pageElement.getOffsetTop() + pageElement.getOffsetHeight() < scrollTop) {
+			while (page + 1 < pages.size() && pageJumpTime == 0
+					&& pageElement.getOffsetTop() + pageElement.getOffsetHeight() < scrollTop - EXTRA_PAGE_MARGIN) {
 				pageElement = pages.get(++page).getElement();
 			}
 			int left = pageElement.getOffsetLeft() - scrollLeft;
 			int top = pageElement.getOffsetTop() - scrollTop;
-			app.getPageLayout().externalScroll(page, left, top);
+			app.getPageLayout().externalScroll(page, left, top, pageJumpTime == 0);
 
 			if (page != currentPage) {
-				blockedScrollStartTime = System.currentTimeMillis();
-				noChangeTicks = 0;
-				AnimationScheduler.get().requestAnimationFrame(this::animationTick);
+				pageJumpTime = time;
 			}
+
+			prevTop = getScrollTop(getElement());
+			prevLeft = getScrollLeft(getElement());
+			prevSpeedX = speedX;
+			prevSpeedY = speedY;
+			prevTime = time;
 		}
 
-		private void animationTick(double timestamp) {
-			if (noChangeTicks > 2 || timestamp - blockedScrollStartTime > 750) {
-				blockedScrollStartTime = 0;
-			} else {
-				AnimationScheduler.get().requestAnimationFrame(this::animationTick);
-			}
-			noChangeTicks++;
+		private boolean isGreater(double s1, double s2) {
+			if (s1 == 0)
+				return false;
+			if (s2 == 0)
+				return true;
+			return Math.signum(s1) == Math.signum(s2) && Math.abs(s1) > Math.abs(s2) * 1.5;
 		}
 	}
 

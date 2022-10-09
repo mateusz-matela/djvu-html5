@@ -1,8 +1,6 @@
 package pl.djvuhtml5.client.ui;
 
-import static pl.djvuhtml5.client.TileRenderer.MAX_SUBSAMPLE;
-import static pl.djvuhtml5.client.TileRenderer.toSubsample;
-import static pl.djvuhtml5.client.TileRenderer.toZoom;
+import static pl.djvuhtml5.client.TileRenderer.*;
 
 import java.util.ArrayList;
 
@@ -10,14 +8,7 @@ import com.google.gwt.canvas.client.Canvas;
 import com.google.gwt.canvas.dom.client.Context2d;
 import com.google.gwt.dom.client.CanvasElement;
 import com.google.gwt.dom.client.Element;
-import com.google.gwt.event.dom.client.DomEvent;
-import com.google.gwt.event.dom.client.KeyCodes;
-import com.google.gwt.event.dom.client.KeyDownEvent;
-import com.google.gwt.event.dom.client.KeyDownHandler;
-import com.google.gwt.event.dom.client.MouseDownEvent;
-import com.google.gwt.event.dom.client.MouseWheelEvent;
-import com.google.gwt.event.dom.client.MouseWheelHandler;
-import com.google.gwt.event.dom.client.TouchStartEvent;
+import com.google.gwt.event.dom.client.*;
 import com.google.gwt.http.client.UrlBuilder;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.Window;
@@ -99,8 +90,11 @@ public class SinglePageLayout {
 			setPage(newPage);
 		});
 		dataStore.addInfoListener(pageNum -> {
-			if (pageNum == page)
+			if (pageNum == page) {
 				setPage(pageNum);
+			} else {
+				viewChanged();
+			}
 		});
 		dataStore.addTileListener(pageNum -> {
 			if (pageNum == page)
@@ -276,7 +270,7 @@ public class SinglePageLayout {
 	 * @param left position of page's left edge on the canvas
 	 * @param top position of page's top edge on the canvas
 	 */
-	public void externalScroll(int page, int left, int top) {
+	public void externalScroll(int page, int left, int top, boolean allowPageJump) {
 		int w = canvas.getCoordinateSpaceWidth(), h = canvas.getCoordinateSpaceHeight();
 		if (page == this.page && centerX == w / 2 - left && centerY == h / 2 - top)
 			return;
@@ -289,14 +283,14 @@ public class SinglePageLayout {
 			setPage(page);
 		} else {
 			viewChanged();
-			if (oldX == centerX && oldY == centerY && enableScrollPageJump) {
-				if (newY < oldY) {
+			if (oldX == centerX && oldY == centerY && enableScrollPageJump && allowPageJump) {
+				if (newY < oldY - 1) {
 					changePage(page - 1, 0, 1);
-				} else if (newY > oldY) {
+				} else if (newY > oldY + 1) {
 					changePage(page + 1, 0, -1);
-				} else if (newX < oldX) {
+				} else if (newX < oldX - 1) {
 					changePage(page - 1, 1, 0);
-				} else if (newX > oldX) {
+				} else if (newX > oldX + 1) {
 					changePage(page + 1, -1, 0);
 				}
 			}
@@ -322,7 +316,7 @@ public class SinglePageLayout {
 		graphics2d.translate(startX, startY);
 		graphics2d.scale(scale, scale);
 		graphics2d.translate(-startX, -startY);
-		graphics2d.scale(1, -1); // DjVu images have y-axis inverted 
+		graphics2d.scale(1, -1); // DjVu images have y-axis inverted
 
 		int tileSize = DjvuContext.getTileSize();
 		int pw = (int) (pageInfo.width * zoom), ph = (int) (pageInfo.height * zoom);
