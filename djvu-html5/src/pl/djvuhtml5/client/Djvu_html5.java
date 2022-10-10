@@ -20,11 +20,7 @@ import com.lizardtech.djvu.Utils;
 import com.lizardtech.djvu.text.DjVuText;
 
 import pl.djvuhtml5.client.TileRenderer.TileInfo;
-import pl.djvuhtml5.client.ui.Scrollbar;
-import pl.djvuhtml5.client.ui.SinglePageLayout;
-import pl.djvuhtml5.client.ui.TextLayer;
-import pl.djvuhtml5.client.ui.Toolbar;
-import pl.djvuhtml5.client.ui.UIHider;
+import pl.djvuhtml5.client.ui.*;
 
 /**
  * Entry point classes define <code>onModuleLoad()</code>.
@@ -32,7 +28,7 @@ import pl.djvuhtml5.client.ui.UIHider;
 public class Djvu_html5 implements EntryPoint {
 
 	private static final String WELCOME_MESSAGE =
-			"Starting djvu-html5 viewer v0.3.0 from https://github.com/mateusz-matela/djvu-html5";
+			"Starting djvu-html5 viewer v0.3.1 from https://github.com/mateusz-matela/djvu-html5";
 
 	private static final String CONTEXT_GLOBAL_VARIABLE = "DJVU_CONTEXT";
 
