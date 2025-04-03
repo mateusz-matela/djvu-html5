@@ -4,21 +4,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.gwt.event.dom.client.BlurEvent;
-import com.google.gwt.event.dom.client.BlurHandler;
-import com.google.gwt.event.dom.client.ChangeEvent;
-import com.google.gwt.event.dom.client.ChangeHandler;
-import com.google.gwt.event.dom.client.ClickEvent;
-import com.google.gwt.event.dom.client.ClickHandler;
-import com.google.gwt.event.dom.client.KeyCodes;
-import com.google.gwt.event.dom.client.KeyDownEvent;
-import com.google.gwt.event.dom.client.KeyDownHandler;
+import com.google.gwt.event.dom.client.*;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.ListBox;
 import com.google.gwt.user.client.ui.TextBox;
 
 import pl.djvuhtml5.client.DjvuContext;
+import pl.djvuhtml5.client.Djvu_html5;
 import pl.djvuhtml5.client.ui.SinglePageLayout.ChangeListener;
 
 public class Toolbar extends FlowPanel {
@@ -28,6 +21,8 @@ public class Toolbar extends FlowPanel {
 	private List<Integer> zoomOptions = Arrays.asList(100);
 
 	private final SelectionPanel zoomPanel;
+
+	private int previousZoomIndex;
 
 	private int pagesCount;
 
@@ -63,6 +58,7 @@ public class Toolbar extends FlowPanel {
 			}
 		};
 		add(zoomPanel);
+		setDefaultZoomOptions();
 		setZoomOptions(zoomOptions);
 
 		pagePanel = new SelectionPanel("buttonPagePrev", "buttonPageNext") {
@@ -116,10 +112,29 @@ public class Toolbar extends FlowPanel {
 		});
 		zoomPanel.updateButtons();
 	}
+	
+	public void setDefaultZoomOptions() {
+		String defaultZoom = DjvuContext.getDefaultZoom();
+		if ("Fit width".equals(defaultZoom)) {
+			zoomPanel.selection.setSelectedIndex(zoomOptions.size());
+			previousZoomIndex = zoomOptions.size();
+		} else if ("Fit page".equals(defaultZoom)) {
+			zoomPanel.selection.setSelectedIndex(zoomOptions.size() + 1);
+			previousZoomIndex = zoomOptions.size() + 1;
+		} else {
+			try {
+				zoomOptions = Arrays.asList(Integer.valueOf(defaultZoom));
+			} catch (NumberFormatException e) {
+				zoomOptions = Arrays.asList(100);
+			}
+			zoomPanel.selection.setSelectedIndex(0);
+			previousZoomIndex = 0;
+		}
+	}
 
 	public void setZoomOptions(List<Integer> newZoomOptions) {
 		ListBox zoomSelection = zoomPanel.selection;
-		int previousIndex = zoomSelection.getSelectedIndex();
+		int previousIndex = previousZoomIndex;
 
 		zoomSelection.clear();
 		for (int i : newZoomOptions) {
@@ -129,8 +144,10 @@ public class Toolbar extends FlowPanel {
 		zoomSelection.addItem(DjvuContext.getString("label_fitPage", "Fit page"));
 
 		if (previousIndex >= zoomOptions.size()) {
-			// either "fit with" or "fit page" was selected  
-			zoomSelection.setSelectedIndex(newZoomOptions.size() + (zoomOptions.size() - previousIndex));
+			// either "fit with" or "fit page" was selected
+			zoomSelection.setSelectedIndex(newZoomOptions.size() + (previousIndex - zoomOptions.size()));
+			zoomOptions = newZoomOptions;
+			zoomSelectionChanged();
 		} else {
 			int zoom = pageLayout != null ? pageLayout.getZoom() : 100;
 			int newSelected = Arrays.binarySearch(newZoomOptions.toArray(), zoom, Collections.reverseOrder());
@@ -140,7 +157,9 @@ public class Toolbar extends FlowPanel {
 				zoomSelectionChanged();
 			} else {
 				zoomSelection.setSelectedIndex(-1);
+				previousZoomIndex = -1;
 				zoomOptions = newZoomOptions;
+				zoomPanel.textBox.setText(zoom + "%");
 			}
 		}
 		zoomPanel.updateButtons();
@@ -161,6 +180,7 @@ public class Toolbar extends FlowPanel {
 			return;
 		ListBox zoomSelection = zoomPanel.selection;
 		int index = zoomSelection.getSelectedIndex();
+		previousZoomIndex = index;
 		if (index < zoomOptions.size()) {
 			pageLayout.setZoom(zoomOptions.get(index));
 		} else {
@@ -192,6 +212,7 @@ public class Toolbar extends FlowPanel {
 		int zoom = Math.min(Integer.valueOf(digits), DjvuContext.getMaxZoom());
 		zoom = Math.max(zoom, zoomOptions.get(zoomOptions.size() - 1));
 		zoomPanel.selection.setSelectedIndex(-1);
+		previousZoomIndex = -1;
 		pageLayout.setZoom(zoom);
 		zoomTextBox.setText(zoom + "%");
 		zoomTextBox.setFocus(false);
@@ -204,7 +225,7 @@ public class Toolbar extends FlowPanel {
 		if (index >= 0) {
 			index -= direction;
 		} else {
-			index = -index - (direction == 1 ? 2 : 1); 
+			index = -index - (direction == 1 ? 2 : 1);
 		}
 		index = Math.min(index, zoomOptions.size() - 1);
 		index = Math.max(index, 0);

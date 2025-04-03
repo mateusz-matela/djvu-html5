@@ -102,6 +102,10 @@ public class DjvuContext {
 		return getInt("maxZoom", 10000);
 	}
 	
+	public static String getDefaultZoom() {
+		return getString("defualtZoom", "100");
+	}
+	
 	public static boolean getLocationUpdateEnabled() {
 		return getBoolean("locationUpdateEnabled", true);
 	}
