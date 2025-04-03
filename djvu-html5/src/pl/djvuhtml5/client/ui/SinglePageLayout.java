@@ -199,8 +199,14 @@ public class SinglePageLayout {
 			subsample++;
 		zoom100 = toZoom(subsample);
 
-		if (zoom == 0)
-			zoom = zoom100;
+		if (zoom == 0) {
+			try {
+				String defaultZoom = DjvuContext.getDefaultZoom();
+				zoom = Integer.valueOf(defaultZoom) * zoom100 / 100;
+			} catch (NumberFormatException e) {
+				zoom = zoom100;
+			}
+		}
 
 		double z = zoom100;
 		for (int i = subsample + 1; i <= MAX_SUBSAMPLE; i++) {
